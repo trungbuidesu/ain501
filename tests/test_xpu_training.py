@@ -3,11 +3,26 @@
 
 import time
 
+import pytest
 import torch
 import torch.nn as nn
 import torch.optim as optim
 
 
+def _arc_xpu_is_available() -> bool:
+    """Cho biết Intel Arc XPU backend có khả dụng trong env hiện tại hay không."""
+    try:
+        if not hasattr(torch, "xpu") or not torch.xpu.is_available():
+            return False
+        return "arc" in torch.xpu.get_device_name(0).casefold()
+    except RuntimeError:
+        return False
+
+
+@pytest.mark.skipif(
+    not _arc_xpu_is_available(),
+    reason="Intel Arc XPU backend is not available in this environment",
+)
 def test_xpu_training() -> None:
     """Train model nhỏ trên XPU và xác minh loss ở mức hợp lý."""
     device = torch.device("xpu")

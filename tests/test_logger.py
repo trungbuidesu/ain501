@@ -13,13 +13,23 @@ from src.utils import TrainingLogger
 LOG_DIR = "runs/_test_logger"
 
 
+def _arc_xpu_is_available() -> bool:
+    """Cho biết Intel Arc XPU backend có khả dụng trong env hiện tại hay không."""
+    try:
+        if not hasattr(torch, "xpu") or not torch.xpu.is_available():
+            return False
+        return "arc" in torch.xpu.get_device_name(0).casefold()
+    except RuntimeError:
+        return False
+
+
 def test_logger_tensorboard_xpu() -> None:
     """Chạy training loop nhỏ, ghi TensorBoard và xác minh event file."""
     # Dọn run test cũ nếu còn tồn tại.
     if Path(LOG_DIR).exists():
         shutil.rmtree(LOG_DIR)
 
-    device = torch.device("xpu" if torch.xpu.is_available() else "cpu")
+    device = torch.device("xpu" if _arc_xpu_is_available() else "cpu")
     print(f"Device: {device}")
 
     model = nn.Sequential(

@@ -1,4 +1,5 @@
-"""Test TrainingLogger with TensorBoard backend on XPU training."""
+# -*- coding: utf-8 -*-
+"""Kiểm thử TrainingLogger với TensorBoard backend trên training XPU."""
 
 import shutil
 from pathlib import Path
@@ -13,8 +14,8 @@ LOG_DIR = "runs/_test_logger"
 
 
 def test_logger_tensorboard_xpu() -> None:
-    """Run a tiny training loop, log to TensorBoard, verify files are created."""
-    # Cleanup any previous test run
+    """Chạy training loop nhỏ, ghi TensorBoard và xác minh event file."""
+    # Dọn run test cũ nếu còn tồn tại.
     if Path(LOG_DIR).exists():
         shutil.rmtree(LOG_DIR)
 
@@ -53,24 +54,24 @@ def test_logger_tensorboard_xpu() -> None:
             loss.backward()
             optimizer.step()
 
-            # Log scalar
+            # Ghi scalar đơn.
             logger.log_scalar("train/loss", loss.item(), step=epoch)
 
-            # Log multiple metrics
+            # Ghi nhiều metric cùng nhóm.
             acc = (output.argmax(1) == y).float().mean().item()
             logger.log_scalars("metrics", {"loss": loss.item(), "acc": acc}, step=epoch)
 
             if epoch % 3 == 0:
                 print(f"  Epoch {epoch} | loss={loss.item():.4f} | acc={acc:.4f}")
 
-        # Log histogram of weights
+        # Ghi histogram của weights.
         for name, param in model.named_parameters():
             logger.log_histogram(f"weights/{name}", param.data.cpu(), step=9)
 
-        # Log text
+        # Ghi text summary.
         logger.log_text("summary", "Test training completed successfully", step=9)
 
-    # Verify TensorBoard files were created
+    # Xác minh TensorBoard event file đã được tạo.
     tb_dir = Path(LOG_DIR) / "test-run"
     assert tb_dir.exists(), f"TensorBoard dir not found: {tb_dir}"
     event_files = list(tb_dir.glob("events.out.tfevents.*"))
@@ -79,8 +80,31 @@ def test_logger_tensorboard_xpu() -> None:
     print(f"\n✓ TensorBoard event files: {[f.name for f in event_files]}")
     print("✓ TrainingLogger test PASSED")
 
-    # Cleanup
+    # Dọn output test.
     shutil.rmtree(LOG_DIR)
+
+
+def test_logger_log_artifact_uses_artifact_type() -> None:
+    """Đảm bảo `log_artifact` dispatch tham số `artifact_type` xuống backend."""
+
+    class FakeBackend:
+        """Backend giả để bắt tham số artifact."""
+
+        def __init__(self) -> None:
+            """Khởi tạo vùng nhớ cho call gần nhất."""
+            self.call: tuple[str, str] | None = None
+
+        def log_artifact(self, path: str, artifact_type: str = "model") -> None:
+            """Lưu lại path và artifact type được logger truyền xuống."""
+            self.call = (path, artifact_type)
+
+    backend = FakeBackend()
+    logger = TrainingLogger(backends=[])
+    logger._backends.append(backend)
+
+    logger.log_artifact("models/best.pt", artifact_type="checkpoint")
+
+    assert backend.call == ("models/best.pt", "checkpoint")
 
 
 if __name__ == "__main__":

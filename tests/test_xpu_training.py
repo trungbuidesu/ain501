@@ -1,4 +1,5 @@
-"""Quick sanity check: train a tiny model on Intel Arc A770 via XPU."""
+# -*- coding: utf-8 -*-
+"""Sanity check nhanh: train model nhỏ trên Intel Arc A770 qua XPU."""
 
 import time
 
@@ -8,10 +9,11 @@ import torch.optim as optim
 
 
 def test_xpu_training() -> None:
+    """Train model nhỏ trên XPU và xác minh loss ở mức hợp lý."""
     device = torch.device("xpu")
     print(f"Device: {torch.xpu.get_device_name(0)}")
 
-    # Tiny model
+    # Model nhỏ cho sanity check.
     model = nn.Sequential(
         nn.Linear(64, 128),
         nn.ReLU(),
@@ -21,11 +23,11 @@ def test_xpu_training() -> None:
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=1e-3)
 
-    # Synthetic data
+    # Dữ liệu tổng hợp.
     x = torch.randn(256, 64, device=device)
     y = torch.randint(0, 10, (256,), device=device)
 
-    # Training loop
+    # Vòng lặp huấn luyện.
     start = time.perf_counter()
     for epoch in range(20):
         optimizer.zero_grad()
@@ -40,7 +42,7 @@ def test_xpu_training() -> None:
     elapsed = time.perf_counter() - start
     print(f"Training 20 epochs took {elapsed:.3f}s on XPU")
 
-    # Verify loss decreased
+    # Xác minh loss ở mức kỳ vọng.
     assert loss.item() < 2.5, f"Loss too high: {loss.item()}"
     print("✓ XPU training sanity check PASSED")
 

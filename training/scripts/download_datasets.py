@@ -1,4 +1,5 @@
-"""Wrapper for Phase 0 dataset download planning."""
+# -*- coding: utf-8 -*-
+"""Wrapper cho bước lập kế hoạch download dataset Phase 0."""
 
 from __future__ import annotations
 
@@ -9,6 +10,7 @@ from training.scripts.data_utils import main as data_utils_main
 
 
 def main(argv: Sequence[str] | None = None) -> int:
+    """Chạy subcommand `download-plan` với tham số CLI được truyền vào."""
     args = ["download-plan"]
     if argv:
         args.extend(argv)

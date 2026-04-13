@@ -1,13 +1,13 @@
-"""
-Unified Training Logger — shared utility for TensorBoard & Weights & Biases.
+# -*- coding: utf-8 -*-
+"""Logger huấn luyện thống nhất cho TensorBoard và Weights & Biases.
 
-Usage:
+Cách dùng:
     from src.utils import TrainingLogger
 
     logger = TrainingLogger(
         project="ain501-yolo",
         run_name="exp-001",
-        backends=["tensorboard", "wandb"],  # or just one
+        backends=["tensorboard", "wandb"],
         log_dir="runs/exp-001",
         config={"lr": 1e-3, "epochs": 100},
     )
@@ -18,7 +18,7 @@ Usage:
         logger.log_scalars("metrics", {"acc": 0.95, "f1": 0.92}, step=epoch)
 
     logger.log_image("predictions", image_tensor, step=epoch)
-    logger.log_artifact("model.pt", type="model")
+    logger.log_artifact("model.pt", artifact_type="model")
     logger.finish()
 """
 
@@ -27,7 +27,7 @@ from __future__ import annotations
 import logging
 import os
 from pathlib import Path
-from typing import Any
+from typing import Any, ClassVar
 
 import numpy as np
 
@@ -35,26 +35,29 @@ log = logging.getLogger(__name__)
 
 
 class _TensorBoardBackend:
-    """TensorBoard logging backend."""
+    """Backend ghi log TensorBoard."""
 
     def __init__(self, log_dir: str, config: dict[str, Any] | None = None) -> None:
+        """Khởi tạo SummaryWriter và ghi config ban đầu nếu có."""
         from torch.utils.tensorboard import SummaryWriter
 
         self.writer = SummaryWriter(log_dir=log_dir)
         if config:
-            # Log hyperparameters as text
+            # Ghi hyperparameters dưới dạng text để dễ đọc trong TensorBoard.
             config_text = "\n".join(f"**{k}**: {v}" for k, v in config.items())
             self.writer.add_text("hyperparameters", config_text, global_step=0)
-        log.info("TensorBoard logger initialized → %s", log_dir)
+        log.info("TensorBoard logger initialized -> %s", log_dir)
 
     def log_scalar(self, tag: str, value: float, step: int) -> None:
+        """Ghi một scalar vào TensorBoard."""
         self.writer.add_scalar(tag, value, global_step=step)
 
     def log_scalars(self, main_tag: str, values: dict[str, float], step: int) -> None:
+        """Ghi nhiều scalar cùng nhóm vào TensorBoard."""
         self.writer.add_scalars(main_tag, values, global_step=step)
 
     def log_image(self, tag: str, image: Any, step: int) -> None:
-        """Log image. Accepts torch.Tensor (C,H,W) or numpy (H,W,C)."""
+        """Ghi ảnh TensorBoard, nhận `torch.Tensor` CHW hoặc `numpy` HWC."""
         import torch
 
         if isinstance(image, torch.Tensor):
@@ -65,26 +68,34 @@ class _TensorBoardBackend:
             log.warning("TensorBoard: unsupported image type %s", type(image))
 
     def log_histogram(self, tag: str, values: Any, step: int) -> None:
+        """Ghi histogram vào TensorBoard."""
         self.writer.add_histogram(tag, values, global_step=step)
 
     def log_text(self, tag: str, text: str, step: int) -> None:
+        """Ghi text vào TensorBoard."""
         self.writer.add_text(tag, text, global_step=step)
 
-    def log_artifact(self, path: str, type: str = "file") -> None:
-        # TensorBoard doesn't have native artifact support
-        log.debug("TensorBoard: artifact logging not supported, skipping %s", path)
+    def log_artifact(self, path: str, artifact_type: str = "file") -> None:
+        """Bỏ qua artifact vì TensorBoard không có artifact API native."""
+        log.debug(
+            "TensorBoard: artifact logging not supported, skipping %s (%s)",
+            path,
+            artifact_type,
+        )
 
     def log_model_graph(self, model: Any, input_sample: Any) -> None:
+        """Ghi graph kiến trúc model vào TensorBoard."""
         self.writer.add_graph(model, input_sample)
 
     def finish(self) -> None:
+        """Flush và đóng SummaryWriter."""
         self.writer.flush()
         self.writer.close()
         log.info("TensorBoard logger closed.")
 
 
 class _WandbBackend:
-    """Weights & Biases logging backend."""
+    """Backend ghi log Weights & Biases."""
 
     def __init__(
         self,
@@ -94,6 +105,7 @@ class _WandbBackend:
         tags: list[str] | None = None,
         log_dir: str | None = None,
     ) -> None:
+        """Khởi tạo W&B run với project, config và tag đã cho."""
         import wandb
 
         self._wandb = wandb
@@ -105,16 +117,19 @@ class _WandbBackend:
             dir=log_dir,
             reinit=True,
         )
-        log.info("W&B logger initialized → project=%s, run=%s", project, run_name)
+        log.info("W&B logger initialized -> project=%s, run=%s", project, run_name)
 
     def log_scalar(self, tag: str, value: float, step: int) -> None:
+        """Ghi một scalar vào W&B."""
         self._wandb.log({tag: value}, step=step)
 
     def log_scalars(self, main_tag: str, values: dict[str, float], step: int) -> None:
+        """Ghi nhiều scalar cùng nhóm vào W&B."""
         prefixed = {f"{main_tag}/{k}": v for k, v in values.items()}
         self._wandb.log(prefixed, step=step)
 
     def log_image(self, tag: str, image: Any, step: int) -> None:
+        """Ghi ảnh vào W&B."""
         import torch
 
         if isinstance(image, torch.Tensor):
@@ -123,6 +138,7 @@ class _WandbBackend:
         self._wandb.log({tag: img}, step=step)
 
     def log_histogram(self, tag: str, values: Any, step: int) -> None:
+        """Ghi histogram vào W&B."""
         import torch
 
         if isinstance(values, torch.Tensor):
@@ -131,41 +147,44 @@ class _WandbBackend:
         self._wandb.log({tag: hist}, step=step)
 
     def log_text(self, tag: str, text: str, step: int) -> None:
+        """Ghi text vào W&B."""
         self._wandb.log({tag: text}, step=step)
 
-    def log_artifact(self, path: str, type: str = "model") -> None:
+    def log_artifact(self, path: str, artifact_type: str = "model") -> None:
+        """Ghi file hoặc thư mục artifact vào W&B."""
         artifact = self._wandb.Artifact(
             name=Path(path).stem,
-            type=type,
+            type=artifact_type,
         )
         if os.path.isdir(path):
             artifact.add_dir(path)
         else:
             artifact.add_file(path)
         self._wandb.log_artifact(artifact)
-        log.info("W&B: logged artifact %s (type=%s)", path, type)
+        log.info("W&B: logged artifact %s (type=%s)", path, artifact_type)
 
-    def log_model_graph(self, model: Any, input_sample: Any) -> None:
+    def log_model_graph(self, model: Any, _input_sample: Any) -> None:
+        """Theo dõi model bằng W&B; sample input không dùng ở backend này."""
         self._wandb.watch(model, log="all")
 
     def finish(self) -> None:
+        """Kết thúc W&B run hiện tại."""
         self._wandb.finish()
         log.info("W&B logger closed.")
 
 
 class TrainingLogger:
-    """
-    Unified training logger that dispatches to TensorBoard and/or W&B.
+    """Logger huấn luyện thống nhất, dispatch sang TensorBoard và/hoặc W&B.
 
-    Args:
-        project: Project name (used by W&B).
-        run_name: Run/experiment name.
-        backends: List of backends to enable. Options: "tensorboard", "wandb".
-        log_dir: Directory for TensorBoard logs and local output.
-        config: Hyperparameters dict to log at init.
-        tags: Optional tags (W&B only).
+    Tham số:
+        project: Tên project, dùng cho W&B.
+        run_name: Tên run hoặc experiment.
+        backends: Danh sách backend bật, gồm "tensorboard" hoặc "wandb".
+        log_dir: Thư mục log TensorBoard và output local.
+        config: Hyperparameters cần log lúc khởi tạo.
+        tags: Tag tùy chọn cho W&B.
 
-    Example:
+    Ví dụ:
         >>> logger = TrainingLogger(
         ...     project="ain501",
         ...     run_name="yolo-v1",
@@ -177,7 +196,7 @@ class TrainingLogger:
         >>> logger.finish()
     """
 
-    VALID_BACKENDS = {"tensorboard", "wandb"}
+    VALID_BACKENDS: ClassVar[set[str]] = {"tensorboard", "wandb"}
 
     def __init__(
         self,
@@ -188,6 +207,7 @@ class TrainingLogger:
         config: dict[str, Any] | None = None,
         tags: list[str] | None = None,
     ) -> None:
+        """Khởi tạo logger và các backend được yêu cầu."""
         if backends is None:
             backends = ["tensorboard"]
 
@@ -197,12 +217,7 @@ class TrainingLogger:
 
         self._backends: list[Any] = []
         self._names: list[str] = []
-
-        # Resolve log directory
-        if run_name:
-            full_log_dir = str(Path(log_dir) / run_name)
-        else:
-            full_log_dir = log_dir
+        full_log_dir = str(Path(log_dir) / run_name) if run_name else log_dir
 
         for backend_name in backends:
             try:
@@ -233,58 +248,60 @@ class TrainingLogger:
             except Exception as e:
                 log.warning("Failed to init backend '%s': %s", backend_name, e)
 
-        log.info("TrainingLogger ready — active backends: %s", self._names)
+        log.info("TrainingLogger ready -> active backends: %s", self._names)
 
     @property
     def active_backends(self) -> list[str]:
-        """Return list of currently active backend names."""
+        """Trả về danh sách backend đang hoạt động."""
         return list(self._names)
 
     def log_scalar(self, tag: str, value: float, step: int) -> None:
-        """Log a single scalar value."""
+        """Ghi một scalar value vào tất cả backend."""
         for b in self._backends:
             b.log_scalar(tag, value, step)
 
     def log_scalars(self, main_tag: str, values: dict[str, float], step: int) -> None:
-        """Log multiple scalars under a grouped tag."""
+        """Ghi nhiều scalar value dưới một grouped tag."""
         for b in self._backends:
             b.log_scalars(main_tag, values, step)
 
     def log_image(self, tag: str, image: Any, step: int) -> None:
-        """Log an image (torch.Tensor CHW or numpy HWC)."""
+        """Ghi một ảnh, nhận `torch.Tensor` CHW hoặc `numpy` HWC."""
         for b in self._backends:
             b.log_image(tag, image, step)
 
     def log_histogram(self, tag: str, values: Any, step: int) -> None:
-        """Log a histogram of values."""
+        """Ghi histogram của values."""
         for b in self._backends:
             b.log_histogram(tag, values, step)
 
     def log_text(self, tag: str, text: str, step: int) -> None:
-        """Log a text string."""
+        """Ghi chuỗi text."""
         for b in self._backends:
             b.log_text(tag, text, step)
 
-    def log_artifact(self, path: str, type: str = "model") -> None:
-        """Log a file/directory as an artifact (W&B only)."""
+    def log_artifact(self, path: str, artifact_type: str = "model") -> None:
+        """Ghi file hoặc thư mục như artifact, hiện chỉ W&B hỗ trợ."""
         for b in self._backends:
-            b.log_artifact(path, type)
+            b.log_artifact(path, artifact_type)
 
     def log_model_graph(self, model: Any, input_sample: Any) -> None:
-        """Log model architecture graph."""
+        """Ghi graph kiến trúc model nếu backend hỗ trợ."""
         for b in self._backends:
             b.log_model_graph(model, input_sample)
 
     def finish(self) -> None:
-        """Flush and close all backends. Call at end of training."""
+        """Flush và đóng tất cả backend, gọi ở cuối quá trình huấn luyện."""
         for b in self._backends:
             b.finish()
         self._backends.clear()
         self._names.clear()
-        log.info("TrainingLogger finished — all backends closed.")
+        log.info("TrainingLogger finished -> all backends closed.")
 
     def __enter__(self) -> TrainingLogger:
+        """Trả về logger khi dùng context manager."""
         return self
 
     def __exit__(self, *args: Any) -> None:
+        """Đóng logger khi thoát context manager."""
         self.finish()

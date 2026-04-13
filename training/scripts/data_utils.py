@@ -1,4 +1,5 @@
-"""Dataset preparation utilities for Phase 0 accessibility data work."""
+# -*- coding: utf-8 -*-
+"""Tiện ích chuẩn bị dataset cho Phase 0 của accessibility assistant."""
 
 from __future__ import annotations
 
@@ -23,7 +24,7 @@ DEFAULT_DATASET_CONFIG_DIR = Path("configs/datasets")
 
 @dataclass(frozen=True)
 class ValidationIssue:
-    """A single dataset validation issue."""
+    """Một lỗi hoặc cảnh báo khi validate dataset."""
 
     level: str
     path: str
@@ -32,19 +33,20 @@ class ValidationIssue:
 
 @dataclass(frozen=True)
 class ValidationReport:
-    """Summary returned by validators."""
+    """Báo cáo tổng hợp trả về từ các hàm kiểm tra dữ liệu."""
 
     checked_files: int
     issues: tuple[ValidationIssue, ...]
 
     @property
     def valid(self) -> bool:
+        """Cho biết báo cáo không có lỗi mức `error`."""
         return not any(issue.level == "error" for issue in self.issues)
 
 
 @dataclass(frozen=True)
 class MergeReport:
-    """Summary returned by YOLO merge preview/execution."""
+    """Báo cáo trả về khi preview hoặc thực thi merge YOLO dataset."""
 
     dry_run: bool
     scanned_labels: int
@@ -54,12 +56,13 @@ class MergeReport:
 
     @property
     def valid(self) -> bool:
+        """Cho biết quá trình merge không có lỗi mức `error`."""
         return not any(issue.level == "error" for issue in self.issues)
 
 
 @dataclass(frozen=True)
 class IcdarTextBox:
-    """ICDAR text localization entry."""
+    """Một annotation text localization theo format ICDAR."""
 
     points: tuple[tuple[int, int], tuple[int, int], tuple[int, int], tuple[int, int]]
     text: str
@@ -67,7 +70,7 @@ class IcdarTextBox:
 
 
 def load_yaml(path: Path) -> dict[str, Any]:
-    """Load a YAML mapping from disk."""
+    """Đọc file YAML từ đĩa và trả về mapping."""
 
     data = yaml.safe_load(path.read_text(encoding="utf-8"))
     if not isinstance(data, dict):
@@ -76,13 +79,13 @@ def load_yaml(path: Path) -> dict[str, Any]:
 
 
 def dataset_config_paths(config_dir: Path = DEFAULT_DATASET_CONFIG_DIR) -> list[Path]:
-    """Return dataset config files in deterministic order."""
+    """Trả về danh sách file config dataset theo thứ tự ổn định."""
 
     return sorted(config_dir.glob("*.yaml"))
 
 
 def download_plan_lines(config_paths: Sequence[Path]) -> list[str]:
-    """Build a human-readable download plan from dataset configs."""
+    """Tạo nội dung download plan dễ đọc từ các config dataset."""
 
     lines: list[str] = []
     for config_path in config_paths:
@@ -94,6 +97,7 @@ def download_plan_lines(config_paths: Sequence[Path]) -> list[str]:
 
 
 def _append_download_details(node: Any, lines: list[str]) -> None:
+    """Duyệt một node config và thêm thông tin download vào output."""
     if isinstance(node, dict):
         if "homepage" in node:
             lines.append(f"homepage: {node['homepage']}")
@@ -123,7 +127,7 @@ def normalize_coco_bbox(
     image_width: int,
     image_height: int,
 ) -> tuple[float, float, float, float] | None:
-    """Convert COCO ``x, y, width, height`` pixels to normalized YOLO bbox."""
+    """Chuyển bbox COCO pixel `x, y, width, height` sang YOLO normalized."""
 
     if len(bbox) != 4:
         return None
@@ -151,7 +155,7 @@ def coco_annotations_to_yolo_lines(
     coco: dict[str, Any],
     class_names: Sequence[str],
 ) -> dict[str, list[str]]:
-    """Convert selected COCO annotations to YOLO label lines keyed by image file."""
+    """Chuyển annotation COCO đã chọn thành các dòng label YOLO theo file ảnh."""
 
     images = {
         int(image["id"]): image
@@ -197,7 +201,7 @@ def write_yolo_from_coco(
     split: str,
     dry_run: bool = True,
 ) -> int:
-    """Convert a COCO annotation JSON into a YOLO directory for one split."""
+    """Chuyển một annotation JSON COCO thành thư mục YOLO cho một split."""
 
     coco = json.loads(annotation_path.read_text(encoding="utf-8"))
     labels_by_file = coco_annotations_to_yolo_lines(coco, class_names)
@@ -224,7 +228,7 @@ def write_yolo_from_coco(
 
 
 def validate_yolo_dataset(root: Path, class_names: Sequence[str]) -> ValidationReport:
-    """Validate a YOLO image/label dataset rooted at ``root``."""
+    """Kiểm tra YOLO image/label dataset tại thư mục gốc `root`."""
 
     issues: list[ValidationIssue] = []
     checked_files = 0
@@ -286,7 +290,7 @@ def validate_yolo_label_line(
     class_count: int,
     path: str,
 ) -> ValidationIssue | None:
-    """Validate a single normalized YOLO label line."""
+    """Kiểm tra một dòng label YOLO normalized."""
 
     parts = line.split()
     if len(parts) != 5:
@@ -312,7 +316,7 @@ def merge_yolo_datasets(
     canonical_names: Sequence[str],
     dry_run: bool = True,
 ) -> MergeReport:
-    """Merge YOLO datasets while remapping each source's class ids."""
+    """Merge nhiều YOLO dataset và remap class id của từng source."""
 
     issues: list[ValidationIssue] = []
     scanned_labels = 0
@@ -370,7 +374,7 @@ def merge_yolo_datasets(
 
 
 def read_yolo_names(source: Path) -> list[str]:
-    """Read YOLO class names from classes.txt or Ultralytics data.yaml."""
+    """Đọc tên class YOLO từ `classes.txt` hoặc `data.yaml` của Ultralytics."""
 
     classes_path = source / "classes.txt"
     if classes_path.exists():
@@ -391,6 +395,7 @@ def read_yolo_names(source: Path) -> list[str]:
 
 
 def _find_matching_image(images_root: Path, relative_label: Path) -> Path | None:
+    """Tìm ảnh tương ứng với một label YOLO theo stem và extension hỗ trợ."""
     stem = relative_label.with_suffix("")
     for extension in IMAGE_EXTENSIONS:
         candidate = stem.with_suffix(extension)
@@ -405,7 +410,7 @@ def remap_yolo_label_text(
     path: str,
     issues: list[ValidationIssue],
 ) -> str:
-    """Return remapped label text, recording issues for unknown ids."""
+    """Trả về label text đã remap và ghi nhận lỗi với class id không hợp lệ."""
 
     output_lines: list[str] = []
     for line_number, line in enumerate(label_text.splitlines(), start=1):
@@ -438,7 +443,7 @@ def stratified_split(
     train_ratio: float = 0.8,
     val_ratio: float = 0.1,
 ) -> dict[str, list[dict[str, str]]]:
-    """Deterministic stratified split that preserves input order within labels."""
+    """Tạo stratified split ổn định và giữ thứ tự input trong từng label."""
 
     if train_ratio <= 0 or val_ratio < 0 or train_ratio + val_ratio >= 1:
         raise ValueError("Expected train_ratio > 0, val_ratio >= 0, and test > 0")
@@ -463,7 +468,7 @@ def group_aware_split(
     train_ratio: float = 0.8,
     val_ratio: float = 0.1,
 ) -> dict[str, list[dict[str, str]]]:
-    """Deterministic split that keeps each group in only one split."""
+    """Tạo split ổn định, đảm bảo mỗi group chỉ nằm trong một split."""
 
     groups: dict[str, list[dict[str, str]]] = {}
     for row in rows:
@@ -485,13 +490,13 @@ def group_aware_split(
 
 
 def parse_hmdb_classes(root: Path) -> list[str]:
-    """Return HMDB class names from class directories."""
+    """Trả về tên class HMDB từ các thư mục class."""
 
     return sorted(path.name for path in root.iterdir() if path.is_dir())
 
 
 def parse_places_categories(path: Path) -> dict[str, int]:
-    """Parse a Places365 categories file into ``category -> index``."""
+    """Parse file categories Places365 thành mapping `category -> index`."""
 
     categories: dict[str, int] = {}
     for line in path.read_text(encoding="utf-8").splitlines():
@@ -507,7 +512,7 @@ def parse_places_categories(path: Path) -> dict[str, int]:
 
 
 def parse_msr_vtt_captions(path: Path) -> dict[str, list[str]]:
-    """Normalize MSR-VTT style annotations to ``video_id -> captions``."""
+    """Normalize annotation kiểu MSR-VTT thành mapping `video_id -> captions`."""
 
     data = json.loads(path.read_text(encoding="utf-8"))
     annotations = data.get("annotations", data if isinstance(data, list) else [])
@@ -526,7 +531,7 @@ def parse_msr_vtt_captions(path: Path) -> dict[str, list[str]]:
 
 
 def parse_icdar_gt(path: Path) -> list[IcdarTextBox]:
-    """Parse ICDAR 2015 localization/transcription ground truth."""
+    """Parse ground truth localization/transcription của ICDAR 2015."""
 
     entries: list[IcdarTextBox] = []
     for line in path.read_text(encoding="utf-8-sig").splitlines():
@@ -551,7 +556,7 @@ def validate_wav(
     path: Path,
     expected_sample_rate_hz: int | None = None,
 ) -> ValidationReport:
-    """Validate a synthesized Piper WAV file."""
+    """Kiểm tra file WAV được synthesize từ Piper."""
 
     issues: list[ValidationIssue] = []
     try:
@@ -581,7 +586,7 @@ def validate_wav(
 
 
 def tts_voice_entries(config: dict[str, Any]) -> list[dict[str, Any]]:
-    """Return default Piper voice entries from the TTS config."""
+    """Trả về danh sách voice Piper mặc định từ TTS config."""
 
     voices = config.get("voices", {})
     if not isinstance(voices, dict):
@@ -597,7 +602,7 @@ def validate_tts_config(
     execute: bool = False,
     strict_files: bool = True,
 ) -> ValidationReport:
-    """Validate Piper voice config and optionally synthesize sample WAV files."""
+    """Kiểm tra config voice Piper và tùy chọn synthesize WAV sample."""
 
     config = load_yaml(config_path)
     issues: list[ValidationIssue] = []
@@ -650,7 +655,7 @@ def validate_tts_config(
 
 
 def synthesize_with_piper(model_path: Path, output_wav: Path, text: str) -> None:
-    """Run Piper CLI for one prompt."""
+    """Chạy Piper CLI cho một prompt."""
 
     command = [
         "piper",
@@ -674,7 +679,7 @@ def augment_preview(
     limit: int = 8,
     dry_run: bool = True,
 ) -> int:
-    """Create or preview simple augmentation samples for image datasets."""
+    """Tạo hoặc preview sample augmentation đơn giản cho image dataset."""
 
     image_paths = [
         path
@@ -695,7 +700,7 @@ def augment_preview(
 
 
 def read_classes(path: Path) -> list[str]:
-    """Read class names from a text file."""
+    """Đọc danh sách tên class từ file text."""
 
     return [
         line.strip()
@@ -709,6 +714,7 @@ def write_split_csvs(
     output_dir: Path,
     fieldnames: Sequence[str],
 ) -> None:
+    """Ghi từng split ra file CSV riêng trong thư mục output."""
     output_dir.mkdir(parents=True, exist_ok=True)
     for split_name, rows in splits.items():
         with (output_dir / f"{split_name}.csv").open(
@@ -722,6 +728,7 @@ def write_split_csvs(
 
 
 def build_arg_parser() -> argparse.ArgumentParser:
+    """Tạo parser dòng lệnh cho các tiện ích data pipeline."""
     parser = argparse.ArgumentParser(description=__doc__)
     subparsers = parser.add_subparsers(dest="command", required=True)
 
@@ -771,6 +778,7 @@ def build_arg_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: Sequence[str] | None = None) -> int:
+    """Chạy CLI data pipeline và trả về mã thoát."""
     parser = build_arg_parser()
     args = parser.parse_args(argv)
 
@@ -848,7 +856,7 @@ def main(argv: Sequence[str] | None = None) -> int:
 
 
 def print_report(report: ValidationReport) -> None:
-    """Print a validation report for CLI usage."""
+    """In validation report cho CLI."""
 
     print(f"checked_files={report.checked_files} valid={report.valid}")
     for issue in report.issues:
@@ -856,7 +864,7 @@ def print_report(report: ValidationReport) -> None:
 
 
 def print_merge_report(report: MergeReport) -> None:
-    """Print a merge report for CLI usage."""
+    """In merge report cho CLI."""
 
     print(
         " ".join(

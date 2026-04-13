@@ -1,3 +1,6 @@
+# -*- coding: utf-8 -*-
+"""Kiểm thử các tiện ích chuẩn bị dataset Phase 0."""
+
 from __future__ import annotations
 
 import json
@@ -27,6 +30,7 @@ FIXTURES = Path(__file__).parent / "fixtures"
 
 
 def test_coco_to_yolo_keeps_dog_class() -> None:
+    """Đảm bảo converter COCO -> YOLO giữ class `dog`."""
     coco = json.loads((FIXTURES / "coco_tiny.json").read_text(encoding="utf-8"))
     class_names = ["person", "dog"]
 
@@ -39,6 +43,7 @@ def test_coco_to_yolo_keeps_dog_class() -> None:
 
 
 def test_normalize_coco_bbox_clips_and_rejects_invalid() -> None:
+    """Đảm bảo bbox COCO được clip đúng và bbox không hợp lệ bị loại."""
     assert normalize_coco_bbox([-10, -10, 20, 20], 100, 100) == pytest.approx(
         (0.05, 0.05, 0.1, 0.1)
     )
@@ -46,6 +51,7 @@ def test_normalize_coco_bbox_clips_and_rejects_invalid() -> None:
 
 
 def test_validate_yolo_dataset_reports_bad_labels(tmp_path: Path) -> None:
+    """Đảm bảo validator YOLO báo lỗi với class id ngoài danh sách."""
     root = tmp_path / "dataset"
     image_dir = root / "images" / "train"
     label_dir = root / "labels" / "train"
@@ -61,6 +67,7 @@ def test_validate_yolo_dataset_reports_bad_labels(tmp_path: Path) -> None:
 
 
 def test_merge_yolo_dry_run_previews_remap_without_writing(tmp_path: Path) -> None:
+    """Đảm bảo merge YOLO dry-run preview remap nhưng không ghi output."""
     source = tmp_path / "source"
     image_dir = source / "images" / "train"
     label_dir = source / "labels" / "train"
@@ -85,6 +92,7 @@ def test_merge_yolo_dry_run_previews_remap_without_writing(tmp_path: Path) -> No
 
 
 def test_split_helpers_keep_expected_invariants() -> None:
+    """Đảm bảo split helper giữ invariant về label và group."""
     rows = [{"path": f"a{i}", "label": "a", "group": f"ga{i}"} for i in range(10)] + [
         {"path": f"b{i}", "label": "b", "group": f"gb{i}"} for i in range(10)
     ]
@@ -102,6 +110,7 @@ def test_split_helpers_keep_expected_invariants() -> None:
 
 
 def test_public_dataset_parsers() -> None:
+    """Đảm bảo parser fixture cho MSR-VTT, Places365 và ICDAR hoạt động."""
     captions = parse_msr_vtt_captions(FIXTURES / "msr_vtt_tiny.json")
     assert captions["video0"] == [
         "a person walks on the sidewalk",
@@ -117,6 +126,7 @@ def test_public_dataset_parsers() -> None:
 
 
 def test_tts_config_and_wav_validation(tmp_path: Path) -> None:
+    """Đảm bảo config TTS và WAV sample tối thiểu được validate đúng."""
     model_path = tmp_path / "voice.onnx"
     config_path = tmp_path / "voice.onnx.json"
     wav_path = tmp_path / "voice.wav"
@@ -151,11 +161,13 @@ def test_tts_config_and_wav_validation(tmp_path: Path) -> None:
 
 
 def test_cli_smoke_dry_run() -> None:
+    """Đảm bảo các lệnh CLI dry-run chính chạy thành công."""
     assert main(["download-plan"]) == 0
     assert main(["validate-tts", "--dry-run"]) == 0
 
 
 def test_config_contains_accessibility_requirements() -> None:
+    """Đảm bảo config chứa các yêu cầu accessibility quan trọng."""
     detection = load_yaml(Path("configs/datasets/object_detection_accessibility.yaml"))
     action = load_yaml(Path("configs/datasets/action_accessibility.yaml"))
     assert "dog" in detection["classes"]["coco_subset"]

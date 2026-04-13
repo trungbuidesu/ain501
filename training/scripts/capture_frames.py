@@ -1,4 +1,5 @@
-"""Capture screen frames for custom accessibility datasets."""
+# -*- coding: utf-8 -*-
+"""Ghi frame màn hình cho custom accessibility datasets."""
 
 from __future__ import annotations
 
@@ -10,6 +11,7 @@ from typing import Any
 
 
 def build_parser() -> argparse.ArgumentParser:
+    """Tạo parser dòng lệnh cho script capture frame."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--output-dir",
@@ -28,7 +30,7 @@ def capture_frames(
     fps: float,
     execute: bool = False,
 ) -> int:
-    """Capture frames with dxcam on Windows and mss as fallback."""
+    """Ghi hoặc preview số frame dự kiến với `dxcam`, fallback sang `mss`."""
 
     if duration_seconds <= 0 or fps <= 0:
         raise ValueError("duration_seconds and fps must be positive")
@@ -45,6 +47,7 @@ def capture_frames(
 
 
 def _create_dxcam_camera() -> Any | None:
+    """Tạo camera `dxcam` nếu thư viện khả dụng."""
     try:
         import dxcam
     except ImportError:
@@ -58,6 +61,7 @@ def _capture_dxcam(
     frame_count: int,
     interval: float,
 ) -> int:
+    """Ghi frame bằng `dxcam` và lưu ảnh JPEG ra thư mục đích."""
     from PIL import Image
 
     captured = 0
@@ -71,6 +75,7 @@ def _capture_dxcam(
 
 
 def _capture_mss(output_dir: Path, frame_count: int, interval: float) -> int:
+    """Ghi frame bằng `mss` khi `dxcam` không khả dụng."""
     import mss
     from PIL import Image
 
@@ -88,6 +93,7 @@ def _capture_mss(output_dir: Path, frame_count: int, interval: float) -> int:
 
 
 def main(argv: Sequence[str] | None = None) -> int:
+    """Chạy CLI capture frame và trả về mã thoát."""
     args = build_parser().parse_args(argv)
     count = capture_frames(
         output_dir=args.output_dir,

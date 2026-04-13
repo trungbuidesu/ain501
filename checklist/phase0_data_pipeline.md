@@ -50,8 +50,8 @@ File này dùng để theo dõi tiến độ Phase 0. Quy ước:
 
 ## Video Captioning Dataset (Tier 2)
 
-- [ ] Download MSR-VTT hoặc MSVD
-  - Trạng thái: Chưa download dữ liệu thật. Đã có config `configs/datasets/video_captioning_msr_vtt.yaml`.
+- [ ] Download MSR-VTT
+  - Trạng thái: Chưa download dữ liệu thật. Đã chọn cố định MSR-VTT thay vì MSVD vì MSR-VTT là benchmark video captioning lớn/chuẩn hơn, config `configs/datasets/video_captioning_msr_vtt.yaml` đã có sẵn, và parser normalize `video_id -> captions[]` đã dùng fixture MSR-VTT. Vẫn giữ Tier 2/deferred.
 - [ ] Explore: xem sample videos + captions
   - Trạng thái: Mới có notebook starter `notebooks/0.6_msr_vtt_captioning_explore.ipynb`. Chưa xem sample thật vì chưa có dataset local.
 - [x] Hiểu format: `video_id -> multiple captions`
@@ -59,10 +59,10 @@ File này dùng để theo dõi tiến độ Phase 0. Quy ước:
 
 ## OCR Dataset
 
-- [ ] Download ICDAR 2015 hoặc TextOCR
-  - Trạng thái: Chưa download dữ liệu thật. Đã có config `configs/datasets/ocr_icdar2015.yaml`.
+- [ ] Download TextOCR
+  - Trạng thái: Chưa download dữ liệu thật. Đã chọn TextOCR thay vì ICDAR 2015 vì TextOCR phù hợp scene text thực tế hơn và có public download assets; ICDAR 2015 cần registration nên kém thuận tiện hơn cho bootstrap. Cần migrate config `configs/datasets/ocr_icdar2015.yaml` sang TextOCR trước khi chạy dataset thật.
 - [ ] Explore: các loại text (scene text, document, handwriting)
-  - Trạng thái: Mới có notebook starter `notebooks/0.7_icdar_ocr_explore.ipynb` và parser ICDAR fixture. Chưa explore dataset thật.
+  - Trạng thái: Notebook starter hiện vẫn là `notebooks/0.7_icdar_ocr_explore.ipynb` và parser fixture hiện vẫn ICDAR; cần đổi sang TextOCR trong vòng OCR tiếp theo. Chưa explore dataset thật.
 
 ## Data Pipeline Utilities (`src/training/scripts/data_utils.py`)
 

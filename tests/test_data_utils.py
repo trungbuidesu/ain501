@@ -12,11 +12,11 @@ from pathlib import Path
 import pytest
 from PIL import Image
 
-from training.scripts.data_utils import (
+from src.training.scripts.data_utils import (
     add_frame_sequence_columns,
     augment_preview,
     augmentation_preset,
-    build_hmdb_manifest,
+    build_action_manifest,
     build_image_augmentation,
     build_scene_subset_manifest,
     build_scene_subset_manifest_from_places_filelist,
@@ -187,35 +187,39 @@ def test_config_contains_accessibility_requirements() -> None:
     assert "Phase 9" in action["phase_notes"]["approaching"]
 
 
-def test_hmdb_manifest_uses_class_folders_and_split_files(tmp_path: Path) -> None:
-    """Đảm bảo manifest HMDB đọc video theo class folder và split official."""
-    videos_root = tmp_path / "videos"
-    split_root = tmp_path / "splits"
-    (videos_root / "walk").mkdir(parents=True)
-    (videos_root / "run").mkdir()
+def test_ucf101_action_manifest_uses_official_split_lists(tmp_path: Path) -> None:
+    """Đảm bảo action manifest đọc official UCF-101 train/test split lists."""
+    videos_root = tmp_path / "UCF-101"
+    split_root = tmp_path / "ucfTrainTestlist"
+    (videos_root / "Biking").mkdir(parents=True)
+    (videos_root / "WalkingWithDog").mkdir()
     split_root.mkdir()
-    (videos_root / "walk" / "walk_one.avi").write_bytes(b"fake")
-    (videos_root / "walk" / "walk_two.avi").write_bytes(b"fake")
-    (videos_root / "run" / "run_one.mp4").write_bytes(b"fake")
-    (videos_root / "run" / "notes.txt").write_text("skip", encoding="utf-8")
-    (split_root / "walk_test_split1.txt").write_text(
-        "walk_one.avi 1\nwalk_two.avi 2\n",
+    (videos_root / "Biking" / "v_Biking_g01_c01.avi").write_bytes(b"fake")
+    (videos_root / "WalkingWithDog" / "v_WalkingWithDog_g01_c01.avi").write_bytes(
+        b"fake"
+    )
+    (split_root / "trainlist01.txt").write_text(
+        "Biking/v_Biking_g01_c01.avi 10\n",
         encoding="utf-8",
     )
-    (split_root / "run_test_split1.txt").write_text(
-        "run_one.mp4 0\n",
+    (split_root / "testlist01.txt").write_text(
+        "WalkingWithDog/v_WalkingWithDog_g01_c01.avi\n",
         encoding="utf-8",
     )
 
-    rows = build_hmdb_manifest(videos_root, ["walk", "run"], split_root=split_root)
+    rows = build_action_manifest(
+        videos_root=videos_root,
+        class_names=["Biking", "WalkingWithDog"],
+        dataset_name="ucf101",
+        split_root=split_root,
+    )
 
     assert [row["relative_path"] for row in rows] == [
-        "run/run_one.mp4",
-        "walk/walk_one.avi",
-        "walk/walk_two.avi",
+        "Biking/v_Biking_g01_c01.avi",
+        "WalkingWithDog/v_WalkingWithDog_g01_c01.avi",
     ]
-    assert {row["split"] for row in rows} == {"train", "test", "unused"}
-    assert validate_video_manifest(rows, ["walk", "run"]).valid
+    assert {row["split"] for row in rows} == {"train", "test"}
+    assert validate_video_manifest(rows, ["Biking", "WalkingWithDog"]).valid
 
 
 def test_frame_sequence_sampling_and_manifest_validation(tmp_path: Path) -> None:
@@ -285,13 +289,13 @@ def test_augmentation_presets_and_dry_run_do_not_write(tmp_path: Path) -> None:
     assert not output_dir.exists()
 
 
-def test_training_package_imports_outside_repo_root(tmp_path: Path) -> None:
-    """Đảm bảo package editable expose `training.scripts` ngoài repo root."""
+def test_src_training_package_imports_outside_repo_root(tmp_path: Path) -> None:
+    """Đảm bảo package editable expose `src.training.scripts` ngoài repo root."""
     result = subprocess.run(
         [
             sys.executable,
             "-c",
-            "import training.scripts.data_utils as d; print(d.__name__)",
+            "import src.training.scripts.data_utils as d; print(d.__name__)",
         ],
         cwd=tmp_path,
         text=True,
@@ -299,7 +303,7 @@ def test_training_package_imports_outside_repo_root(tmp_path: Path) -> None:
         check=True,
     )
 
-    assert "training.scripts.data_utils" in result.stdout
+    assert "src.training.scripts.data_utils" in result.stdout
 
 
 def test_write_classes_and_verify_dataset_paths(tmp_path: Path) -> None:

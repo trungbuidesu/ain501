@@ -6,7 +6,7 @@ from __future__ import annotations
 import sys
 from collections.abc import Sequence
 
-from training.scripts.data_utils import main as data_utils_main
+from src.training.scripts.data_utils import main as data_utils_main
 
 
 def main(argv: Sequence[str] | None = None) -> int:

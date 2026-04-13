@@ -2,36 +2,36 @@ name: action_accessibility
 task: action_recognition
 phase: "0.4"
 base_dataset:
-  name: hmdb51
-  homepage: https://serre-lab.clps.brown.edu/resource/hmdb-a-large-human-motion-database/
-  root: data/external/hmdb51
-  split_root: data/external/hmdb51/test_train_splits
-  videos_root: data/external/hmdb51/videos
+  name: ucf101
+  homepage: https://www.crcv.ucf.edu/data/UCF101.php
+  root: data/external/ucf101
+  split_root: data/external/ucf101/ucfTrainTestlist
+  videos_root: data/external/ucf101/UCF-101
   download:
     dry_run_default: true
-    manual_note: HMDB-51 is downloaded from the official dataset page.
+    manual_note: UCF-101 is downloaded from the official dataset page; place videos under UCF-101 and official train/test lists under ucfTrainTestlist.
 classes:
   public_bootstrap:
-    - walk
-    - wave
-    - sit
-    - stand
-    - climb_stairs
-    - fall_floor
-    - run
-    - turn
-    - push
-    - pick
-    - throw
-    - catch
-    - jump
-    - ride_bike
-    - kick_ball
-    - kick
-    - punch
-    - shake_hands
-    - talk
-    - clap
+    - BabyCrawling
+    - BalanceBeam
+    - Basketball
+    - BenchPress
+    - Biking
+    - BodyWeightSquats
+    - BoxingPunchingBag
+    - BoxingSpeedBag
+    - Clapping
+    - HorseRiding
+    - JumpingJack
+    - PullUps
+    - PushUps
+    - RockClimbingIndoor
+    - RopeClimbing
+    - SkateBoarding
+    - SoccerJuggling
+    - TaiChi
+    - WalkingWithDog
+    - WallPushups
   custom_required:
     - person_approaching
     - vehicle_approaching

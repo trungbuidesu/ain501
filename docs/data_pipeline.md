@@ -26,29 +26,29 @@ label đã convert, audio sinh ra, hoặc model weights.
 Các thao tác lớn hoặc có side effect đều phải opt-in:
 
 ```bash
-python -m training.scripts.data_utils download-plan
-python -m training.scripts.data_utils verify-dataset-paths --tasks object_detection action_recognition scene_classification
-python -m training.scripts.data_utils write-classes
-python -m training.scripts.data_utils build-action-manifest
-python -m training.scripts.data_utils build-scene-subset
-python -m training.scripts.data_utils convert --coco-json path/to/instances.json --image-root path/to/images --output-root data/processed/demo --classes classes.txt
-python -m training.scripts.data_utils merge-yolo --sources data/custom/export --output-root data/processed/merged --classes classes.txt --dry-run
-python -m training.scripts.data_utils augment-preview --input-dir path/to/images --output-dir data/processed/augment_preview --task detection
-python -m training.scripts.data_utils validate-tts --dry-run
-python -m training.scripts.capture_frames --duration-seconds 3600 --fps 1
+python -m src.training.scripts.data_utils download-plan
+python -m src.training.scripts.data_utils verify-dataset-paths --tasks object_detection action_recognition scene_classification
+python -m src.training.scripts.data_utils write-classes
+python -m src.training.scripts.data_utils build-action-manifest
+python -m src.training.scripts.data_utils build-scene-subset
+python -m src.training.scripts.data_utils convert --coco-json path/to/instances.json --image-root path/to/images --output-root data/processed/demo --classes classes.txt
+python -m src.training.scripts.data_utils merge-yolo --sources data/custom/export --output-root data/processed/merged --classes classes.txt --dry-run
+python -m src.training.scripts.data_utils augment-preview --input-dir path/to/images --output-dir data/processed/augment_preview --task detection
+python -m src.training.scripts.data_utils validate-tts --dry-run
+python -m src.training.scripts.capture_frames --duration-seconds 3600 --fps 1
 ```
 
 Fallback PowerShell khi `python` không có trong PATH:
 
 ```powershell
 $AIN501_PY="C:\Users\bdtrung29.1\miniconda3\envs\ain501\python.exe"
-& $AIN501_PY -m training.scripts.data_utils download-plan
-& $AIN501_PY -m training.scripts.data_utils verify-dataset-paths --tasks object_detection action_recognition scene_classification
-& $AIN501_PY -m training.scripts.data_utils write-classes
-& $AIN501_PY -m training.scripts.data_utils build-action-manifest
-& $AIN501_PY -m training.scripts.data_utils build-scene-subset
-& $AIN501_PY -m training.scripts.data_utils validate-tts --dry-run
-& $AIN501_PY -m training.scripts.capture_frames --duration-seconds 60 --fps 1
+& $AIN501_PY -m src.training.scripts.data_utils download-plan
+& $AIN501_PY -m src.training.scripts.data_utils verify-dataset-paths --tasks object_detection action_recognition scene_classification
+& $AIN501_PY -m src.training.scripts.data_utils write-classes
+& $AIN501_PY -m src.training.scripts.data_utils build-action-manifest
+& $AIN501_PY -m src.training.scripts.data_utils build-scene-subset
+& $AIN501_PY -m src.training.scripts.data_utils validate-tts --dry-run
+& $AIN501_PY -m src.training.scripts.capture_frames --duration-seconds 60 --fps 1
 ```
 
 Chỉ dùng `--execute` sau khi đã xác nhận path, dung lượng lưu trữ và xử lý
@@ -59,8 +59,9 @@ riêng tư.
 - COCO 2017: tải `train2017.zip`, `val2017.zip` và
   `annotations_trainval2017.zip` từ trang COCO chính thức vào
   `data/downloads/coco/`, rồi giải nén vào `data/external/coco2017/`.
-- HMDB-51: tải video và split train/test chính thức từ trang dataset vào
-  `data/external/hmdb51/`.
+- UCF-101: tải video và split train/test chính thức từ trang dataset vào
+  `data/external/ucf101/`; đặt video dưới `UCF-101/` và split files dưới
+  `ucfTrainTestlist/`.
 - Places365: dùng biến thể Places365 256px và category file dưới
   `data/external/places365/`. Nếu dùng official devkit/filelist, đặt
   `categories_places365.txt` và `places365_train_standard.txt` hoặc
@@ -79,8 +80,8 @@ riêng tư.
   báo các path local còn thiếu cho core datasets trước khi chạy convert/subset.
 - Object detection classes: `write-classes --execute` ghi canonical
   `classes.txt` từ `classes.coco_subset` trong object detection config.
-- Action recognition: `build-action-manifest` đọc HMDB-style class folders, optional
-  official split files và chỉ ghi manifest khi có `--execute`.
+- Action recognition: `build-action-manifest` đọc UCF-101 class folders,
+  optional official split files và chỉ ghi manifest khi có `--execute`.
 - Frame sequence: sampler dùng mặc định `frame_sequence_length=16` và
   `frame_stride=2` theo action config; video thiếu frame được bỏ qua ở sequence
   manifest.
@@ -89,8 +90,8 @@ riêng tư.
   `data/processed`.
 - Image augmentation: `augment-preview` hỗ trợ `--task detection|scene|ocr` và
   `--size`; dry-run mặc định chỉ đếm ảnh, `--execute` mới ghi preview.
-- Packaging: package editable cần expose cả `src*` và `training*` để các lệnh
-  `python -m training.scripts...` chạy được ngoài repo root.
+- Packaging: package editable expose `src*`; các data utility chạy qua
+  `python -m src.training.scripts...` để toàn bộ source code nằm dưới `src/`.
 
 ## Env Ghi Nhận
 
@@ -113,8 +114,8 @@ riêng tư.
 7. Validate và preview remap trước khi ghi merged output:
 
 ```bash
-python -m training.scripts.data_utils validate --dataset-root data/custom/annotation_exports/export_001 --classes data/processed/object_detection_accessibility/classes.txt
-python -m training.scripts.data_utils merge-yolo --sources data/custom/annotation_exports/export_001 data/processed/object_detection_accessibility --output-root data/processed/object_detection_accessibility_merged --classes data/processed/object_detection_accessibility/classes.txt --dry-run
+python -m src.training.scripts.data_utils validate --dataset-root data/custom/annotation_exports/export_001 --classes data/processed/object_detection_accessibility/classes.txt
+python -m src.training.scripts.data_utils merge-yolo --sources data/custom/annotation_exports/export_001 data/processed/object_detection_accessibility --output-root data/processed/object_detection_accessibility_merged --classes data/processed/object_detection_accessibility/classes.txt --dry-run
 ```
 
 ## Checklist Riêng Tư
@@ -137,13 +138,13 @@ python -m training.scripts.data_utils merge-yolo --sources data/custom/annotatio
 ## Lệnh Acceptance
 
 ```bash
-python -m training.scripts.data_utils download-plan
-python -m training.scripts.data_utils verify-dataset-paths --tasks object_detection action_recognition scene_classification
-python -m training.scripts.data_utils write-classes
-python -m training.scripts.data_utils build-action-manifest
-python -m training.scripts.data_utils build-scene-subset
-python -m training.scripts.data_utils validate-tts --dry-run
-python -m training.scripts.capture_frames --duration-seconds 60 --fps 1
+python -m src.training.scripts.data_utils download-plan
+python -m src.training.scripts.data_utils verify-dataset-paths --tasks object_detection action_recognition scene_classification
+python -m src.training.scripts.data_utils write-classes
+python -m src.training.scripts.data_utils build-action-manifest
+python -m src.training.scripts.data_utils build-scene-subset
+python -m src.training.scripts.data_utils validate-tts --dry-run
+python -m src.training.scripts.capture_frames --duration-seconds 60 --fps 1
 ruff check .
 black --check .
 mypy .

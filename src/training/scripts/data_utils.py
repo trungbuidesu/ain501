@@ -503,19 +503,20 @@ def group_aware_split(
     }
 
 
-def build_hmdb_manifest(
+def build_action_manifest(
     videos_root: Path,
     class_names: Sequence[str],
+    dataset_name: str = "class_folders",
     split_root: Path | None = None,
     split_index: int = 1,
 ) -> list[dict[str, str]]:
-    """Tạo manifest HMDB-style từ thư mục video phân cấp theo class."""
+    """Tạo action manifest từ dataset video phân cấp theo class."""
 
     allowed_classes = set(class_names)
-    split_by_file = (
-        read_hmdb_split_assignments(split_root, split_index)
-        if split_root is not None and split_root.exists()
-        else {}
+    split_by_key = read_action_split_assignments(
+        dataset_name,
+        split_root,
+        split_index=split_index,
     )
     rows: list[dict[str, str]] = []
     for video_path in sorted(videos_root.rglob("*")):
@@ -527,32 +528,56 @@ def build_hmdb_manifest(
         label = video_path.parent.name
         if label not in allowed_classes:
             continue
+        relative_path = video_path.relative_to(videos_root).as_posix()
         rows.append(
             {
                 "path": str(video_path),
-                "relative_path": video_path.relative_to(videos_root).as_posix(),
+                "relative_path": relative_path,
                 "label": label,
                 "group": video_path.stem,
-                "split": split_by_file.get(video_path.name, "unassigned"),
+                "split": split_by_key.get(
+                    relative_path,
+                    split_by_key.get(video_path.name, "unassigned"),
+                ),
             }
         )
     return rows
 
 
-def read_hmdb_split_assignments(
+def read_action_split_assignments(
+    dataset_name: str,
+    split_root: Path | None,
+    split_index: int = 1,
+) -> dict[str, str]:
+    """Đọc split assignment cho action dataset được cấu hình."""
+
+    if split_root is None or not split_root.exists():
+        return {}
+    normalized_name = dataset_name.lower().replace("-", "").replace("_", "")
+    if normalized_name == "ucf101":
+        return read_ucf101_split_assignments(split_root, split_index)
+    return {}
+
+
+def read_ucf101_split_assignments(
     split_root: Path,
     split_index: int = 1,
 ) -> dict[str, str]:
-    """Đọc các file HMDB `*_test_splitN.txt` thành mapping `file -> split`."""
+    """Đọc official UCF-101 trainlist/testlist thành mapping relative path -> split."""
 
     assignments: dict[str, str] = {}
-    split_labels = {"0": "unused", "1": "train", "2": "test"}
-    for split_path in sorted(split_root.glob(f"*_test_split{split_index}.txt")):
-        for line in split_path.read_text(encoding="utf-8").splitlines():
+    train_path = split_root / f"trainlist{split_index:02d}.txt"
+    test_path = split_root / f"testlist{split_index:02d}.txt"
+    if train_path.exists():
+        for line in train_path.read_text(encoding="utf-8").splitlines():
             parts = line.split()
-            if len(parts) < 2:
-                continue
-            assignments[parts[0]] = split_labels.get(parts[1], "unknown")
+            if parts:
+                assignments[parts[0].replace("\\", "/")] = "train"
+    if test_path.exists():
+        for line in test_path.read_text(encoding="utf-8").splitlines():
+            parts = line.split()
+            if parts:
+                assignments[parts[0].replace("\\", "/")] = "test"
     return assignments
 
 
@@ -959,12 +984,6 @@ def copy_scene_subset(
         shutil.copy2(source, destination)
         copied += 1
     return copied
-
-
-def parse_hmdb_classes(root: Path) -> list[str]:
-    """Trả về tên class HMDB từ các thư mục class."""
-
-    return sorted(path.name for path in root.iterdir() if path.is_dir())
 
 
 def parse_places_categories(path: Path) -> dict[str, int]:
@@ -1499,9 +1518,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         videos_root = args.videos_root or Path(str(base_dataset["videos_root"]))
         split_root = args.split_root or Path(str(base_dataset["split_root"]))
         output_csv = args.output_csv or Path(str(output["manifest"]))
-        rows = build_hmdb_manifest(
+        rows = build_action_manifest(
             videos_root=videos_root,
             class_names=[str(name) for name in public_classes],
+            dataset_name=str(base_dataset.get("name", "class_folders")),
             split_root=split_root,
             split_index=args.split_index,
         )

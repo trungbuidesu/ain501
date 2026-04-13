@@ -1,0 +1,61 @@
+name: object_detection_accessibility
+task: object_detection
+phase: "0.3"
+base_dataset:
+  name: coco_2017
+  homepage: https://cocodataset.org/
+  root: data/external/coco2017
+  images:
+    train: data/external/coco2017/train2017
+    val: data/external/coco2017/val2017
+  annotations:
+    train: data/external/coco2017/annotations/instances_train2017.json
+    val: data/external/coco2017/annotations/instances_val2017.json
+  bbox_format: coco_xywh_pixels
+  download:
+    dry_run_default: true
+    files:
+      - url: http://images.cocodataset.org/zips/train2017.zip
+        path: data/downloads/coco/train2017.zip
+      - url: http://images.cocodataset.org/zips/val2017.zip
+        path: data/downloads/coco/val2017.zip
+      - url: http://images.cocodataset.org/annotations/annotations_trainval2017.zip
+        path: data/downloads/coco/annotations_trainval2017.zip
+classes:
+  coco_subset:
+    - person
+    - dog
+    - bicycle
+    - car
+    - motorcycle
+    - bus
+    - truck
+    - train
+    - traffic light
+    - stop sign
+    - bench
+    - chair
+    - backpack
+    - handbag
+    - suitcase
+    - umbrella
+  custom_only:
+    - door
+    - stairs
+    - crosswalk_signal
+    - elevator
+    - curb
+    - sidewalk_obstacle
+output:
+  yolo_root: data/processed/object_detection_accessibility
+  merged_root: data/processed/object_detection_accessibility_merged
+  canonical_names_path: data/processed/object_detection_accessibility/classes.txt
+custom_workflow:
+  raw_private_root: data/custom/raw_frames_private
+  sanitized_root: data/custom/sanitized_frames
+  annotation_exports_root: data/custom/annotation_exports
+  annotation_tools:
+    - CVAT
+    - Roboflow
+  target_images: "200-500"
+  export_format: ultralytics_yolo

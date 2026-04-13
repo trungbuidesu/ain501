@@ -1,0 +1,52 @@
+name: action_accessibility
+task: action_recognition
+phase: "0.4"
+base_dataset:
+  name: hmdb51
+  homepage: https://serre-lab.clps.brown.edu/resource/hmdb-a-large-human-motion-database/
+  root: data/external/hmdb51
+  split_root: data/external/hmdb51/test_train_splits
+  videos_root: data/external/hmdb51/videos
+  download:
+    dry_run_default: true
+    manual_note: HMDB-51 is downloaded from the official dataset page.
+classes:
+  public_bootstrap:
+    - walk
+    - wave
+    - sit
+    - stand
+    - climb_stairs
+    - fall_floor
+    - run
+    - turn
+    - push
+    - pick
+    - throw
+    - catch
+    - jump
+    - ride_bike
+    - kick_ball
+    - kick
+    - punch
+    - shake_hands
+    - talk
+    - clap
+  custom_required:
+    - person_approaching
+    - vehicle_approaching
+    - pointing_direction
+    - open_door
+    - close_door
+    - crossing_street
+    - stairs_up
+    - stairs_down
+phase_notes:
+  approaching: Derived from object detection plus tracking in Phase 9; not a Phase 0 blocker.
+sampling:
+  frame_sequence_length: 16
+  frame_stride: 2
+  split_seed: 501
+output:
+  manifest: data/processed/action_accessibility/manifest.csv
+  split_manifest: data/processed/action_accessibility/splits.csv

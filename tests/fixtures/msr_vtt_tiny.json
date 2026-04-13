@@ -1,0 +1,16 @@
+{
+  "annotations": [
+    {
+      "video_id": "video0",
+      "caption": "a person walks on the sidewalk"
+    },
+    {
+      "video_id": "video0",
+      "caption": "a dog waits near a person"
+    },
+    {
+      "image_id": "video1",
+      "sentence": "a bus approaches the stop"
+    }
+  ]
+}

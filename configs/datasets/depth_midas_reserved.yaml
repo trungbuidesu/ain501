@@ -1,0 +1,18 @@
+name: depth_midas_reserved
+task: monocular_depth_estimation
+phase: "0.9"
+status: reserved
+model_family:
+  name: MiDaS/DPT
+  repository: https://github.com/isl-org/MiDaS
+  note: Phase 0 reserves config and IO shape only; training/evaluation is out of scope.
+paths:
+  model_root: models/depth/midas
+  input_root: data/processed/depth/input_frames
+  output_root: data/processed/depth/predictions
+io:
+  input_format: RGB image
+  output_format: relative_depth_map
+  metric_distance: false
+phase_notes:
+  - Depth can support distance reasoning later, but it does not block Phase 0 data work.

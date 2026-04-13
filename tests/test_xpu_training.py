@@ -1,8 +1,10 @@
 """Quick sanity check: train a tiny model on Intel Arc A770 via XPU."""
+
+import time
+
 import torch
 import torch.nn as nn
 import torch.optim as optim
-import time
 
 
 def test_xpu_training() -> None:
@@ -20,14 +22,14 @@ def test_xpu_training() -> None:
     optimizer = optim.Adam(model.parameters(), lr=1e-3)
 
     # Synthetic data
-    X = torch.randn(256, 64, device=device)
+    x = torch.randn(256, 64, device=device)
     y = torch.randint(0, 10, (256,), device=device)
 
     # Training loop
     start = time.perf_counter()
     for epoch in range(20):
         optimizer.zero_grad()
-        output = model(X)
+        output = model(x)
         loss = criterion(output, y)
         loss.backward()
         optimizer.step()

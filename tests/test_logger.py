@@ -1,4 +1,5 @@
 """Test TrainingLogger with TensorBoard backend on XPU training."""
+
 import shutil
 from pathlib import Path
 
@@ -42,12 +43,12 @@ def test_logger_tensorboard_xpu() -> None:
         print(f"Active backends: {logger.active_backends}")
         assert "tensorboard" in logger.active_backends
 
-        X = torch.randn(64, 32, device=device)
+        x = torch.randn(64, 32, device=device)
         y = torch.randint(0, 5, (64,), device=device)
 
         for epoch in range(10):
             optimizer.zero_grad()
-            output = model(X)
+            output = model(x)
             loss = criterion(output, y)
             loss.backward()
             optimizer.step()

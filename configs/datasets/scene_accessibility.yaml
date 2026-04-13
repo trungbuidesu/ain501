@@ -1,0 +1,38 @@
+name: scene_accessibility
+task: scene_classification
+phase: "0.5"
+base_dataset:
+  name: places365
+  homepage: https://github.com/CSAILVision/places365
+  root: data/external/places365
+  categories_file: data/external/places365/categories_places365.txt
+  download:
+    dry_run_default: true
+    variant: places365_standard_256
+classes:
+  places_subset:
+    - crosswalk
+    - restaurant
+    - general_store/indoor
+    - shopfront
+    - supermarket
+    - corridor
+    - staircase
+    - elevator/door
+    - elevator_lobby
+    - kitchen
+    - living_room
+    - bathroom
+    - park
+    - office
+    - parking_lot
+    - street
+  custom_or_proxy:
+    sidewalk: Requires custom capture or explicit proxy mapping.
+    bus_stop: Requires custom capture or explicit proxy mapping.
+balancing:
+  max_images_per_class: 1000
+  split_seed: 501
+output:
+  subset_root: data/processed/scene_accessibility
+  manifest: data/processed/scene_accessibility/manifest.csv

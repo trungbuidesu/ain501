@@ -1,0 +1,3 @@
+/a/crosswalk 0
+/r/restaurant 1
+/s/street 2

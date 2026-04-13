@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Các tiện ích dùng chung cho dự án AIN501."""
+"""Tiện ích dùng chung: export ``TrainingLogger`` (TensorBoard / Weights & Biases)."""
 
 from src.utils.logger import TrainingLogger
 

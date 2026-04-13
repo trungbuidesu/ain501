@@ -1,2 +1,2 @@
 # -*- coding: utf-8 -*-
-"""Tiện ích huấn luyện và chuẩn bị dữ liệu."""
+"""Gói con huấn luyện và script dữ liệu (``scripts``): ``data_utils``, ``capture_frames``."""

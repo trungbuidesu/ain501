@@ -1,5 +1,11 @@
 # -*- coding: utf-8 -*-
-"""Ghi frame màn hình cho custom accessibility datasets."""
+"""Ghi frame màn hình phục vụ bộ dữ liệu tùy chỉnh (accessibility).
+
+Chạy qua ``python -m src.training.scripts.capture_frames``. Mặc định **không**
+ghi file (dry-run): chỉ tính số frame dự kiến. Truyền ``--execute`` để lưu JPEG.
+Ưu tiên thư viện ``dxcam`` (Windows / DirectX); nếu không có thì dùng ``mss``
+chụp toàn màn hình chính.
+"""
 
 from __future__ import annotations
 
@@ -11,7 +17,7 @@ from typing import Any
 
 
 def build_parser() -> argparse.ArgumentParser:
-    """Tạo parser dòng lệnh cho script capture frame."""
+    """Dựng CLI: ``--output-dir``, ``--duration-seconds``, ``--fps``, ``--execute``."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--output-dir",
@@ -30,7 +36,21 @@ def capture_frames(
     fps: float,
     execute: bool = False,
 ) -> int:
-    """Ghi hoặc preview số frame dự kiến với `dxcam`, fallback sang `mss`."""
+    """Lập kế hoạch hoặc thực sự chụp frame màn hình theo chu kỳ ``1/fps``.
+
+    Args:
+        output_dir: Thư mục đích cho ``frame_*.jpg`` khi ``execute`` là True.
+        duration_seconds: Tổng thời gian ghi (giây), phải dương.
+        fps: Số frame trên giây (float dương).
+        execute: False chỉ trả về số frame dự kiến; True tạo thư mục và ghi ảnh.
+
+    Returns:
+        Số frame dự kiến (dry-run) hoặc số frame đã ghi thành công (có thể nhỏ
+        hơn nếu ``dxcam.grab()`` trả về None).
+
+    Raises:
+        ValueError: Nếu ``duration_seconds`` hoặc ``fps`` không dương.
+    """
 
     if duration_seconds <= 0 or fps <= 0:
         raise ValueError("duration_seconds and fps must be positive")
@@ -93,7 +113,7 @@ def _capture_mss(output_dir: Path, frame_count: int, interval: float) -> int:
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    """Chạy CLI capture frame và trả về mã thoát."""
+    """Parse argv, gọi ``capture_frames``, in số frame và luôn trả ``0``."""
     args = build_parser().parse_args(argv)
     count = capture_frames(
         output_dir=args.output_dir,

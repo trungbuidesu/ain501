@@ -1,2 +1,2 @@
 # -*- coding: utf-8 -*-
-"""Các script thực thi cho huấn luyện và chuẩn bị dữ liệu."""
+"""Script chạy được qua ``python -m src.training.scripts.<module>`` (data pipeline, capture)."""

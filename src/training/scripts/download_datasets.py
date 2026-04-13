@@ -1,5 +1,9 @@
 # -*- coding: utf-8 -*-
-"""Wrapper cho bước lập kế hoạch download dataset Phase 0."""
+"""Wrapper mỏng chuyển tiếp sang ``data_utils`` subcommand ``download-plan``.
+
+Dùng khi muốn một entrypoint tên gọn (ví dụ script hoặc doc) mà không gõ đủ
+``python -m src.training.scripts.data_utils download-plan ...``.
+"""
 
 from __future__ import annotations
 
@@ -10,7 +14,11 @@ from src.training.scripts.data_utils import main as data_utils_main
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    """Chạy subcommand `download-plan` với tham số CLI được truyền vào."""
+    """Gọi ``data_utils.main`` với tiền tố ``download-plan`` và ``argv`` thêm vào.
+
+    Returns:
+        Mã thoát do ``data_utils.main`` trả về (thường ``0`` sau khi in kế hoạch).
+    """
     args = ["download-plan"]
     if argv:
         args.extend(argv)

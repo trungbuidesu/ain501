@@ -1,5 +1,18 @@
 # -*- coding: utf-8 -*-
-"""Tiện ích chuẩn bị dataset cho Phase 0 của accessibility assistant."""
+"""Tiện ích chuẩn bị dataset cho Phase 0 của accessibility assistant.
+
+Entrypoint CLI::
+
+    python -m src.training.scripts.data_utils <subcommand> [--help]
+
+Các subcommand chính: ``download-plan``, ``verify-dataset-paths``,
+``write-classes``, ``split``, ``validate`` (YOLO), ``convert`` (COCO→YOLO),
+``merge-yolo``, ``augment-preview``, ``build-action-manifest``,
+``build-scene-subset``, ``validate-tts``. Thao tác ghi file hoặc tải dữ liệu
+lớn thường cần cờ ``--execute`` hoặc tắt ``--dry-run`` sau khi đã xem kế hoạch.
+
+Config dataset đọc từ ``configs/datasets/*.yaml`` (mặc định ``DEFAULT_DATASET_CONFIG_DIR``).
+"""
 
 from __future__ import annotations
 
@@ -1405,7 +1418,12 @@ def write_split_csvs(
 
 
 def build_arg_parser() -> argparse.ArgumentParser:
-    """Tạo parser dòng lệnh cho các tiện ích data pipeline."""
+    """Tạo ``ArgumentParser`` gốc và toàn bộ subparser cho pipeline dữ liệu Phase 0.
+
+    Returns:
+        Parser có ``required`` subcommand; mô tả từng lệnh nằm trong ``--help``
+        của subcommand tương ứng.
+    """
     parser = argparse.ArgumentParser(description=__doc__)
     subparsers = parser.add_subparsers(dest="command", required=True)
 
@@ -1513,7 +1531,12 @@ def build_arg_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    """Chạy CLI data pipeline và trả về mã thoát."""
+    """Điều phối subcommand CLI: in kết quả ra stdout và trả mã thoát cho shell.
+
+    Returns:
+        ``0`` nếu lệnh hoàn tất và (khi có) validation không có lỗi mức error;
+        ``1`` nếu validation/merge báo lỗi hoặc thao tác thất bại.
+    """
     parser = build_arg_parser()
     args = parser.parse_args(argv)
 

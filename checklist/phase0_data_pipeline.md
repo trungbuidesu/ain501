@@ -9,11 +9,11 @@ File này dùng để theo dõi tiến độ Phase 0. Quy ước:
 ## Object Detection Dataset
 
 - [ ] Download COCO 2017 train + val (~20GB)
-  - Trạng thái: Chưa download dữ liệu thật. Đã có config nguồn và `download-plan` trong `configs/datasets/object_detection_accessibility.yaml`.
+  - Trạng thái: Đang làm một phần trên dữ liệu thật. Đã tải/extract `annotations_trainval2017.zip` và `val2017.zip`; đã ghi `classes.txt`, convert COCO val -> YOLO với 3445 ảnh selected và validate YOLO `checked_files=6890 valid=True`. `train2017.zip`/`train2017` vẫn chưa có nên mục tổng thể còn mở.
 - [x] Hiểu COCO annotation format (JSON, bbox, categories)
   - Trạng thái: Đã implement parser/converter COCO bbox `[x, y, width, height]` sang YOLO trong `training/scripts/data_utils.py`, có test fixture.
 - [ ] Viết data exploration notebook: phân tích distribution classes, bbox sizes
-  - Trạng thái: Notebook starter `notebooks/0.3_coco_detection_explore.ipynb` đã có fallback fixture để chạy khi chưa có COCO local. Chưa chạy phân tích đầy đủ trên COCO thật.
+  - Trạng thái: Notebook starter `notebooks/0.3_coco_detection_explore.ipynb` đã có fallback fixture để chạy khi chưa có COCO local. Chưa chạy phân tích đầy đủ trên COCO train+val thật.
 
 ### Optional - Custom Domain Data
 
@@ -39,12 +39,12 @@ File này dùng để theo dõi tiến độ Phase 0. Quy ước:
 
 ## Scene Classification Dataset
 
-- [ ] Download Places365 subset mini (~6GB)
-  - Trạng thái: Chưa download dữ liệu thật. Đã có config trong `configs/datasets/scene_accessibility.yaml`.
+- [x] Download Places365 subset mini (~6GB)
+  - Trạng thái: Đã tải/extract official Places365 devkit/filelist và `val_256` 256px vào `data/external/places365`. Đây là bootstrap subset 36,500 ảnh val; chưa tải full train 256px.
 - [x] Chọn 10-20 scene categories phù hợp
   - Trạng thái: Đã chọn subset scene trong `configs/datasets/scene_accessibility.yaml`, gồm cả note cho `sidewalk` và `bus_stop` là custom/proxy.
-- [ ] Tạo balanced subset cho training router
-  - Trạng thái: Chưa tạo subset thật. Đã có config balancing và notebook starter `notebooks/0.5_places_scene_subset.ipynb` với fallback fixture.
+- [x] Tạo balanced subset cho training router
+  - Trạng thái: Đã chạy `build-scene-subset --file-list data/external/places365/places365_val.txt --execute`, tạo `data/processed/scene_accessibility/manifest.csv` với 1600 rows = 16 class x 100 ảnh. Chưa copy ảnh sang processed để tránh nhân đôi dữ liệu.
 - [ ] Optional: tự capture + label thêm 200-500 screenshots
   - Trạng thái: Chưa capture/label thật. Đã có privacy checklist và capture script dry-run.
 
@@ -94,5 +94,5 @@ File này dùng để theo dõi tiến độ Phase 0. Quy ước:
 ## Tổng Kết Hiện Tại
 
 - Hoàn thành scaffolding/config/docs/notebook starter/utility dry-run/test fixtures.
-- Chưa hoàn thành download dataset thật, capture/annotate thật, balanced subset thật, converter CVAT/Roboflow raw export -> YOLO, và analysis notebook chạy trên dữ liệu thật.
-- Hai phần code ưu tiên trước đó đã được bổ sung ở mức code-first: video frame-sequence loader và augmentation presets. Ưu tiên tiếp theo là chạy trên dataset thật sau khi xác nhận dung lượng/path local.
+- Chưa hoàn thành đầy đủ download dataset thật; hiện có COCO annotations + val2017 local, val YOLO output đã validate, Places365 devkit + val_256 local và scene manifest balanced 1600 rows. Vẫn chưa có COCO train2017, HMDB-51 local, capture/annotate thật, converter CVAT/Roboflow raw export -> YOLO, và analysis notebook chạy trên dataset thật đầy đủ.
+- Hai phần code ưu tiên trước đó đã được bổ sung ở mức code-first: video frame-sequence loader và augmentation presets. Bổ sung thêm core dataset run helpers: `verify-dataset-paths`, `write-classes`, `build-scene-subset`. Ưu tiên tiếp theo là tải/đặt dataset thật vào `data/external` rồi chạy pipeline execute.

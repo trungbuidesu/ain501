@@ -655,6 +655,312 @@ def write_manifest_csv(rows: Sequence[dict[str, str]], output_path: Path) -> Non
         writer.writerows(rows)
 
 
+def canonical_class_names(
+    config: dict[str, Any],
+    class_key: str = "coco_subset",
+    include_custom: bool = False,
+) -> list[str]:
+    """Trả về danh sách class canonical từ config dataset."""
+
+    classes = config.get("classes", {})
+    if not isinstance(classes, dict):
+        raise ValueError("Config missing classes mapping")
+    names = classes.get(class_key, [])
+    if not isinstance(names, list):
+        raise ValueError(f"Config classes.{class_key} must be a list")
+    class_names = [str(name) for name in names]
+    custom_names = classes.get("custom_only", [])
+    if include_custom and isinstance(custom_names, list):
+        class_names.extend(str(name) for name in custom_names)
+    return class_names
+
+
+def write_classes_file(
+    config_path: Path,
+    output_path: Path,
+    class_key: str = "coco_subset",
+    include_custom: bool = False,
+    dry_run: bool = True,
+) -> list[str]:
+    """Ghi hoặc preview file `classes.txt` từ config dataset."""
+
+    class_names = canonical_class_names(
+        load_yaml(config_path),
+        class_key=class_key,
+        include_custom=include_custom,
+    )
+    if not dry_run:
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text("\n".join(class_names) + "\n", encoding="utf-8")
+    return class_names
+
+
+def verify_dataset_paths(
+    config_paths: Sequence[Path],
+    tasks: Sequence[str] | None = None,
+    include_outputs: bool = False,
+    include_downloads: bool = True,
+) -> ValidationReport:
+    """Kiểm tra các path local quan trọng được khai báo trong dataset config."""
+
+    task_filter = set(tasks or [])
+    issues: list[ValidationIssue] = []
+    checked_files = 0
+    for config_path in config_paths:
+        config = load_yaml(config_path)
+        task = str(config.get("task", ""))
+        if task_filter and task not in task_filter:
+            continue
+        nodes: list[tuple[str, Any]] = []
+        if "base_dataset" in config:
+            nodes.append(("base_dataset", config["base_dataset"]))
+        if include_outputs and "output" in config:
+            nodes.append(("output", config["output"]))
+        for node_name, node in nodes:
+            for key_path, path in _declared_local_paths(
+                node,
+                prefix=node_name,
+                include_downloads=include_downloads,
+            ):
+                checked_files += 1
+                if path.exists():
+                    continue
+                issues.append(
+                    ValidationIssue(
+                        "error",
+                        f"{config_path}:{key_path}",
+                        f"missing local path: {path}",
+                    )
+                )
+    return ValidationReport(checked_files, tuple(issues))
+
+
+def _declared_local_paths(
+    node: Any,
+    prefix: str = "",
+    include_downloads: bool = True,
+) -> list[tuple[str, Path]]:
+    """Trích các path local trong config mà không coi URL là path."""
+
+    paths: list[tuple[str, Path]] = []
+    if isinstance(node, dict):
+        for key, value in node.items():
+            key_path = f"{prefix}.{key}" if prefix else str(key)
+            if not include_downloads and ".download." in f".{key_path}.":
+                continue
+            if key in {"homepage", "url", "manual_note", "variant", "name", "task"}:
+                continue
+            if isinstance(value, str) and _looks_like_local_path(value):
+                paths.append((key_path, Path(value)))
+            elif isinstance(value, (dict, list)):
+                paths.extend(
+                    _declared_local_paths(
+                        value,
+                        key_path,
+                        include_downloads=include_downloads,
+                    )
+                )
+    elif isinstance(node, list):
+        for index, value in enumerate(node):
+            paths.extend(
+                _declared_local_paths(
+                    value,
+                    f"{prefix}[{index}]",
+                    include_downloads=include_downloads,
+                )
+            )
+    return paths
+
+
+def _looks_like_local_path(value: str) -> bool:
+    """Cho biết chuỗi config có giống local path không."""
+
+    if "://" in value or value.startswith("Phase "):
+        return False
+    path_markers = {"/", "\\"}
+    suffixes = {".json", ".txt", ".csv", ".yaml", ".yml", ".zip", ".jsonl"}
+    return any(marker in value for marker in path_markers) or any(
+        value.endswith(suffix) for suffix in suffixes
+    )
+
+
+def build_scene_subset_manifest(
+    images_root: Path,
+    class_names: Sequence[str],
+    max_images_per_class: int = 1000,
+) -> list[dict[str, str]]:
+    """Tạo manifest balanced cho scene classification từ thư mục ảnh local."""
+
+    if max_images_per_class <= 0:
+        raise ValueError("max_images_per_class must be positive")
+    rows: list[dict[str, str]] = []
+    for class_name in class_names:
+        matched = 0
+        for image_path in sorted(images_root.rglob("*")):
+            if matched >= max_images_per_class:
+                break
+            if (
+                not image_path.is_file()
+                or image_path.suffix.lower() not in IMAGE_EXTENSIONS
+            ):
+                continue
+            relative_parent = image_path.parent.relative_to(images_root).as_posix()
+            if not _scene_path_matches_class(relative_parent, class_name):
+                continue
+            rows.append(
+                {
+                    "path": str(image_path),
+                    "relative_path": image_path.relative_to(images_root).as_posix(),
+                    "label": class_name,
+                    "source_category": relative_parent,
+                }
+            )
+            matched += 1
+    return rows
+
+
+def build_scene_subset_manifest_from_places_filelist(
+    images_root: Path,
+    filelist_path: Path,
+    categories_file: Path,
+    class_names: Sequence[str],
+    max_images_per_class: int = 1000,
+) -> list[dict[str, str]]:
+    """Tạo manifest scene từ official Places365 filelist + categories."""
+
+    if max_images_per_class <= 0:
+        raise ValueError("max_images_per_class must be positive")
+    categories = read_places_categories(categories_file)
+    counts = dict.fromkeys(class_names, 0)
+    rows: list[dict[str, str]] = []
+    with filelist_path.open(encoding="utf-8") as file:
+        for line in file:
+            parsed = _parse_places_filelist_line(line)
+            if parsed is None:
+                continue
+            relative_path, category_index = parsed
+            source_category = categories.get(category_index)
+            if source_category is None:
+                continue
+            for class_name in class_names:
+                if counts[class_name] >= max_images_per_class:
+                    continue
+                if not _scene_path_matches_class(source_category, class_name):
+                    continue
+                image_path = _resolve_places_image_path(images_root, relative_path)
+                rows.append(
+                    {
+                        "path": str(image_path),
+                        "relative_path": (
+                            image_path.relative_to(images_root).as_posix()
+                            if image_path.is_relative_to(images_root)
+                            else relative_path
+                        ),
+                        "label": class_name,
+                        "source_category": source_category,
+                    }
+                )
+                counts[class_name] += 1
+                break
+            if all(count >= max_images_per_class for count in counts.values()):
+                break
+    return rows
+
+
+def read_places_categories(categories_file: Path) -> dict[int, str]:
+    """Đọc `categories_places365.txt` thành mapping label index -> category."""
+
+    categories: dict[int, str] = {}
+    with categories_file.open(encoding="utf-8") as file:
+        for line in file:
+            parts = line.strip().split()
+            if len(parts) < 2:
+                continue
+            try:
+                index = int(parts[-1])
+            except ValueError:
+                continue
+            categories[index] = parts[0].strip("/")
+    return categories
+
+
+def _parse_places_filelist_line(line: str) -> tuple[str, int] | None:
+    """Parse một dòng Places365 filelist dạng `<path> <class_index>`."""
+
+    parts = line.strip().split()
+    if len(parts) < 2:
+        return None
+    try:
+        category_index = int(parts[-1])
+    except ValueError:
+        return None
+    return parts[0].lstrip("/"), category_index
+
+
+def _resolve_places_image_path(images_root: Path, relative_path: str) -> Path:
+    """Resolve path ảnh Places365 cho cả train folder và val_256 flat archive."""
+
+    relative = Path(relative_path)
+    candidates = [
+        images_root / relative,
+        images_root / relative.name,
+        images_root / "val_256" / relative.name,
+        images_root / "data_256_standard" / relative,
+    ]
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate
+    return candidates[0]
+
+
+def _find_default_places_filelist(root: Path) -> Path | None:
+    """Tìm filelist Places365 phổ biến nếu người dùng không truyền explicit."""
+
+    candidates = [
+        root / "places365_train_standard.txt",
+        root / "places365_val.txt",
+        root / "filelist_places365-standard" / "places365_train_standard.txt",
+        root / "filelist_places365-standard" / "places365_val.txt",
+    ]
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate
+    return None
+
+
+def _scene_path_matches_class(relative_parent: str, class_name: str) -> bool:
+    """Match class scene với category path Places-style."""
+
+    normalized_parent = relative_parent.replace("\\", "/").strip("/")
+    normalized_class = class_name.strip("/")
+    if "/" in normalized_class:
+        return normalized_parent == normalized_class or normalized_parent.endswith(
+            f"/{normalized_class}"
+        )
+    return (
+        normalized_parent == normalized_class
+        or normalized_parent.endswith(f"/{normalized_class}")
+        or normalized_parent.split("/")[-1] == normalized_class.split("/")[-1]
+    )
+
+
+def copy_scene_subset(
+    rows: Sequence[dict[str, str]],
+    subset_root: Path,
+) -> int:
+    """Copy ảnh scene subset theo label vào `subset_root/images`."""
+
+    copied = 0
+    for row in rows:
+        source = Path(row["path"])
+        label = row["label"].replace("/", "_")
+        destination = subset_root / "images" / label / source.name
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source, destination)
+        copied += 1
+    return copied
+
+
 def parse_hmdb_classes(root: Path) -> list[str]:
     """Trả về tên class HMDB từ các thư mục class."""
 
@@ -974,6 +1280,31 @@ def build_arg_parser() -> argparse.ArgumentParser:
     download.add_argument("--config-dir", type=Path, default=DEFAULT_DATASET_CONFIG_DIR)
     download.add_argument("--execute", action="store_true")
 
+    verify_paths = subparsers.add_parser("verify-dataset-paths")
+    verify_paths.add_argument(
+        "--config-dir",
+        type=Path,
+        default=DEFAULT_DATASET_CONFIG_DIR,
+    )
+    verify_paths.add_argument("--tasks", nargs="*")
+    verify_paths.add_argument("--include-outputs", action="store_true")
+    verify_paths.add_argument("--skip-downloads", action="store_true")
+
+    write_classes = subparsers.add_parser("write-classes")
+    write_classes.add_argument(
+        "--config",
+        type=Path,
+        default=Path("configs/datasets/object_detection_accessibility.yaml"),
+    )
+    write_classes.add_argument(
+        "--output",
+        type=Path,
+        default=Path("data/processed/object_detection_accessibility/classes.txt"),
+    )
+    write_classes.add_argument("--class-key", default="coco_subset")
+    write_classes.add_argument("--include-custom", action="store_true")
+    write_classes.add_argument("--execute", action="store_true")
+
     split = subparsers.add_parser("split")
     split.add_argument("--input-csv", type=Path, required=True)
     split.add_argument("--output-dir", type=Path, required=True)
@@ -1022,6 +1353,21 @@ def build_arg_parser() -> argparse.ArgumentParser:
     action_manifest.add_argument("--split-index", type=int, default=1)
     action_manifest.add_argument("--execute", action="store_true")
 
+    scene_subset = subparsers.add_parser("build-scene-subset")
+    scene_subset.add_argument(
+        "--config",
+        type=Path,
+        default=Path("configs/datasets/scene_accessibility.yaml"),
+    )
+    scene_subset.add_argument("--images-root", type=Path)
+    scene_subset.add_argument("--file-list", type=Path)
+    scene_subset.add_argument("--categories-file", type=Path)
+    scene_subset.add_argument("--output-csv", type=Path)
+    scene_subset.add_argument("--subset-root", type=Path)
+    scene_subset.add_argument("--max-images-per-class", type=int)
+    scene_subset.add_argument("--copy-images", action="store_true")
+    scene_subset.add_argument("--execute", action="store_true")
+
     validate_tts_parser = subparsers.add_parser("validate-tts")
     validate_tts_parser.add_argument(
         "--config",
@@ -1042,6 +1388,35 @@ def main(argv: Sequence[str] | None = None) -> int:
         if args.execute:
             print("Execute mode is reserved for explicit dataset download wrappers.")
         print("\n".join(download_plan_lines(dataset_config_paths(args.config_dir))))
+        return 0
+
+    if args.command == "verify-dataset-paths":
+        report = verify_dataset_paths(
+            dataset_config_paths(args.config_dir),
+            tasks=args.tasks,
+            include_outputs=args.include_outputs,
+            include_downloads=not args.skip_downloads,
+        )
+        print_report(report)
+        return 0 if report.valid else 1
+
+    if args.command == "write-classes":
+        class_names = write_classes_file(
+            config_path=args.config,
+            output_path=args.output,
+            class_key=args.class_key,
+            include_custom=args.include_custom,
+            dry_run=not args.execute,
+        )
+        print(
+            " ".join(
+                [
+                    f"classes={len(class_names)}",
+                    f"output={args.output}",
+                    f"dry_run={not args.execute}",
+                ]
+            )
+        )
         return 0
 
     if args.command == "split":
@@ -1135,6 +1510,54 @@ def main(argv: Sequence[str] | None = None) -> int:
         if args.execute and report.valid:
             write_manifest_csv(rows, output_csv)
             print(f"wrote_manifest={output_csv} rows={len(rows)}")
+        else:
+            print(f"planned_manifest={output_csv} rows={len(rows)} dry_run=True")
+        return 0
+
+    if args.command == "build-scene-subset":
+        config = load_yaml(args.config)
+        base_dataset = config.get("base_dataset", {})
+        classes = config.get("classes", {})
+        balancing = config.get("balancing", {})
+        output = config.get("output", {})
+        if not isinstance(base_dataset, dict) or not isinstance(classes, dict):
+            raise ValueError("Scene config missing base_dataset/classes")
+        if not isinstance(balancing, dict) or not isinstance(output, dict):
+            raise ValueError("Scene config missing balancing/output")
+        class_names = classes.get("places_subset", [])
+        if not isinstance(class_names, list):
+            raise ValueError("Scene config classes.places_subset must be a list")
+        images_root = args.images_root or Path(str(base_dataset["root"]))
+        categories_file = args.categories_file or Path(
+            str(base_dataset["categories_file"])
+        )
+        filelist_path = args.file_list or _find_default_places_filelist(images_root)
+        output_csv = args.output_csv or Path(str(output["manifest"]))
+        subset_root = args.subset_root or Path(str(output["subset_root"]))
+        max_images = args.max_images_per_class or int(
+            balancing.get("max_images_per_class", 1000)
+        )
+        string_class_names = [str(name) for name in class_names]
+        if filelist_path and categories_file.exists():
+            rows = build_scene_subset_manifest_from_places_filelist(
+                images_root=images_root,
+                filelist_path=filelist_path,
+                categories_file=categories_file,
+                class_names=string_class_names,
+                max_images_per_class=max_images,
+            )
+        else:
+            rows = build_scene_subset_manifest(
+                images_root=images_root,
+                class_names=string_class_names,
+                max_images_per_class=max_images,
+            )
+        if args.execute:
+            write_manifest_csv(rows, output_csv)
+            copied = copy_scene_subset(rows, subset_root) if args.copy_images else 0
+            print(
+                f"wrote_manifest={output_csv} rows={len(rows)} copied_images={copied}"
+            )
         else:
             print(f"planned_manifest={output_csv} rows={len(rows)} dry_run=True")
         return 0

@@ -27,7 +27,10 @@ Các thao tác lớn hoặc có side effect đều phải opt-in:
 
 ```bash
 python -m training.scripts.data_utils download-plan
+python -m training.scripts.data_utils verify-dataset-paths --tasks object_detection action_recognition scene_classification
+python -m training.scripts.data_utils write-classes
 python -m training.scripts.data_utils build-action-manifest
+python -m training.scripts.data_utils build-scene-subset
 python -m training.scripts.data_utils convert --coco-json path/to/instances.json --image-root path/to/images --output-root data/processed/demo --classes classes.txt
 python -m training.scripts.data_utils merge-yolo --sources data/custom/export --output-root data/processed/merged --classes classes.txt --dry-run
 python -m training.scripts.data_utils augment-preview --input-dir path/to/images --output-dir data/processed/augment_preview --task detection
@@ -40,7 +43,10 @@ Fallback PowerShell khi `python` không có trong PATH:
 ```powershell
 $AIN501_PY="C:\Users\bdtrung29.1\miniconda3\envs\ain501\python.exe"
 & $AIN501_PY -m training.scripts.data_utils download-plan
+& $AIN501_PY -m training.scripts.data_utils verify-dataset-paths --tasks object_detection action_recognition scene_classification
+& $AIN501_PY -m training.scripts.data_utils write-classes
 & $AIN501_PY -m training.scripts.data_utils build-action-manifest
+& $AIN501_PY -m training.scripts.data_utils build-scene-subset
 & $AIN501_PY -m training.scripts.data_utils validate-tts --dry-run
 & $AIN501_PY -m training.scripts.capture_frames --duration-seconds 60 --fps 1
 ```
@@ -56,7 +62,10 @@ riêng tư.
 - HMDB-51: tải video và split train/test chính thức từ trang dataset vào
   `data/external/hmdb51/`.
 - Places365: dùng biến thể Places365 256px và category file dưới
-  `data/external/places365/`.
+  `data/external/places365/`. Nếu dùng official devkit/filelist, đặt
+  `categories_places365.txt` và `places365_train_standard.txt` hoặc
+  `places365_val.txt` cạnh root Places365 để `build-scene-subset` đọc được
+  mapping ảnh -> class.
 - MSR-VTT: tải theo điều khoản phân phối chính thức và normalize annotation về
   dạng `video_id -> captions[]`.
 - ICDAR 2015: đăng ký và tải từ Robust Reading Competition, sau đó validate nội
@@ -66,11 +75,18 @@ riêng tư.
 
 ## Code-First Utilities
 
+- Dataset path check: `verify-dataset-paths --tasks object_detection action_recognition scene_classification`
+  báo các path local còn thiếu cho core datasets trước khi chạy convert/subset.
+- Object detection classes: `write-classes --execute` ghi canonical
+  `classes.txt` từ `classes.coco_subset` trong object detection config.
 - Action recognition: `build-action-manifest` đọc HMDB-style class folders, optional
   official split files và chỉ ghi manifest khi có `--execute`.
 - Frame sequence: sampler dùng mặc định `frame_sequence_length=16` và
   `frame_stride=2` theo action config; video thiếu frame được bỏ qua ở sequence
   manifest.
+- Scene subset: `build-scene-subset` tạo manifest balanced từ Places-style image
+  folders hoặc official Places365 filelist; `--copy-images` mới copy ảnh sang
+  `data/processed`.
 - Image augmentation: `augment-preview` hỗ trợ `--task detection|scene|ocr` và
   `--size`; dry-run mặc định chỉ đếm ảnh, `--execute` mới ghi preview.
 - Packaging: package editable cần expose cả `src*` và `training*` để các lệnh
@@ -122,7 +138,10 @@ python -m training.scripts.data_utils merge-yolo --sources data/custom/annotatio
 
 ```bash
 python -m training.scripts.data_utils download-plan
+python -m training.scripts.data_utils verify-dataset-paths --tasks object_detection action_recognition scene_classification
+python -m training.scripts.data_utils write-classes
 python -m training.scripts.data_utils build-action-manifest
+python -m training.scripts.data_utils build-scene-subset
 python -m training.scripts.data_utils validate-tts --dry-run
 python -m training.scripts.capture_frames --duration-seconds 60 --fps 1
 ruff check .

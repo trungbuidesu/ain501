@@ -18,6 +18,8 @@ from training.scripts.data_utils import (
     augmentation_preset,
     build_hmdb_manifest,
     build_image_augmentation,
+    build_scene_subset_manifest,
+    build_scene_subset_manifest_from_places_filelist,
     coco_annotations_to_yolo_lines,
     group_aware_split,
     load_yaml,
@@ -33,6 +35,8 @@ from training.scripts.data_utils import (
     validate_video_manifest,
     validate_wav,
     validate_yolo_dataset,
+    verify_dataset_paths,
+    write_classes_file,
 )
 
 FIXTURES = Path(__file__).parent / "fixtures"
@@ -296,3 +300,130 @@ def test_training_package_imports_outside_repo_root(tmp_path: Path) -> None:
     )
 
     assert "training.scripts.data_utils" in result.stdout
+
+
+def test_write_classes_and_verify_dataset_paths(tmp_path: Path) -> None:
+    """Đảm bảo class writer dry-run an toàn và path verifier báo thiếu path."""
+    config_path = tmp_path / "dataset.yaml"
+    data_root = tmp_path / "external" / "demo"
+    config_path.write_text(
+        "\n".join(
+            [
+                "name: demo",
+                "base_dataset:",
+                f"  root: {data_root.as_posix()}",
+                "classes:",
+                "  coco_subset:",
+                "    - person",
+                "    - dog",
+                "  custom_only:",
+                "    - door",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    output_path = tmp_path / "classes.txt"
+
+    class_names = write_classes_file(config_path, output_path, dry_run=True)
+
+    assert class_names == ["person", "dog"]
+    assert not output_path.exists()
+    report = verify_dataset_paths([config_path])
+    assert not report.valid
+    assert any(str(data_root) in issue.message for issue in report.issues)
+
+
+def test_scene_subset_manifest_balances_by_class(tmp_path: Path) -> None:
+    """Đảm bảo scene subset chọn tối đa số ảnh cấu hình cho mỗi class."""
+    images_root = tmp_path / "places"
+    (images_root / "a" / "crosswalk").mkdir(parents=True)
+    (images_root / "restaurant").mkdir()
+    for index in range(3):
+        Image.new("RGB", (8, 8), color="white").save(
+            images_root / "a" / "crosswalk" / f"crosswalk_{index}.jpg"
+        )
+    Image.new("RGB", (8, 8), color="white").save(
+        images_root / "restaurant" / "restaurant_0.jpg"
+    )
+
+    rows = build_scene_subset_manifest(
+        images_root,
+        ["crosswalk", "restaurant"],
+        max_images_per_class=2,
+    )
+
+    assert [row["label"] for row in rows].count("crosswalk") == 2
+    assert [row["label"] for row in rows].count("restaurant") == 1
+    assert all(Path(row["path"]).exists() for row in rows)
+
+
+def test_scene_subset_manifest_from_places_filelist(tmp_path: Path) -> None:
+    """Đảm bảo scene subset đọc được official Places365 val filelist."""
+    images_root = tmp_path / "places365"
+    val_root = images_root / "val_256"
+    val_root.mkdir(parents=True)
+    for name in [
+        "Places365_val_00000001.jpg",
+        "Places365_val_00000002.jpg",
+        "Places365_val_00000003.jpg",
+    ]:
+        Image.new("RGB", (8, 8), color="white").save(val_root / name)
+    categories_file = images_root / "categories_places365.txt"
+    categories_file.write_text(
+        "/c/crosswalk 0\n/r/restaurant 1\n/s/street 2\n",
+        encoding="utf-8",
+    )
+    filelist_path = images_root / "places365_val.txt"
+    filelist_path.write_text(
+        "\n".join(
+            [
+                "/Places365_val_00000001.jpg 0",
+                "/Places365_val_00000002.jpg 0",
+                "/Places365_val_00000003.jpg 1",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    rows = build_scene_subset_manifest_from_places_filelist(
+        images_root=images_root,
+        filelist_path=filelist_path,
+        categories_file=categories_file,
+        class_names=["crosswalk", "restaurant"],
+        max_images_per_class=1,
+    )
+
+    assert [row["label"] for row in rows] == ["crosswalk", "restaurant"]
+    assert all(Path(row["path"]).exists() for row in rows)
+
+
+def test_scene_subset_filelist_requires_full_match_for_nested_class(
+    tmp_path: Path,
+) -> None:
+    """Đảm bảo class nested không match nhầm mọi category cùng segment cuối."""
+    images_root = tmp_path / "places365"
+    val_root = images_root / "val_256"
+    val_root.mkdir(parents=True)
+    Image.new("RGB", (8, 8), color="white").save(
+        val_root / "Places365_val_00000001.jpg"
+    )
+    categories_file = images_root / "categories_places365.txt"
+    categories_file.write_text(
+        "/r/restaurant/indoor 0\n/g/general_store/indoor 1\n",
+        encoding="utf-8",
+    )
+    filelist_path = images_root / "places365_val.txt"
+    filelist_path.write_text(
+        "/Places365_val_00000001.jpg 0\n",
+        encoding="utf-8",
+    )
+
+    rows = build_scene_subset_manifest_from_places_filelist(
+        images_root=images_root,
+        filelist_path=filelist_path,
+        categories_file=categories_file,
+        class_names=["general_store/indoor"],
+        max_images_per_class=1,
+    )
+
+    assert rows == []

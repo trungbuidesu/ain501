@@ -81,8 +81,7 @@ Các dataset lõi của Phase 0 hiện dùng:
 - Nhận diện hành động: UCF-101.
 - Phân loại cảnh: Places365.
 - Sinh mô tả video Tier 2/deferred: MSR-VTT.
-- OCR mục tiêu tiếp theo: TextOCR, trong khi config OCR hiện vẫn cần chuyển
-  khỏi ICDAR.
+- OCR: TextOCR.
 
 ## Quy Ước Phát Triển
 

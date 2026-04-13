@@ -29,6 +29,7 @@ from src.training.scripts.data_utils import (
     parse_icdar_gt,
     parse_msr_vtt_captions,
     parse_places_categories,
+    parse_textocr_annotations,
     sample_frame_indices,
     stratified_split,
     validate_tts_config,
@@ -123,7 +124,7 @@ def test_split_helpers_keep_expected_invariants() -> None:
 
 
 def test_public_dataset_parsers() -> None:
-    """Đảm bảo parser fixture cho MSR-VTT, Places365 và ICDAR hoạt động."""
+    """Đảm bảo parser fixture cho MSR-VTT, Places365, ICDAR và TextOCR hoạt động."""
     captions = parse_msr_vtt_captions(FIXTURES / "msr_vtt_tiny.json")
     assert captions["video0"] == [
         "a person walks on the sidewalk",
@@ -136,6 +137,12 @@ def test_public_dataset_parsers() -> None:
     icdar = parse_icdar_gt(FIXTURES / "icdar_tiny.txt")
     assert icdar[0].text == "STORE"
     assert icdar[1].ignored
+
+    textocr = parse_textocr_annotations(FIXTURES / "textocr_tiny.json")
+    assert textocr[0].image_file == "train_val_images/img0.jpg"
+    assert textocr[0].bbox == (10.0, 20.0, 40.0, 12.0)
+    assert textocr[0].text == "STORE"
+    assert textocr[1].ignored
 
 
 def test_tts_config_and_wav_validation(tmp_path: Path) -> None:

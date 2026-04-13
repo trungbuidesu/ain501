@@ -41,7 +41,7 @@ python -m src.training.scripts.capture_frames --duration-seconds 3600 --fps 1
 Fallback PowerShell khi `python` không có trong PATH:
 
 ```powershell
-$AIN501_PY="C:\Users\bdtrung29.1\miniconda3\envs\ain501\python.exe"
+$AIN501_PY="$env:USERPROFILE\miniconda3\envs\trungbd\python.exe"
 & $AIN501_PY -m src.training.scripts.data_utils download-plan
 & $AIN501_PY -m src.training.scripts.data_utils verify-dataset-paths --tasks object_detection action_recognition scene_classification
 & $AIN501_PY -m src.training.scripts.data_utils write-classes
@@ -69,8 +69,10 @@ riêng tư.
   mapping ảnh -> class.
 - MSR-VTT: tải theo điều khoản phân phối chính thức và normalize annotation về
   dạng `video_id -> captions[]`.
-- ICDAR 2015: đăng ký và tải từ Robust Reading Competition, sau đó validate nội
-  dung zip local trước khi xử lý.
+- TextOCR: dataset OCR mục tiêu cho scene text thực tế. Config hiện tại là
+  `configs/datasets/ocr_textocr.yaml`; đặt `TextOCR_0.1_train.json`,
+  `TextOCR_0.1_val.json` và thư mục ảnh `train_val_images/` dưới
+  `data/external/textocr/`.
 - Piper TTS: đặt voice files dưới `models/voices/piper/` theo
   `configs/datasets/tts_piper_accessibility.yaml`.
 

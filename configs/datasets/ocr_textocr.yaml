@@ -1,0 +1,33 @@
+name: ocr_textocr
+task: ocr_scene_text
+phase: "0.7"
+base_dataset:
+  name: textocr
+  homepage: https://textvqa.org/textocr/
+  root: data/external/textocr
+  images:
+    train_val: data/external/textocr/train_val_images
+  annotations:
+    train: data/external/textocr/TextOCR_0.1_train.json
+    val: data/external/textocr/TextOCR_0.1_val.json
+  download:
+    dry_run_default: true
+    files:
+      - url: https://dl.fbaipublicfiles.com/textvqa/images/train_val_images.zip
+        path: data/downloads/textocr/train_val_images.zip
+      - url: https://dl.fbaipublicfiles.com/textvqa/data/textocr/TextOCR_0.1_train.json
+        path: data/downloads/textocr/TextOCR_0.1_train.json
+      - url: https://dl.fbaipublicfiles.com/textvqa/data/textocr/TextOCR_0.1_val.json
+        path: data/downloads/textocr/TextOCR_0.1_val.json
+    manual_note: Download TextOCR assets and place the extracted train_val_images folder plus TextOCR_0.1_train.json/TextOCR_0.1_val.json under data/external/textocr.
+format:
+  annotation_version: "0.1"
+  source_format: textocr_json
+  text_field: utf8_string
+  bbox_format: xywh_pixels
+  polygon_field: points
+  ignored_when:
+    - empty_text
+    - illegible
+output:
+  normalized_annotations: data/processed/ocr_textocr/annotations.jsonl

@@ -1,0 +1,28 @@
+{
+  "imgs": {
+    "img0": {
+      "id": "img0",
+      "file_name": "train_val_images/img0.jpg",
+      "width": 100,
+      "height": 80
+    }
+  },
+  "anns": {
+    "ann0": {
+      "id": "ann0",
+      "image_id": "img0",
+      "utf8_string": "STORE",
+      "bbox": [10, 20, 40, 12],
+      "points": [[10, 20], [50, 20], [50, 32], [10, 32]],
+      "legibility": "legible"
+    },
+    "ann1": {
+      "id": "ann1",
+      "image_id": "img0",
+      "utf8_string": "",
+      "bbox": [5, 5, 10, 10],
+      "points": [5, 5, 15, 5, 15, 15, 5, 15],
+      "legibility": "illegible"
+    }
+  }
+}

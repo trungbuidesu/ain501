@@ -60,9 +60,9 @@ File này dùng để theo dõi tiến độ Phase 0. Quy ước:
 ## OCR Dataset
 
 - [ ] Download TextOCR
-  - Trạng thái: Chưa download dữ liệu thật. Đã chọn TextOCR thay vì ICDAR 2015 vì TextOCR phù hợp scene text thực tế hơn và có public download assets; ICDAR 2015 cần registration nên kém thuận tiện hơn cho bootstrap. Cần migrate config `configs/datasets/ocr_icdar2015.yaml` sang TextOCR trước khi chạy dataset thật.
+  - Trạng thái: Chưa download dữ liệu thật. Đã chọn TextOCR thay vì ICDAR 2015 vì TextOCR phù hợp scene text thực tế hơn và có public download assets; config đã migrate sang `configs/datasets/ocr_textocr.yaml`. Chưa có `data/external/textocr` local.
 - [ ] Explore: các loại text (scene text, document, handwriting)
-  - Trạng thái: Notebook starter hiện vẫn là `notebooks/0.7_icdar_ocr_explore.ipynb` và parser fixture hiện vẫn ICDAR; cần đổi sang TextOCR trong vòng OCR tiếp theo. Chưa explore dataset thật.
+  - Trạng thái: Notebook starter đã đổi sang `notebooks/0.7_textocr_explore.ipynb` và đã có parser fixture TextOCR trong `src/training/scripts/data_utils.py`. Chưa explore dataset thật và notebook chưa có output thống kê.
 
 ## Data Pipeline Utilities (`src/training/scripts/data_utils.py`)
 
@@ -94,5 +94,5 @@ File này dùng để theo dõi tiến độ Phase 0. Quy ước:
 ## Tổng Kết Hiện Tại
 
 - Hoàn thành scaffolding/config/docs/notebook starter/utility dry-run/test fixtures.
-- Chưa hoàn thành đầy đủ download dataset thật; hiện có COCO annotations + val2017 local, val YOLO output đã validate, Places365 devkit + val_256 local và scene manifest balanced 1600 rows. Vẫn chưa có COCO train2017, UCF-101 local, capture/annotate thật, converter CVAT/Roboflow raw export -> YOLO, và analysis notebook chạy trên dataset thật đầy đủ.
+- Chưa hoàn thành đầy đủ download dataset thật; hiện có COCO annotations + val2017 local, val YOLO output đã validate, Places365 devkit + val_256 local và scene manifest balanced 1600 rows. Vẫn chưa có COCO train2017, UCF-101 local, TextOCR local, MSR-VTT local, capture/annotate thật, converter CVAT/Roboflow raw export -> YOLO, và analysis notebook chạy trên dataset thật đầy đủ.
 - Hai phần code ưu tiên trước đó đã được bổ sung ở mức code-first: video frame-sequence loader và augmentation presets. Bổ sung thêm core dataset run helpers: `verify-dataset-paths`, `write-classes`, `build-scene-subset`; action manifest hiện target UCF-101. Ưu tiên tiếp theo là tải/đặt dataset thật vào `data/external` rồi chạy pipeline execute.

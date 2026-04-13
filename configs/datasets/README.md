@@ -40,8 +40,8 @@ Tệp config: `scene_accessibility.yaml` (Phase 0.5)
 - **Video Captioning (`video_captioning_msr_vtt.yaml`) - Phase 0.6:**
   - Mục đích: Bình luận và tóm tắt theo thời gian thực mô tả hoạt cảnh. Dữ liệu: `MSR-VTT`. Tier ưu tiên thấp (Tier 2 deferred), cơ chế tự động mapping normalized format `video_id -> captions[]`.
 
-- **OCR Scene Text (`ocr_icdar2015.yaml`) - Phase 0.7:**
-  - Mục đích: Đọc nội dung tự nhiên không dùng nét ngay ngắn ngoài thực tiễn, số nhà, hoặc label thang máy. Dữ liệu trích ly: `ICDAR 2015 Challenge 4`. Cấu hình định dạng box bounding 4 góc chéo (`quadrilateral_points: 4`) và chỉ định việc bỏ qua text loang lổ / vỡ hình theo luật (`###`).
+- **OCR Scene Text - Phase 0.7:**
+  - Mục đích: Đọc chữ trong cảnh thực tế như số nhà, nhãn thang máy, biển báo hoặc chữ trên đồ vật. Config mục tiêu hiện là `ocr_textocr.yaml`, dùng TextOCR 0.1 với trường `utf8_string`, bbox `xywh_pixels` và polygon `points`. Dữ liệu thật vẫn chưa có local dưới `data/external/textocr`.
 
 - **Validation Text-to-Speech (`tts_piper_accessibility.yaml`) - Phase 0.8:**
   - Mục đích: Validate chất âm báo bằng lời module phản hồi cho người khiếm thị. Config nhúng đường dẫn các model `.onnx` tiếng Việt (`vi_VN-vais1000-medium`) và tiếng Anh với sample rate `22050Hz`. Hỗ trợ script fallback model.

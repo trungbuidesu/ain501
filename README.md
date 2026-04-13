@@ -28,17 +28,17 @@ hướng sạch, module hóa, dễ kiểm thử và dễ mở rộng.
 
 ### 2. Tạo Môi Trường
 
-Repo hiện đang được kiểm tra trong conda env `trungbd`. Nếu env chưa có:
+Tạo một conda env riêng cho project. Thay `<env-name>` bằng tên env bạn muốn dùng:
 
 ```bash
-conda create --name trungbd python=3.10
-conda activate trungbd
+conda create --name <env-name> python=3.10
+conda activate <env-name>
 ```
 
-Nếu đã có env:
+Nếu đã có sẵn env phù hợp, chỉ cần activate env đó:
 
 ```bash
-conda activate trungbd
+conda activate <env-name>
 ```
 
 ### 3. Cài Đặt
@@ -50,14 +50,13 @@ pip install -e ".[dev]"
 ```
 
 Nếu dùng Torch CPU/XPU, cài wheel phù hợp máy trước hoặc sau bước cài editable
-theo hướng dẫn chính thức của PyTorch/Intel. Env local đã từng dùng
-`torch 2.11.0+xpu`; máy không có GPU Intel Arc được hỗ trợ có thể bỏ qua kiểm
-thử XPU.
+theo hướng dẫn chính thức của PyTorch/Intel. Máy không có GPU Intel Arc được hỗ
+trợ có thể bỏ qua kiểm thử XPU.
 
-Dự phòng PowerShell khi `python` hoặc `conda` không có trong PATH:
+Dự phòng PowerShell khi `python` không có trong PATH nhưng env đã được activate:
 
 ```powershell
-$AIN501_PY="C:\Users\Admin\miniconda3\envs\trungbd\python.exe"
+$AIN501_PY=Join-Path $env:CONDA_PREFIX "python.exe"
 & $AIN501_PY -m pip install -e ".[dev]"
 ```
 
@@ -100,7 +99,7 @@ Quy tắc commit và kiểm tra code chi tiết nằm trong
 Dự phòng PowerShell:
 
 ```powershell
-$AIN501_PY="C:\Users\Admin\miniconda3\envs\trungbd\python.exe"
+$AIN501_PY=Join-Path $env:CONDA_PREFIX "python.exe"
 & $AIN501_PY -m black --check .
 & $AIN501_PY -m ruff check .
 & $AIN501_PY -m mypy .

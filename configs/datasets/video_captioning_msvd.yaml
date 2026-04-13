@@ -1,0 +1,27 @@
+name: video_captioning_msvd
+task: video_captioning
+phase: "0.6"
+tier: 2
+base_dataset:
+  name: msvd
+  homepage: https://huggingface.co/datasets/friedrichor/MSVD
+  root: data/external/msvd
+  videos_root: data/external/msvd/videos
+  annotations: data/external/msvd/annotations/msvd_captions.json
+  download:
+    dry_run_default: true
+    huggingface_dataset: friedrichor/MSVD
+    manual_note: Download MSVD from the Hugging Face dataset mirror, then normalize rows to the project format.
+format:
+  normalized_mapping: video_id -> captions[]
+  accepted_fields:
+    - video_id
+    - image_id
+    - id
+    - clip_id
+    - video_path
+    - captions
+    - caption
+    - sentence
+output:
+  normalized_captions: data/processed/video_captioning_msvd/captions.json

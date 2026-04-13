@@ -67,8 +67,8 @@ riêng tư.
   `categories_places365.txt` và `places365_train_standard.txt` hoặc
   `places365_val.txt` cạnh root Places365 để `build-scene-subset` đọc được
   mapping ảnh -> class.
-- MSR-VTT: tải theo điều khoản phân phối chính thức và normalize annotation về
-  dạng `video_id -> captions[]`.
+- MSVD: tải từ dataset mirror `friedrichor/MSVD` theo điều khoản sử dụng của nguồn
+  phân phối và normalize annotation về dạng `video_id -> captions[]`.
 - TextOCR: dataset OCR mục tiêu cho scene text thực tế. Config hiện tại là
   `configs/datasets/ocr_textocr.yaml`; đặt `TextOCR_0.1_train.json`,
   `TextOCR_0.1_val.json` và thư mục ảnh `train_val_images/` dưới

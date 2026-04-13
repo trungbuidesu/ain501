@@ -11,7 +11,7 @@ Các subcommand chính: ``download-plan``, ``verify-dataset-paths``,
 ``build-scene-subset``, ``validate-tts``. Thao tác ghi file hoặc tải dữ liệu
 lớn thường cần cờ ``--execute`` hoặc tắt ``--dry-run`` sau khi đã xem kế hoạch.
 
-Config dataset đọc từ ``configs/datasets/*.yaml`` (mặc định ``DEFAULT_DATASET_CONFIG_DIR``).
+Dataset configs live in ``configs/datasets/*.yaml``.
 """
 
 from __future__ import annotations
@@ -144,6 +144,8 @@ def _append_download_details(node: Any, lines: list[str]) -> None:
         if isinstance(download, dict):
             if download.get("dry_run_default") is not None:
                 lines.append(f"dry_run_default: {download['dry_run_default']}")
+            if download.get("huggingface_dataset"):
+                lines.append(f"huggingface_dataset: {download['huggingface_dataset']}")
             if download.get("manual_note"):
                 lines.append(f"manual_note: {download['manual_note']}")
             files = download.get("files")
@@ -798,7 +800,15 @@ def _declared_local_paths(
             key_path = f"{prefix}.{key}" if prefix else str(key)
             if not include_downloads and ".download." in f".{key_path}.":
                 continue
-            if key in {"homepage", "url", "manual_note", "variant", "name", "task"}:
+            if key in {
+                "homepage",
+                "url",
+                "manual_note",
+                "variant",
+                "name",
+                "task",
+                "huggingface_dataset",
+            }:
                 continue
             if isinstance(value, str) and _looks_like_local_path(value):
                 paths.append((key_path, Path(value)))
@@ -1027,22 +1037,39 @@ def parse_places_categories(path: Path) -> dict[str, int]:
     return categories
 
 
-def parse_msr_vtt_captions(path: Path) -> dict[str, list[str]]:
-    """Normalize annotation kiểu MSR-VTT thành mapping `video_id -> captions`."""
+def parse_msvd_captions(path: Path) -> dict[str, list[str]]:
+    """Normalize annotation kiểu MSVD thành mapping `video_id -> captions`."""
 
     data = json.loads(path.read_text(encoding="utf-8"))
-    annotations = data.get("annotations", data if isinstance(data, list) else [])
+    annotations: Any
+    if isinstance(data, dict):
+        annotations = data.get("annotations", data.get("data", data.get("rows", [])))
+    else:
+        annotations = data
     if not isinstance(annotations, list):
-        raise ValueError("Expected MSR-VTT annotations list")
+        raise ValueError("Expected MSVD annotations list")
     captions: dict[str, list[str]] = {}
     for annotation in annotations:
         if not isinstance(annotation, dict):
             continue
-        video_id = annotation.get("video_id", annotation.get("image_id"))
-        caption = annotation.get("caption", annotation.get("sentence"))
-        if video_id is None or caption is None:
+        video_id = annotation.get(
+            "video_id",
+            annotation.get("image_id", annotation.get("id", annotation.get("clip_id"))),
+        )
+        if video_id is None and annotation.get("video_path") is not None:
+            video_id = Path(str(annotation["video_path"])).stem
+        raw_captions = annotation.get(
+            "captions",
+            annotation.get("caption", annotation.get("sentence")),
+        )
+        if video_id is None or raw_captions is None:
             continue
-        captions.setdefault(str(video_id), []).append(str(caption))
+        if isinstance(raw_captions, list):
+            captions.setdefault(str(video_id), []).extend(
+                str(caption) for caption in raw_captions
+            )
+        else:
+            captions.setdefault(str(video_id), []).append(str(raw_captions))
     return captions
 
 

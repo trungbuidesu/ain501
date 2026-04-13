@@ -27,7 +27,7 @@ from src.training.scripts.data_utils import (
     merge_yolo_datasets,
     normalize_coco_bbox,
     parse_icdar_gt,
-    parse_msr_vtt_captions,
+    parse_msvd_captions,
     parse_places_categories,
     parse_textocr_annotations,
     sample_frame_indices,
@@ -124,12 +124,13 @@ def test_split_helpers_keep_expected_invariants() -> None:
 
 
 def test_public_dataset_parsers() -> None:
-    """Đảm bảo parser fixture cho MSR-VTT, Places365, ICDAR và TextOCR hoạt động."""
-    captions = parse_msr_vtt_captions(FIXTURES / "msr_vtt_tiny.json")
+    """Đảm bảo parser fixture cho MSVD, Places365, ICDAR và TextOCR hoạt động."""
+    captions = parse_msvd_captions(FIXTURES / "msvd_tiny.json")
     assert captions["video0"] == [
         "a person walks on the sidewalk",
         "a dog waits near a person",
     ]
+    assert captions["video1"] == ["a bus approaches the stop"]
 
     places = parse_places_categories(FIXTURES / "places_categories_tiny.txt")
     assert places["a/crosswalk"] == 0

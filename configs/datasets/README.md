@@ -37,8 +37,8 @@ Tệp config: `scene_accessibility.yaml`
 
 ### 4. Tiện ích và Dự Phòng Tương Lai
 
-- **Video Captioning (`video_captioning_msr_vtt.yaml`):**
-  - Mục đích: Bình luận và tóm tắt theo thời gian thực mô tả hoạt cảnh. Dữ liệu: `MSR-VTT`. Tier ưu tiên thấp (Tier 2 deferred), cơ chế tự động mapping normalized format `video_id -> captions[]`.
+- **Video Captioning (`video_captioning_msvd.yaml`):**
+  - Mục đích: Bình luận và tóm tắt theo thời gian thực mô tả hoạt cảnh. Dữ liệu: `MSVD`. Tier ưu tiên thấp (Tier 2 deferred), cơ chế tự động mapping normalized format `video_id -> captions[]`.
 
 - **OCR Scene Text:**
   - Mục đích: Đọc chữ trong cảnh thực tế như số nhà, nhãn thang máy, biển báo hoặc chữ trên đồ vật. Config mục tiêu hiện là `ocr_textocr.yaml`, dùng TextOCR 0.1 với trường `utf8_string`, bbox `xywh_pixels` và polygon `points`. Dữ liệu thật vẫn chưa có local dưới `data/external/textocr`.

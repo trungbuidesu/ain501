@@ -130,7 +130,7 @@ Các bộ dữ liệu (dataset) đang được khai báo cấu hình:
 - **Nhận diện hành động (Action Recognition):** Bộ gốc UCF-101. Lấy mẫu luồng frame video nhận diện chuỗi hành động có sẵn và tự định nghĩa.
 - **Phân loại không gian (Scene Classification):** Bộ gốc Places365. Subset ảnh 256px đi kèm cơ chế tự động cân bằng cho các không gian bối cảnh.
 - **Trích xuất văn bản (OCR Scene Text):** Nhắm tới nền tảng TextOCR. Đọc chữ trên các vật thể và biển báo tự nhiên.
-- **Sinh mô tả video (Video Captioning):** Bộ gốc MSR-VTT. Sinh caption thuyết minh sự kiện (Tier 2/deferred).
+- **Sinh mô tả video (Video Captioning):** Bộ gốc MSVD. Sinh caption thuyết minh sự kiện (Tier 2/deferred).
 - **Giọng nói ảo (TTS Validation):** Khai phá các model ONNX của Piper để kiểm chứng tín hiệu phát âm thanh đầu ra.
 - **Ước lượng chiều sâu (Depth Estimation):** Slot model dự phòng cho thuật toán MiDaS.
 
@@ -141,7 +141,7 @@ Các bộ dữ liệu (dataset) đang được khai báo cấu hình:
 | `notebooks/0.3_coco_detection_explore.ipynb` | COCO / phát hiện đối tượng |
 | `notebooks/0.4_action_ucf101_explore.ipynb` | UCF-101 / nhận diện hành động |
 | `notebooks/0.5_places_scene_subset.ipynb` | Places365 / phân loại cảnh |
-| `notebooks/0.6_msr_vtt_captioning_explore.ipynb` | MSR-VTT / mô tả video (Tier 2) |
+| `notebooks/0.6_msvd_captioning_explore.ipynb` | MSVD / mô tả video (Tier 2) |
 | `notebooks/0.7_textocr_explore.ipynb` | TextOCR / chữ trong cảnh |
 | `notebooks/0.8_tts_piper_validation.ipynb` | Piper TTS / giọng ONNX |
 | `notebooks/0.9_depth_midas_reserved.ipynb` | Độ sâu (MiDaS, dự phòng) |

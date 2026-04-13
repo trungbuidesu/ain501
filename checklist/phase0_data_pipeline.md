@@ -50,12 +50,12 @@ File này dùng để theo dõi tiến độ Phase 0. Quy ước:
 
 ## Video Captioning Dataset (Tier 2)
 
-- [ ] Download MSR-VTT
-  - Trạng thái: Chưa download dữ liệu thật. Đã chọn cố định MSR-VTT thay vì MSVD vì MSR-VTT là benchmark video captioning lớn/chuẩn hơn, config `configs/datasets/video_captioning_msr_vtt.yaml` đã có sẵn, và parser normalize `video_id -> captions[]` đã dùng fixture MSR-VTT. Vẫn giữ Tier 2/deferred.
+- [ ] Download MSVD
+  - Trạng thái: Chưa download dữ liệu thật. Đã đổi cố định sang MSVD cho video captioning Tier 2; config `configs/datasets/video_captioning_msvd.yaml` đã có sẵn và parser normalize `video_id -> captions[]` dùng fixture MSVD. Gợi ý tải qua Hugging Face dataset mirror `friedrichor/MSVD`.
 - [ ] Explore: xem sample videos + captions
-  - Trạng thái: Mới có notebook starter `notebooks/0.6_msr_vtt_captioning_explore.ipynb`. Chưa xem sample thật vì chưa có dataset local.
+  - Trạng thái: Mới có notebook starter `notebooks/0.6_msvd_captioning_explore.ipynb`. Chưa xem sample thật vì chưa có dataset local.
 - [x] Hiểu format: `video_id -> multiple captions`
-  - Trạng thái: Đã implement parser normalize MSR-VTT thành `video_id -> captions[]`, có test fixture.
+  - Trạng thái: Đã implement parser normalize MSVD thành `video_id -> captions[]`, có test fixture.
 
 ## OCR Dataset
 
@@ -94,5 +94,5 @@ File này dùng để theo dõi tiến độ Phase 0. Quy ước:
 ## Tổng Kết Hiện Tại
 
 - Hoàn thành scaffolding/config/docs/notebook starter/utility dry-run/test fixtures.
-- Chưa hoàn thành đầy đủ download dataset thật; hiện có COCO annotations + val2017 local, val YOLO output đã validate, Places365 devkit + val_256 local và scene manifest balanced 1600 rows. Vẫn chưa có COCO train2017, UCF-101 local, TextOCR local, MSR-VTT local, capture/annotate thật, converter CVAT/Roboflow raw export -> YOLO, và analysis notebook chạy trên dataset thật đầy đủ.
+- Chưa hoàn thành đầy đủ download dataset thật; hiện có COCO annotations + val2017 local, val YOLO output đã validate, Places365 devkit + val_256 local và scene manifest balanced 1600 rows. Vẫn chưa có COCO train2017, UCF-101 local, TextOCR local, MSVD local, capture/annotate thật, converter CVAT/Roboflow raw export -> YOLO, và analysis notebook chạy trên dataset thật đầy đủ.
 - Hai phần code ưu tiên trước đó đã được bổ sung ở mức code-first: video frame-sequence loader và augmentation presets. Bổ sung thêm core dataset run helpers: `verify-dataset-paths`, `write-classes`, `build-scene-subset`; action manifest hiện target UCF-101. Ưu tiên tiếp theo là tải/đặt dataset thật vào `data/external` rồi chạy pipeline execute.

@@ -4,6 +4,8 @@
 from __future__ import annotations
 
 import json
+import subprocess
+import sys
 import wave
 from pathlib import Path
 
@@ -11,6 +13,11 @@ import pytest
 from PIL import Image
 
 from training.scripts.data_utils import (
+    add_frame_sequence_columns,
+    augment_preview,
+    augmentation_preset,
+    build_hmdb_manifest,
+    build_image_augmentation,
     coco_annotations_to_yolo_lines,
     group_aware_split,
     load_yaml,
@@ -20,8 +27,10 @@ from training.scripts.data_utils import (
     parse_icdar_gt,
     parse_msr_vtt_captions,
     parse_places_categories,
+    sample_frame_indices,
     stratified_split,
     validate_tts_config,
+    validate_video_manifest,
     validate_wav,
     validate_yolo_dataset,
 )
@@ -172,3 +181,118 @@ def test_config_contains_accessibility_requirements() -> None:
     action = load_yaml(Path("configs/datasets/action_accessibility.yaml"))
     assert "dog" in detection["classes"]["coco_subset"]
     assert "Phase 9" in action["phase_notes"]["approaching"]
+
+
+def test_hmdb_manifest_uses_class_folders_and_split_files(tmp_path: Path) -> None:
+    """Đảm bảo manifest HMDB đọc video theo class folder và split official."""
+    videos_root = tmp_path / "videos"
+    split_root = tmp_path / "splits"
+    (videos_root / "walk").mkdir(parents=True)
+    (videos_root / "run").mkdir()
+    split_root.mkdir()
+    (videos_root / "walk" / "walk_one.avi").write_bytes(b"fake")
+    (videos_root / "walk" / "walk_two.avi").write_bytes(b"fake")
+    (videos_root / "run" / "run_one.mp4").write_bytes(b"fake")
+    (videos_root / "run" / "notes.txt").write_text("skip", encoding="utf-8")
+    (split_root / "walk_test_split1.txt").write_text(
+        "walk_one.avi 1\nwalk_two.avi 2\n",
+        encoding="utf-8",
+    )
+    (split_root / "run_test_split1.txt").write_text(
+        "run_one.mp4 0\n",
+        encoding="utf-8",
+    )
+
+    rows = build_hmdb_manifest(videos_root, ["walk", "run"], split_root=split_root)
+
+    assert [row["relative_path"] for row in rows] == [
+        "run/run_one.mp4",
+        "walk/walk_one.avi",
+        "walk/walk_two.avi",
+    ]
+    assert {row["split"] for row in rows} == {"train", "test", "unused"}
+    assert validate_video_manifest(rows, ["walk", "run"]).valid
+
+
+def test_frame_sequence_sampling_and_manifest_validation(tmp_path: Path) -> None:
+    """Đảm bảo sampler giữ stride và validator bắt group leak giữa split."""
+    video = tmp_path / "walk.avi"
+    video.write_bytes(b"fake")
+    rows = [
+        {
+            "path": str(video),
+            "relative_path": "walk/walk.avi",
+            "label": "walk",
+            "group": "shared",
+            "split": "train",
+        }
+    ]
+
+    assert sample_frame_indices(33, sequence_length=16, frame_stride=2) == tuple(
+        range(1, 32, 2)
+    )
+    assert sample_frame_indices(30, sequence_length=16, frame_stride=2) == ()
+
+    sequence_rows = add_frame_sequence_columns(
+        rows,
+        frame_counts={str(video): 33},
+        sequence_length=16,
+        frame_stride=2,
+    )
+    assert sequence_rows[0]["frame_indices"] == " ".join(
+        str(index) for index in range(1, 32, 2)
+    )
+
+    leaking_rows = [
+        *rows,
+        {
+            **rows[0],
+            "path": str(video),
+            "relative_path": "walk/walk-copy.avi",
+            "split": "test",
+        },
+    ]
+    report = validate_video_manifest(leaking_rows, ["walk"])
+    assert not report.valid
+    assert any("multiple splits" in issue.message for issue in report.issues)
+
+
+def test_augmentation_presets_and_dry_run_do_not_write(tmp_path: Path) -> None:
+    """Đảm bảo preset augmentation tồn tại và dry-run không ghi output."""
+    input_dir = tmp_path / "images"
+    output_dir = tmp_path / "augmented"
+    input_dir.mkdir()
+    Image.new("RGB", (16, 16), color="white").save(input_dir / "sample.jpg")
+
+    for task in ("detection", "scene", "ocr"):
+        preset = augmentation_preset(task, size=32)
+        transform = build_image_augmentation(task, size=32, normalize=False)
+        assert preset.task == task
+        assert callable(transform)
+
+    count = augment_preview(
+        input_dir=input_dir,
+        output_dir=output_dir,
+        task="scene",
+        size=32,
+        dry_run=True,
+    )
+    assert count == 1
+    assert not output_dir.exists()
+
+
+def test_training_package_imports_outside_repo_root(tmp_path: Path) -> None:
+    """Đảm bảo package editable expose `training.scripts` ngoài repo root."""
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            "import training.scripts.data_utils as d; print(d.__name__)",
+        ],
+        cwd=tmp_path,
+        text=True,
+        capture_output=True,
+        check=True,
+    )
+
+    assert "training.scripts.data_utils" in result.stdout

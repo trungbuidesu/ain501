@@ -19,7 +19,10 @@ import yaml  # type: ignore[import-untyped]
 from PIL import Image
 
 IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".bmp", ".webp"}
+VIDEO_EXTENSIONS = {".avi", ".mp4", ".mov", ".mkv", ".webm", ".mpg", ".mpeg"}
 DEFAULT_DATASET_CONFIG_DIR = Path("configs/datasets")
+DEFAULT_NORMALIZE_MEAN = (0.485, 0.456, 0.406)
+DEFAULT_NORMALIZE_STD = (0.229, 0.224, 0.225)
 
 
 @dataclass(frozen=True)
@@ -67,6 +70,17 @@ class IcdarTextBox:
     points: tuple[tuple[int, int], tuple[int, int], tuple[int, int], tuple[int, int]]
     text: str
     ignored: bool
+
+
+@dataclass(frozen=True)
+class AugmentationPreset:
+    """Mô tả preset augmentation dùng cho một image task."""
+
+    task: str
+    size: int
+    normalize_mean: tuple[float, float, float]
+    normalize_std: tuple[float, float, float]
+    supports_bboxes: bool
 
 
 def load_yaml(path: Path) -> dict[str, Any]:
@@ -489,6 +503,158 @@ def group_aware_split(
     }
 
 
+def build_hmdb_manifest(
+    videos_root: Path,
+    class_names: Sequence[str],
+    split_root: Path | None = None,
+    split_index: int = 1,
+) -> list[dict[str, str]]:
+    """Tạo manifest HMDB-style từ thư mục video phân cấp theo class."""
+
+    allowed_classes = set(class_names)
+    split_by_file = (
+        read_hmdb_split_assignments(split_root, split_index)
+        if split_root is not None and split_root.exists()
+        else {}
+    )
+    rows: list[dict[str, str]] = []
+    for video_path in sorted(videos_root.rglob("*")):
+        if (
+            not video_path.is_file()
+            or video_path.suffix.lower() not in VIDEO_EXTENSIONS
+        ):
+            continue
+        label = video_path.parent.name
+        if label not in allowed_classes:
+            continue
+        rows.append(
+            {
+                "path": str(video_path),
+                "relative_path": video_path.relative_to(videos_root).as_posix(),
+                "label": label,
+                "group": video_path.stem,
+                "split": split_by_file.get(video_path.name, "unassigned"),
+            }
+        )
+    return rows
+
+
+def read_hmdb_split_assignments(
+    split_root: Path,
+    split_index: int = 1,
+) -> dict[str, str]:
+    """Đọc các file HMDB `*_test_splitN.txt` thành mapping `file -> split`."""
+
+    assignments: dict[str, str] = {}
+    split_labels = {"0": "unused", "1": "train", "2": "test"}
+    for split_path in sorted(split_root.glob(f"*_test_split{split_index}.txt")):
+        for line in split_path.read_text(encoding="utf-8").splitlines():
+            parts = line.split()
+            if len(parts) < 2:
+                continue
+            assignments[parts[0]] = split_labels.get(parts[1], "unknown")
+    return assignments
+
+
+def sample_frame_indices(
+    frame_count: int,
+    sequence_length: int = 16,
+    frame_stride: int = 2,
+) -> tuple[int, ...]:
+    """Lấy chuỗi frame ở giữa video theo `sequence_length` và `frame_stride`."""
+
+    if frame_count <= 0 or sequence_length <= 0 or frame_stride <= 0:
+        raise ValueError(
+            "frame_count, sequence_length, and frame_stride must be positive"
+        )
+    required_span = (sequence_length - 1) * frame_stride + 1
+    if frame_count < required_span:
+        return ()
+    start = (frame_count - required_span) // 2
+    return tuple(start + index * frame_stride for index in range(sequence_length))
+
+
+def add_frame_sequence_columns(
+    rows: Sequence[dict[str, str]],
+    frame_counts: dict[str, int],
+    sequence_length: int = 16,
+    frame_stride: int = 2,
+) -> list[dict[str, str]]:
+    """Bổ sung cột frame sequence cho các video có đủ số frame."""
+
+    sequence_rows: list[dict[str, str]] = []
+    for row in rows:
+        path = row["path"]
+        frame_count = frame_counts.get(path)
+        if frame_count is None:
+            continue
+        indices = sample_frame_indices(frame_count, sequence_length, frame_stride)
+        if not indices:
+            continue
+        sequence_rows.append(
+            {
+                **row,
+                "frame_count": str(frame_count),
+                "frame_indices": " ".join(str(index) for index in indices),
+                "sequence_length": str(sequence_length),
+                "frame_stride": str(frame_stride),
+            }
+        )
+    return sequence_rows
+
+
+def validate_video_manifest(
+    rows: Sequence[dict[str, str]],
+    class_names: Sequence[str],
+) -> ValidationReport:
+    """Validate manifest video cơ bản cho action pipeline."""
+
+    allowed_classes = set(class_names)
+    issues: list[ValidationIssue] = []
+    group_to_splits: dict[str, set[str]] = {}
+    for index, row in enumerate(rows, start=1):
+        path = Path(row.get("path", ""))
+        label = row.get("label", "")
+        split = row.get("split", "")
+        group = row.get("group", path.stem)
+        row_path = str(path) if str(path) else f"row:{index}"
+
+        if not path.exists():
+            issues.append(ValidationIssue("error", row_path, "missing video file"))
+        if path.suffix.lower() not in VIDEO_EXTENSIONS:
+            issues.append(
+                ValidationIssue("error", row_path, "unsupported video extension")
+            )
+        if label not in allowed_classes:
+            issues.append(ValidationIssue("error", row_path, f"unknown class: {label}"))
+        if split and split not in {"train", "val", "test", "unused", "unassigned"}:
+            issues.append(ValidationIssue("error", row_path, f"unknown split: {split}"))
+        if split not in {"", "unused", "unassigned"}:
+            group_to_splits.setdefault(group, set()).add(split)
+
+    for group, splits in group_to_splits.items():
+        if len(splits) > 1:
+            issues.append(
+                ValidationIssue(
+                    "error",
+                    group,
+                    f"group appears in multiple splits: {sorted(splits)}",
+                )
+            )
+    return ValidationReport(len(rows), tuple(issues))
+
+
+def write_manifest_csv(rows: Sequence[dict[str, str]], output_path: Path) -> None:
+    """Ghi manifest dạng CSV với fieldnames ổn định từ các row."""
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    fieldnames = sorted({key for row in rows for key in row})
+    with output_path.open("w", newline="", encoding="utf-8") as file:
+        writer = csv.DictWriter(file, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(rows)
+
+
 def parse_hmdb_classes(root: Path) -> list[str]:
     """Trả về tên class HMDB từ các thư mục class."""
 
@@ -673,13 +839,75 @@ def synthesize_with_piper(model_path: Path, output_wav: Path, text: str) -> None
     )
 
 
+def augmentation_preset(task: str, size: int = 640) -> AugmentationPreset:
+    """Trả về metadata preset augmentation cho image task."""
+
+    normalized_task = task.lower()
+    if normalized_task not in {"detection", "scene", "ocr"}:
+        raise ValueError("Expected task to be one of: detection, scene, ocr")
+    if size <= 0:
+        raise ValueError("size must be positive")
+    return AugmentationPreset(
+        task=normalized_task,
+        size=size,
+        normalize_mean=DEFAULT_NORMALIZE_MEAN,
+        normalize_std=DEFAULT_NORMALIZE_STD,
+        supports_bboxes=normalized_task == "detection",
+    )
+
+
+def build_image_augmentation(
+    task: str,
+    size: int = 640,
+    normalize: bool = True,
+) -> Any:
+    """Tạo Albumentations transform cho detection, scene hoặc OCR."""
+
+    import albumentations
+
+    preset = augmentation_preset(task, size)
+    transforms: list[Any]
+    if preset.task == "ocr":
+        transforms = [
+            albumentations.Resize(height=size, width=size),
+            albumentations.RandomBrightnessContrast(p=0.4),
+        ]
+    else:
+        transforms = [
+            albumentations.LongestMaxSize(max_size=size),
+            albumentations.PadIfNeeded(min_height=size, min_width=size, border_mode=0),
+            albumentations.RandomCrop(height=size, width=size, p=0.25),
+            albumentations.HorizontalFlip(p=0.5),
+            albumentations.ColorJitter(p=0.3),
+            albumentations.RandomBrightnessContrast(p=0.3),
+        ]
+    if normalize:
+        transforms.append(
+            albumentations.Normalize(
+                mean=preset.normalize_mean,
+                std=preset.normalize_std,
+            )
+        )
+    if preset.supports_bboxes:
+        return albumentations.Compose(
+            transforms,
+            bbox_params=albumentations.BboxParams(
+                format="yolo",
+                label_fields=["class_labels"],
+            ),
+        )
+    return albumentations.Compose(transforms)
+
+
 def augment_preview(
     input_dir: Path,
     output_dir: Path,
     limit: int = 8,
     dry_run: bool = True,
+    task: str = "detection",
+    size: int = 640,
 ) -> int:
-    """Tạo hoặc preview sample augmentation đơn giản cho image dataset."""
+    """Tạo hoặc preview sample augmentation cho image dataset."""
 
     image_paths = [
         path
@@ -689,13 +917,23 @@ def augment_preview(
     if dry_run:
         return len(image_paths)
 
+    import numpy as np
+
+    transform = build_image_augmentation(task, size=size, normalize=False)
+    preset = augmentation_preset(task, size)
     output_dir.mkdir(parents=True, exist_ok=True)
     for image_path in image_paths:
         with Image.open(image_path) as image:
-            rgb_image = image.convert("RGB")
-            resized_image = rgb_image.resize((640, 640))
-            flipped = resized_image.transpose(Image.Transpose.FLIP_LEFT_RIGHT)
-            flipped.save(output_dir / image_path.name)
+            image_array = np.asarray(image.convert("RGB"))
+        if preset.supports_bboxes:
+            result = transform(
+                image=image_array,
+                bboxes=[],
+                class_labels=[],
+            )
+        else:
+            result = transform(image=image_array)
+        Image.fromarray(result["image"]).save(output_dir / image_path.name)
     return len(image_paths)
 
 
@@ -763,8 +1001,26 @@ def build_arg_parser() -> argparse.ArgumentParser:
     augment = subparsers.add_parser("augment-preview")
     augment.add_argument("--input-dir", type=Path, required=True)
     augment.add_argument("--output-dir", type=Path, required=True)
+    augment.add_argument(
+        "--task",
+        choices=["detection", "scene", "ocr"],
+        default="detection",
+    )
+    augment.add_argument("--size", type=int, default=640)
     augment.add_argument("--limit", type=int, default=8)
     augment.add_argument("--execute", action="store_true")
+
+    action_manifest = subparsers.add_parser("build-action-manifest")
+    action_manifest.add_argument(
+        "--config",
+        type=Path,
+        default=Path("configs/datasets/action_accessibility.yaml"),
+    )
+    action_manifest.add_argument("--videos-root", type=Path)
+    action_manifest.add_argument("--split-root", type=Path)
+    action_manifest.add_argument("--output-csv", type=Path)
+    action_manifest.add_argument("--split-index", type=int, default=1)
+    action_manifest.add_argument("--execute", action="store_true")
 
     validate_tts_parser = subparsers.add_parser("validate-tts")
     validate_tts_parser.add_argument(
@@ -838,8 +1094,49 @@ def main(argv: Sequence[str] | None = None) -> int:
             output_dir=args.output_dir,
             limit=args.limit,
             dry_run=not args.execute,
+            task=args.task,
+            size=args.size,
         )
-        print(f"augmented_or_previewed={count} dry_run={not args.execute}")
+        print(
+            " ".join(
+                [
+                    f"augmented_or_previewed={count}",
+                    f"task={args.task}",
+                    f"size={args.size}",
+                    f"dry_run={not args.execute}",
+                ]
+            )
+        )
+        return 0
+
+    if args.command == "build-action-manifest":
+        config = load_yaml(args.config)
+        base_dataset = config.get("base_dataset", {})
+        classes = config.get("classes", {})
+        output = config.get("output", {})
+        if not isinstance(base_dataset, dict) or not isinstance(classes, dict):
+            raise ValueError("Action config missing base_dataset/classes")
+        if not isinstance(output, dict):
+            raise ValueError("Action config missing output")
+        public_classes = classes.get("public_bootstrap", [])
+        if not isinstance(public_classes, list):
+            raise ValueError("Action config classes.public_bootstrap must be a list")
+        videos_root = args.videos_root or Path(str(base_dataset["videos_root"]))
+        split_root = args.split_root or Path(str(base_dataset["split_root"]))
+        output_csv = args.output_csv or Path(str(output["manifest"]))
+        rows = build_hmdb_manifest(
+            videos_root=videos_root,
+            class_names=[str(name) for name in public_classes],
+            split_root=split_root,
+            split_index=args.split_index,
+        )
+        report = validate_video_manifest(rows, [str(name) for name in public_classes])
+        print_report(report)
+        if args.execute and report.valid:
+            write_manifest_csv(rows, output_csv)
+            print(f"wrote_manifest={output_csv} rows={len(rows)}")
+        else:
+            print(f"planned_manifest={output_csv} rows={len(rows)} dry_run=True")
         return 0
 
     if args.command == "validate-tts":

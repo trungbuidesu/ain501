@@ -27,8 +27,10 @@ Các thao tác lớn hoặc có side effect đều phải opt-in:
 
 ```bash
 python -m training.scripts.data_utils download-plan
+python -m training.scripts.data_utils build-action-manifest
 python -m training.scripts.data_utils convert --coco-json path/to/instances.json --image-root path/to/images --output-root data/processed/demo --classes classes.txt
 python -m training.scripts.data_utils merge-yolo --sources data/custom/export --output-root data/processed/merged --classes classes.txt --dry-run
+python -m training.scripts.data_utils augment-preview --input-dir path/to/images --output-dir data/processed/augment_preview --task detection
 python -m training.scripts.data_utils validate-tts --dry-run
 python -m training.scripts.capture_frames --duration-seconds 3600 --fps 1
 ```
@@ -38,6 +40,7 @@ Fallback PowerShell khi `python` không có trong PATH:
 ```powershell
 $AIN501_PY="C:\Users\bdtrung29.1\miniconda3\envs\ain501\python.exe"
 & $AIN501_PY -m training.scripts.data_utils download-plan
+& $AIN501_PY -m training.scripts.data_utils build-action-manifest
 & $AIN501_PY -m training.scripts.data_utils validate-tts --dry-run
 & $AIN501_PY -m training.scripts.capture_frames --duration-seconds 60 --fps 1
 ```
@@ -60,6 +63,27 @@ riêng tư.
   dung zip local trước khi xử lý.
 - Piper TTS: đặt voice files dưới `models/voices/piper/` theo
   `configs/datasets/tts_piper_accessibility.yaml`.
+
+## Code-First Utilities
+
+- Action recognition: `build-action-manifest` đọc HMDB-style class folders, optional
+  official split files và chỉ ghi manifest khi có `--execute`.
+- Frame sequence: sampler dùng mặc định `frame_sequence_length=16` và
+  `frame_stride=2` theo action config; video thiếu frame được bỏ qua ở sequence
+  manifest.
+- Image augmentation: `augment-preview` hỗ trợ `--task detection|scene|ocr` và
+  `--size`; dry-run mặc định chỉ đếm ảnh, `--execute` mới ghi preview.
+- Packaging: package editable cần expose cả `src*` và `training*` để các lệnh
+  `python -m training.scripts...` chạy được ngoài repo root.
+
+## Env Ghi Nhận
+
+- Dev env đã dùng: conda env `trungbd`.
+- PyTorch XPU wheel: `torch 2.11.0+xpu`, `torchvision 0.26.0+xpu`,
+  `torchaudio 2.11.0+xpu`.
+- Máy hiện detect `Intel(R) UHD Graphics 730` qua XPU nhưng PyTorch cảnh báo đây
+  không phải Intel Arc-supported GPU; XPU training sanity test sẽ skip nếu không
+  có Intel Arc.
 
 ## Workflow CVAT Hoặc Roboflow
 
@@ -98,6 +122,7 @@ python -m training.scripts.data_utils merge-yolo --sources data/custom/annotatio
 
 ```bash
 python -m training.scripts.data_utils download-plan
+python -m training.scripts.data_utils build-action-manifest
 python -m training.scripts.data_utils validate-tts --dry-run
 python -m training.scripts.capture_frames --duration-seconds 60 --fps 1
 ruff check .

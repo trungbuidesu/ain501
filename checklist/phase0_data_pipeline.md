@@ -13,7 +13,7 @@ File này dùng để theo dõi tiến độ Phase 0. Quy ước:
 - [x] Hiểu COCO annotation format (JSON, bbox, categories)
   - Trạng thái: Đã implement parser/converter COCO bbox `[x, y, width, height]` sang YOLO trong `training/scripts/data_utils.py`, có test fixture.
 - [ ] Viết data exploration notebook: phân tích distribution classes, bbox sizes
-  - Trạng thái: Mới có notebook starter `notebooks/0.3_coco_detection_explore.ipynb`. Chưa có code phân tích distribution/bbox đầy đủ và chưa chạy trên COCO local.
+  - Trạng thái: Notebook starter `notebooks/0.3_coco_detection_explore.ipynb` đã có fallback fixture để chạy khi chưa có COCO local. Chưa chạy phân tích đầy đủ trên COCO thật.
 
 ### Optional - Custom Domain Data
 
@@ -30,8 +30,8 @@ File này dùng để theo dõi tiến độ Phase 0. Quy ước:
 
 - [ ] Download UCF-101 hoặc HMDB-51
   - Trạng thái: Chưa download dữ liệu thật. Plan chọn HMDB-51 làm bootstrap trong `configs/datasets/action_accessibility.yaml`.
-- [ ] Viết data loader: video -> frame sequences
-  - Trạng thái: Chưa implement data loader hoàn chỉnh. Mới có split helper và config sampling.
+- [x] Viết data loader: video -> frame sequences
+  - Trạng thái: Đã implement HMDB-style manifest builder, official split parser, frame-sequence sampler và video manifest validation trong `training/scripts/data_utils.py`, có test fixture. Chưa chạy trên HMDB thật.
 - [x] Phân tích: chọn 20-30 action classes phù hợp use case
   - Trạng thái: Đã chọn class public bootstrap và custom-required trong `configs/datasets/action_accessibility.yaml`. `approaching` được ghi rõ là extension Phase 9, không block Phase 0.
 - [x] Train/val/test split
@@ -44,7 +44,7 @@ File này dùng để theo dõi tiến độ Phase 0. Quy ước:
 - [x] Chọn 10-20 scene categories phù hợp
   - Trạng thái: Đã chọn subset scene trong `configs/datasets/scene_accessibility.yaml`, gồm cả note cho `sidewalk` và `bus_stop` là custom/proxy.
 - [ ] Tạo balanced subset cho training router
-  - Trạng thái: Chưa tạo subset thật. Đã có config balancing và notebook starter `notebooks/0.5_places_scene_subset.ipynb`.
+  - Trạng thái: Chưa tạo subset thật. Đã có config balancing và notebook starter `notebooks/0.5_places_scene_subset.ipynb` với fallback fixture.
 - [ ] Optional: tự capture + label thêm 200-500 screenshots
   - Trạng thái: Chưa capture/label thật. Đã có privacy checklist và capture script dry-run.
 
@@ -68,10 +68,10 @@ File này dùng để theo dõi tiến độ Phase 0. Quy ước:
 
 ### Augmentation Pipeline
 
-- [ ] Random crop, flip, color jitter, brightness
-  - Trạng thái: Chưa đủ. Hiện mới có `augment-preview` đơn giản với resize + horizontal flip.
-- [ ] Resize + normalize chuẩn cho từng model
-  - Trạng thái: Chưa đủ. Cần bổ sung model-specific transforms cho detection/classification/action/OCR.
+- [x] Random crop, flip, color jitter, brightness
+  - Trạng thái: Đã có preset Albumentations cho `detection`, `scene`, `ocr` và CLI `augment-preview --task ...`, mặc định vẫn dry-run. Chưa chạy augmentation trên dataset thật.
+- [x] Resize + normalize chuẩn cho từng model
+  - Trạng thái: Đã có preset resize/normalize ImageNet mean/std cho image tasks; action hiện chỉ có frame-sequence sampler, chưa train model.
 
 ### Split And Validation
 
@@ -95,4 +95,4 @@ File này dùng để theo dõi tiến độ Phase 0. Quy ước:
 
 - Hoàn thành scaffolding/config/docs/notebook starter/utility dry-run/test fixtures.
 - Chưa hoàn thành download dataset thật, capture/annotate thật, balanced subset thật, converter CVAT/Roboflow raw export -> YOLO, và analysis notebook chạy trên dữ liệu thật.
-- Hai phần code nên ưu tiên tiếp theo: video frame-sequence loader và augmentation pipeline đầy đủ.
+- Hai phần code ưu tiên trước đó đã được bổ sung ở mức code-first: video frame-sequence loader và augmentation presets. Ưu tiên tiếp theo là chạy trên dataset thật sau khi xác nhận dung lượng/path local.

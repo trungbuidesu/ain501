@@ -75,13 +75,15 @@ python -m src.training.scripts.data_utils verify-dataset-paths --tasks object_de
 python -m src.training.scripts.data_utils validate-tts --dry-run
 ```
 
-Các dataset lõi của Phase 0 hiện dùng:
+Các bộ dữ liệu (dataset) đang được khai báo cấu hình:
 
-- Phát hiện đối tượng: COCO 2017.
-- Nhận diện hành động: UCF-101.
-- Phân loại cảnh: Places365.
-- Sinh mô tả video Tier 2/deferred: MSR-VTT.
-- OCR: TextOCR.
+- **Phát hiện đối tượng (Object Detection):** Bộ gốc COCO 2017. Cấu trúc tập class thiết yếu để huấn luyện mạng theo định dạng YOLO.
+- **Nhận diện hành động (Action Recognition):** Bộ gốc UCF-101. Lấy mẫu luồng frame video nhận diện chuỗi hành động có sẵn và tự định nghĩa.
+- **Phân loại không gian (Scene Classification):** Bộ gốc Places365. Subset ảnh 256px đi kèm cơ chế tự động cân bằng cho các không gian bối cảnh.
+- **Trích xuất văn bản (OCR Scene Text):** Nhắm tới nền tảng TextOCR. Đọc chữ trên các vật thể và biển báo tự nhiên.
+- **Sinh mô tả video (Video Captioning):** Bộ gốc MSR-VTT. Sinh caption thuyết minh sự kiện (Tier 2/deferred).
+- **Giọng nói ảo (TTS Validation):** Khai phá các model ONNX của Piper để kiểm chứng tín hiệu phát âm thanh đầu ra.
+- **Ước lượng chiều sâu (Depth Estimation):** Slot model dự phòng cho thuật toán MiDaS.
 
 ## Quy Ước Phát Triển
 

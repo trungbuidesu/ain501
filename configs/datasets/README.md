@@ -11,7 +11,7 @@ _Lưu ý: Dữ liệu thật (archive file, video, ảnh raw, label) không đư
 Dự án sử dụng cơ chế kết hợp giữa một Bootstrap Public Dataset lớn và bổ sung thêm Custom Subset cho từng tác vụ riêng biệt. Dưới đây là phân tích chi tiết dựa trên nội dung config thực tế:
 
 ### 1. Object Detection (Phát hiện đối tượng rào cản)
-Tệp config: `object_detection_accessibility.yaml` (Phase 0.3)
+Tệp config: `object_detection_accessibility.yaml`
 - **Mục đích:** Tác vụ lõi giúp Agent kiểm soát vùng an toàn, "nhìn" thấy các vật cản, phương tiện, và đối tượng cần chú ý xung quanh lộ trình của người khiếm thị.
 - **Nguồn:** `COCO 2017` (hỗ trợ kéo tự động file zip từ trang chủ, kích thước gốc ~20GB cho cả annotations, train2017, val2017).
 - **Đặc tính/Bộ nhớ:**
@@ -20,7 +20,7 @@ Tệp config: `object_detection_accessibility.yaml` (Phase 0.3)
   - Hỗ trợ custom workflow yêu cầu capture bổ sung 200-500 ảnh thực tế cho các nhóm bị thiếu ở COCO (elevator, crosswalk_signal, sidewalk_obstacle) để gán nhãn qua Roboflow/CVAT.
 
 ### 2. Action Recognition (Nhận diện hành vi)
-Tệp config: `action_accessibility.yaml` (Phase 0.4)
+Tệp config: `action_accessibility.yaml`
 - **Mục đích:** Đặc trị nhận diện đối tượng đang thực hiện hành động gì dạng video chuỗi (chu kỳ liên tiếp).
 - **Nguồn:** `UCF-101` (video clips) với folder split chuẩn của ucfTrainTestlist.
 - **Đặc tính/Bộ nhớ:**
@@ -28,26 +28,26 @@ Tệp config: `action_accessibility.yaml` (Phase 0.4)
   - Khởi tạo với dãy 20 class Bootstrap có sẵn (v.d. WalkingWithDog, Biking...) và đặt trước config list cho 8 nhóm quan trọng sắp capture (`person_approaching`, `stairs_up`...).
 
 ### 3. Scene Classification (Nhận diện không gian/ngữ cảnh)
-Tệp config: `scene_accessibility.yaml` (Phase 0.5)
+Tệp config: `scene_accessibility.yaml`
 - **Mục đích:** Trả lời trực quan câu hỏi "Chúng ta đang ở đâu?" - để Agent cảnh báo hay khuyên nhủ dựa trên việc đang ở bến xe buýt, ở nhà ga tàu điện hay đang trên công viên.
 - **Nguồn:** `Places365` (ưu tiên bản crop `places365_standard_256` kích thước 256px nhẹ và dễ modelizing hơn bản High-res).
 - **Đặc tính/Bộ nhớ:**
   - Filter một list 16 bối cảnh sát sườn nhất (crosswalk, living_room, parking_lot, street...).
   - Quản lý kích thước dữ liệu nghiêm khắc bằng hệ thống Balancing: chặn mức scale tối đa `max_images_per_class: 1000` ảnh/nhãn tránh làm file manifest đầu ra quá tải.
 
-### 4. Tiện ích và Dự Phòng Tương Lai (Phase 0.6 -> 0.9)
+### 4. Tiện ích và Dự Phòng Tương Lai
 
-- **Video Captioning (`video_captioning_msr_vtt.yaml`) - Phase 0.6:**
+- **Video Captioning (`video_captioning_msr_vtt.yaml`):**
   - Mục đích: Bình luận và tóm tắt theo thời gian thực mô tả hoạt cảnh. Dữ liệu: `MSR-VTT`. Tier ưu tiên thấp (Tier 2 deferred), cơ chế tự động mapping normalized format `video_id -> captions[]`.
 
-- **OCR Scene Text - Phase 0.7:**
+- **OCR Scene Text:**
   - Mục đích: Đọc chữ trong cảnh thực tế như số nhà, nhãn thang máy, biển báo hoặc chữ trên đồ vật. Config mục tiêu hiện là `ocr_textocr.yaml`, dùng TextOCR 0.1 với trường `utf8_string`, bbox `xywh_pixels` và polygon `points`. Dữ liệu thật vẫn chưa có local dưới `data/external/textocr`.
 
-- **Validation Text-to-Speech (`tts_piper_accessibility.yaml`) - Phase 0.8:**
+- **Validation Text-to-Speech (`tts_piper_accessibility.yaml`):**
   - Mục đích: Validate chất âm báo bằng lời module phản hồi cho người khiếm thị. Config nhúng đường dẫn các model `.onnx` tiếng Việt (`vi_VN-vais1000-medium`) và tiếng Anh với sample rate `22050Hz`. Hỗ trợ script fallback model.
 
-- **Depth Estimation (`depth_midas_reserved.yaml`) - Phase 0.9:**
-  - Mục đích: Ước lượng chiều sâu qua một ảnh duy nhất, hỗ trợ nhận định cự ly vật lý. Reserved file. Cấu trúc yêu cầu `input_format: RGB image` ra `output_format: relative_depth_map` (Trạng thái đánh dấu: không cản trở block Phase 0 core).
+- **Depth Estimation (`depth_midas_reserved.yaml`):**
+  - Mục đích: Ước lượng chiều sâu qua một ảnh duy nhất, hỗ trợ nhận định cự ly vật lý. Reserved file. Cấu trúc yêu cầu `input_format: RGB image` ra `output_format: relative_depth_map` (Trạng thái đánh dấu: không cản trở block core).
 
 ---
 

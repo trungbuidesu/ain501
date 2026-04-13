@@ -12,8 +12,8 @@ File này dùng để theo dõi tiến độ Phase 0. Quy ước:
   - Trạng thái: Chưa download dữ liệu thật. Đã có config nguồn và `download-plan` trong `configs/datasets/object_detection_accessibility.yaml`.
 - [x] Hiểu COCO annotation format (JSON, bbox, categories)
   - Trạng thái: Đã implement parser/converter COCO bbox `[x, y, width, height]` sang YOLO trong `training/scripts/data_utils.py`, có test fixture.
-- [x] Viết data exploration notebook: phân tích distribution classes, bbox sizes
-  - Trạng thái: Đã tạo notebook starter `notebooks/0.3_coco_detection_explore.ipynb`. Chưa chạy phân tích thật vì chưa có COCO local.
+- [ ] Viết data exploration notebook: phân tích distribution classes, bbox sizes
+  - Trạng thái: Mới có notebook starter `notebooks/0.3_coco_detection_explore.ipynb`. Chưa có code phân tích distribution/bbox đầy đủ và chưa chạy trên COCO local.
 
 ### Optional - Custom Domain Data
 
@@ -21,8 +21,8 @@ File này dùng để theo dõi tiến độ Phase 0. Quy ước:
   - Trạng thái: Chưa record thật. Đã có script dry-run `training/scripts/capture_frames.py`.
 - [ ] Annotate bằng CVAT hoặc Roboflow (200-500 images)
   - Trạng thái: Chưa annotate thật. Đã có workflow trong `docs/data_pipeline.md`.
-- [x] Convert annotation sang YOLO format
-  - Trạng thái: Đã có khung convert/validate YOLO trong `training/scripts/data_utils.py`. Cần chạy với export thật để xác nhận end-to-end.
+- [ ] Convert annotation sang YOLO format
+  - Trạng thái: Đã có COCO -> YOLO converter và YOLO validator trong `training/scripts/data_utils.py`. Chưa có converter CVAT/Roboflow raw export -> YOLO hoàn chỉnh và chưa chạy với export thật.
 - [x] Merge với subset COCO nếu cần
   - Trạng thái: Đã implement `merge-yolo --dry-run` để preview remap trước khi ghi file. Chưa merge dataset thật.
 
@@ -52,8 +52,8 @@ File này dùng để theo dõi tiến độ Phase 0. Quy ước:
 
 - [ ] Download MSR-VTT hoặc MSVD
   - Trạng thái: Chưa download dữ liệu thật. Đã có config `configs/datasets/video_captioning_msr_vtt.yaml`.
-- [x] Explore: xem sample videos + captions
-  - Trạng thái: Đã tạo notebook starter `notebooks/0.6_msr_vtt_captioning_explore.ipynb`. Chưa xem sample thật vì chưa có dataset local.
+- [ ] Explore: xem sample videos + captions
+  - Trạng thái: Mới có notebook starter `notebooks/0.6_msr_vtt_captioning_explore.ipynb`. Chưa xem sample thật vì chưa có dataset local.
 - [x] Hiểu format: `video_id -> multiple captions`
   - Trạng thái: Đã implement parser normalize MSR-VTT thành `video_id -> captions[]`, có test fixture.
 
@@ -61,8 +61,8 @@ File này dùng để theo dõi tiến độ Phase 0. Quy ước:
 
 - [ ] Download ICDAR 2015 hoặc TextOCR
   - Trạng thái: Chưa download dữ liệu thật. Đã có config `configs/datasets/ocr_icdar2015.yaml`.
-- [x] Explore: các loại text (scene text, document, handwriting)
-  - Trạng thái: Đã tạo notebook starter `notebooks/0.7_icdar_ocr_explore.ipynb` và parser ICDAR fixture. Chưa explore dataset thật.
+- [ ] Explore: các loại text (scene text, document, handwriting)
+  - Trạng thái: Mới có notebook starter `notebooks/0.7_icdar_ocr_explore.ipynb` và parser ICDAR fixture. Chưa explore dataset thật.
 
 ## Data Pipeline Utilities (`training/scripts/data_utils.py`)
 
@@ -94,5 +94,5 @@ File này dùng để theo dõi tiến độ Phase 0. Quy ước:
 ## Tổng Kết Hiện Tại
 
 - Hoàn thành scaffolding/config/docs/notebook starter/utility dry-run/test fixtures.
-- Chưa hoàn thành download dataset thật, capture/annotate thật, balanced subset thật và analysis notebook chạy trên dữ liệu thật.
+- Chưa hoàn thành download dataset thật, capture/annotate thật, balanced subset thật, converter CVAT/Roboflow raw export -> YOLO, và analysis notebook chạy trên dữ liệu thật.
 - Hai phần code nên ưu tiên tiếp theo: video frame-sequence loader và augmentation pipeline đầy đủ.

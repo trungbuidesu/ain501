@@ -70,6 +70,7 @@ target-version = "py310"
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "W", "B", "C4", "UP"]
 ignore = ["UP009"]
+extend-per-file-ignores = {"*.ipynb" = ["F401", "N812", "B905", "E402", "E501"]}
 
 [tool.ruff.lint.isort]
 known-first-party = ["src"]

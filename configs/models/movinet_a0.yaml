@@ -1,0 +1,28 @@
+name: movinet_a0
+role: action_recognition
+model:
+  variant: A0
+  causal: true
+  num_classes: 19
+  pretrained_path: models/video/movinet_a0_k600.pt
+  freeze_backbone: false
+  resolution: 172
+training:
+  lr: 0.001
+  batch_size: 32
+  num_workers: 4
+  epochs: 50
+  n_clips: 5
+  n_clip_frames: 6
+  frame_stride: 2
+  temporal_jitter: true
+  random_crop: true
+qat:
+  lr: 0.0001
+  epochs: 10
+output:
+  checkpoint_dir: models/video/movinet_a0
+  log_dir: runs/movinet_a0
+  report_dir: reports/movinet_a0
+  onnx_fp32: models/movinet_a0_fp32.onnx
+  onnx_int8: models/movinet_a0_int8.onnx

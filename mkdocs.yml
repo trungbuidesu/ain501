@@ -1,0 +1,18 @@
+site_name: Tài liệu AIN501
+site_description: Cổng tài liệu kỹ thuật cho AIN501
+theme:
+  name: material
+nav:
+  - Trang chủ: index.md
+  - Tài liệu:
+      - Tổng quan: general/overview.md
+      - Thí nghiệm: general/experiments.md
+      - Mô hình: general/models.md
+      - Bộ dữ liệu:
+          - Tổng hợp: datasets/index.md
+          - Object Detection (Phát hiện đối tượng): datasets/object_detection.md
+          - Action Recognition (Nhận diện hành động): datasets/action_recognition.md
+          - Scene Classification (Phân loại bối cảnh): datasets/scene_classification.md
+          - Mở rộng (OCR, Chú thích video, TTS, Độ sâu): datasets/extended.md
+  - Tài liệu hiện có:
+      - Data Pipeline: data_pipeline.md

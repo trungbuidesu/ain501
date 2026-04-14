@@ -313,7 +313,7 @@ def main_evaluate(args: argparse.Namespace) -> int:
 
     with torch.no_grad():
         for clips, labels in loader:
-            clips = clips.to(device)
+            clips = preprocess_batch(clips, device)
             if hasattr(model, "clean_activation_buffers"):
                 model.clean_activation_buffers()
             outputs = model(clips)

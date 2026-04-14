@@ -207,4 +207,6 @@ marimo/_lsp/
 __marimo__/
  
 # Project Data
-data/
+/data/
+src/training/data/**/__pycache__/
+src/training/data/**/*.py[codz]

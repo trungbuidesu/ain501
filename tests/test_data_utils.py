@@ -13,6 +13,9 @@ from pathlib import Path
 import pytest
 from PIL import Image
 
+from src.training.data.ocr.textocr import (
+    parse_textocr_annotations as parse_textocr_annotations_from_module,
+)
 from src.training.scripts.data_utils import (
     add_frame_sequence_columns,
     augment_preview,
@@ -226,6 +229,11 @@ def test_public_dataset_parsers() -> None:
     assert textocr[0].text == "STORE"
     assert textocr[1].ignored
 
+    module_textocr = parse_textocr_annotations_from_module(
+        FIXTURES / "textocr_tiny.json"
+    )
+    assert module_textocr == textocr
+
 
 def test_tts_config_and_wav_validation(tmp_path: Path) -> None:
     """Đảm bảo config TTS và WAV sample tối thiểu được validate đúng."""
@@ -266,6 +274,59 @@ def test_cli_smoke_dry_run() -> None:
     """Đảm bảo các lệnh CLI dry-run chính chạy thành công."""
     assert main(["download-plan"]) == 0
     assert main(["validate-tts", "--dry-run"]) == 0
+
+
+def test_build_action_manifest_requires_public_bootstrap_list(tmp_path: Path) -> None:
+    """Đảm bảo CLI báo lỗi khi classes.public_bootstrap không phải list."""
+    config = tmp_path / "action_invalid.yaml"
+    config.write_text(
+        "\n".join(
+            [
+                "base_dataset:",
+                "  videos_root: /tmp/videos",
+                "  split_root: /tmp/splits",
+                "classes:",
+                "  public_bootstrap: not-a-list",
+                "output:",
+                "  manifest: /tmp/action_manifest.csv",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="Action config classes.public_bootstrap must be a list",
+    ):
+        main(["build-action-manifest", "--config", str(config)])
+
+
+def test_build_scene_subset_requires_places_subset_list(tmp_path: Path) -> None:
+    """Đảm bảo CLI báo lỗi khi classes.places_subset không phải list."""
+    config = tmp_path / "scene_invalid.yaml"
+    config.write_text(
+        "\n".join(
+            [
+                "base_dataset:",
+                "  root: /tmp/images",
+                "  categories_file: /tmp/categories.txt",
+                "classes:",
+                "  places_subset: not-a-list",
+                "balancing:",
+                "  max_images_per_class: 100",
+                "output:",
+                "  manifest: /tmp/scene_manifest.csv",
+                "  subset_root: /tmp/subset",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="Scene config classes.places_subset must be a list",
+    ):
+        main(["build-scene-subset", "--config", str(config)])
 
 
 def test_config_contains_accessibility_requirements() -> None:

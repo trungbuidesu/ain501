@@ -14,15 +14,15 @@ log = logging.getLogger(__name__)
 
 
 class TrainingLogger:
-    """Logger huấn luyện thống nhất, dispatch sang TensorBoard và/hoặc W&B.
+    """TrainingLogger thống nhất cho TensorBoard và Weights & Biases.
 
     Tham số:
         project: Tên project, dùng cho W&B.
         run_name: Tên run hoặc experiment.
-        backends: Danh sách backend bật, gồm "tensorboard" hoặc "wandb".
+        backends: Danh sách backend bật: `tensorboard`, `wandb` hoặc cả hai.
         log_dir: Thư mục log TensorBoard và output local.
         config: Hyperparameters cần log lúc khởi tạo.
-        tags: Tag tùy chọn cho W&B.
+        tags: Tags tùy chọn cho W&B.
 
     Ví dụ:
         >>> logger = TrainingLogger(
@@ -98,7 +98,7 @@ class TrainingLogger:
     def _dispatch_to_backends(
         self, method_name: str, *args: Any, **kwargs: Any
     ) -> None:
-        """Gọi một phương thức trên toàn bộ backend đang hoạt động."""
+        """Gọi một method trên toàn bộ backend đang hoạt động."""
         for backend in self._backends:
             getattr(backend, method_name)(*args, **kwargs)
 
@@ -107,7 +107,7 @@ class TrainingLogger:
         self._dispatch_to_backends("log_scalar", tag, value, step)
 
     def log_scalars(self, main_tag: str, values: dict[str, float], step: int) -> None:
-        """Ghi nhiều scalar value dưới một grouped tag."""
+        """Ghi nhiều scalar values dưới một grouped tag."""
         self._dispatch_to_backends("log_scalars", main_tag, values, step)
 
     def log_image(self, tag: str, image: Any, step: int) -> None:

@@ -1,10 +1,9 @@
 # -*- coding: utf-8 -*-
-"""MSVD video-captioning helpers.
+"""Tiện ích video captioning cho MSVD.
 
-The Phase 0 pipeline keeps video captioning as Tier 2/deferred, but this
-module provides a small normalizer so config validation, notebooks, and future
-loaders can agree on one `video_id -> captions[]` shape when MSVD data is
-available locally.
+Phase 0 vẫn xếp video captioning vào nhóm Tier 2/deferred, nhưng module này
+cung cấp normalizer nhỏ để config, notebook và loader tương lai dùng chung
+format `video_id -> captions[]`.
 """
 
 from __future__ import annotations
@@ -15,11 +14,11 @@ from typing import Any
 
 
 def parse_msvd_captions(path: Path) -> dict[str, list[str]]:
-    """Normalize MSVD-style annotations into `video_id -> captions[]`.
+    """Normalize MSVD annotations thành format `video_id -> captions[]`.
 
-    Accepts either a top-level list, a mapping with an `annotations` list, or a
-    mapping keyed by `video_id`. Each row may store text under `captions`,
-    `caption`, or `sentence`; `video_path` falls back to its filename stem.
+    Input có thể là top-level list, dict chứa `annotations`, hoặc dict trực
+    tiếp theo `video_id`. Caption text được đọc từ `captions`, `caption` hoặc
+    `sentence`.
     """
 
     data = json.loads(path.read_text(encoding="utf-8"))

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Stable dataset split helpers."""
+"""Tiện ích chia dataset ổn định."""
 
 from __future__ import annotations
 
@@ -37,7 +37,7 @@ def group_aware_split(
     train_ratio: float = 0.8,
     val_ratio: float = 0.1,
 ) -> dict[str, list[dict[str, str]]]:
-    """Tạo split ổn định, đảm bảo mỗi group chỉ nằm trong một split."""
+    """Tạo group-aware split sao cho mỗi group chỉ thuộc một split."""
 
     groups: dict[str, list[dict[str, str]]] = {}
     for row in rows:

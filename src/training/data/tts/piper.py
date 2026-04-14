@@ -1,9 +1,8 @@
 # -*- coding: utf-8 -*-
-"""Piper TTS validation helpers.
+"""Tiện ích validate Piper TTS.
 
-Validates local voice model/config paths from the TTS dataset config and,
-when explicitly executed, synthesizes short WAV samples for audio sanity
-checks. Dry-run mode avoids file synthesis.
+Module kiểm tra config/model voice local và có thể synthesize WAV mẫu để sanity
+check âm thanh. Dry-run không render âm thanh thật.
 """
 
 from __future__ import annotations
@@ -21,7 +20,7 @@ def validate_wav(
     path: Path,
     expected_sample_rate_hz: int | None = None,
 ) -> ValidationReport:
-    """Kiểm tra file WAV được synthesize từ Piper."""
+    """Validate WAV được synthesize từ Piper."""
 
     issues: list[ValidationIssue] = []
     try:
@@ -51,7 +50,7 @@ def validate_wav(
 
 
 def tts_voice_entries(config: dict[str, Any]) -> list[dict[str, Any]]:
-    """Trả về danh sách voice Piper mặc định từ TTS config."""
+    """Trích xuất danh sách voice entries từ TTS config defaults."""
 
     voices = config.get("voices", {})
     if not isinstance(voices, dict):
@@ -67,11 +66,10 @@ def validate_tts_config(
     execute: bool = False,
     strict_files: bool = True,
 ) -> ValidationReport:
-    """Validate Piper voice config and optional synthesized WAV output.
+    """Validate Piper voice config và tùy chọn synthesize WAV mẫu.
 
-    `strict_files=False` supports dry-run checks before model files are present.
-    `execute=True` runs the Piper CLI for configured prompts when required
-    model/config files exist.
+    `strict_files=False` cho phép dry-run trước khi tải model. `execute=True`
+    gọi Piper CLI để sinh âm thanh thật.
     """
 
     config = load_yaml(config_path)
@@ -125,7 +123,7 @@ def validate_tts_config(
 
 
 def synthesize_with_piper(model_path: Path, output_wav: Path, text: str) -> None:
-    """Chạy Piper CLI cho một prompt."""
+    """Gọi Piper CLI để synthesize một prompt."""
 
     command = [
         "piper",

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Shared types and helpers for the data pipeline."""
+"""Kiểu dữ liệu và tiện ích dùng chung cho data pipeline."""
 
 from __future__ import annotations
 
@@ -20,7 +20,7 @@ DEFAULT_NORMALIZE_STD = (0.229, 0.224, 0.225)
 
 @dataclass(frozen=True)
 class ValidationIssue:
-    """Một lỗi hoặc cảnh báo khi validate dataset."""
+    """Một lỗi hoặc cảnh báo trong quá trình validate dataset."""
 
     level: str
     path: str
@@ -29,20 +29,20 @@ class ValidationIssue:
 
 @dataclass(frozen=True)
 class ValidationReport:
-    """Báo cáo tổng hợp trả về từ các hàm kiểm tra dữ liệu."""
+    """Báo cáo tổng hợp từ các hàm validation."""
 
     checked_files: int
     issues: tuple[ValidationIssue, ...]
 
     @property
     def valid(self) -> bool:
-        """Cho biết báo cáo không có lỗi mức `error`."""
+        """Cho biết report không có issue cấp `error`."""
         return not any(issue.level == "error" for issue in self.issues)
 
 
 @dataclass(frozen=True)
 class MergeReport:
-    """Báo cáo trả về khi preview hoặc thực thi merge YOLO dataset."""
+    """Báo cáo preview hoặc execute khi merge dataset YOLO."""
 
     dry_run: bool
     scanned_labels: int
@@ -52,12 +52,12 @@ class MergeReport:
 
     @property
     def valid(self) -> bool:
-        """Cho biết quá trình merge không có lỗi mức `error`."""
+        """Cho biết merge report không có issue cấp `error`."""
         return not any(issue.level == "error" for issue in self.issues)
 
 
 def load_yaml(path: Path) -> dict[str, Any]:
-    """Đọc file YAML từ đĩa và trả về mapping."""
+    """Đọc YAML và trả về mapping."""
 
     data = yaml.safe_load(path.read_text(encoding="utf-8"))
     if not isinstance(data, dict):
@@ -66,13 +66,13 @@ def load_yaml(path: Path) -> dict[str, Any]:
 
 
 def dataset_config_paths(config_dir: Path = DEFAULT_DATASET_CONFIG_DIR) -> list[Path]:
-    """Trả về danh sách file config dataset theo thứ tự ổn định."""
+    """Liệt kê dataset config YAML theo thứ tự ổn định."""
 
     return sorted(config_dir.glob("*.yaml"))
 
 
 def write_manifest_csv(rows: Sequence[dict[str, str]], output_path: Path) -> None:
-    """Ghi manifest dạng CSV với fieldnames ổn định từ các row."""
+    """Ghi manifest CSV và tự suy ra fieldnames từ rows."""
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     fieldnames = sorted({key for row in rows for key in row})
@@ -83,7 +83,7 @@ def write_manifest_csv(rows: Sequence[dict[str, str]], output_path: Path) -> Non
 
 
 def read_classes(path: Path) -> list[str]:
-    """Đọc danh sách tên class từ file text."""
+    """Đọc danh sách canonical class names từ file text."""
 
     return [
         line.strip()
@@ -97,7 +97,7 @@ def write_split_csvs(
     output_dir: Path,
     fieldnames: Sequence[str],
 ) -> None:
-    """Ghi từng split ra file CSV riêng trong thư mục output."""
+    """Ghi từng split subset ra file CSV trong output directory."""
     output_dir.mkdir(parents=True, exist_ok=True)
     for split_name, rows in splits.items():
         with (output_dir / f"{split_name}.csv").open(

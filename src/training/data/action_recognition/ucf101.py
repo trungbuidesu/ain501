@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
-"""UCF-101 action-recognition helpers.
+"""Tiện ích nhận diện hành động cho UCF-101.
 
-Builds class-folder video manifests, reads official UCF-101 split files,
-adds deterministic center frame sequences, and validates split/group
-invariants for Phase 0 action bootstrap data.
+Module dựng manifest từ thư mục video theo class, đọc split chính thức
+UCF-101, lấy mẫu frame sequence tiền định và kiểm tra bất biến group/split cho
+pipeline Phase 0.
 """
 
 from __future__ import annotations
@@ -26,11 +26,10 @@ def build_action_manifest(
     split_root: Path | None = None,
     split_index: int = 1,
 ) -> list[dict[str, str]]:
-    """Build an action manifest from class-folder videos.
+    """Tạo action manifest từ thư mục video theo class.
 
-    Each row contains absolute path, relative path, label, group, and split.
-    Only class folders listed in `class_names` are included; split assignment
-    comes from UCF-101 train/test lists when present.
+    Mỗi row lưu path tuyệt đối, relative path, label, group và split. Chỉ các
+    class nằm trong `class_names` được đưa vào manifest.
     """
 
     allowed_classes = set(class_names)
@@ -70,7 +69,7 @@ def read_action_split_assignments(
     split_root: Path | None,
     split_index: int = 1,
 ) -> dict[str, str]:
-    """Đọc split assignment cho action dataset được cấu hình."""
+    """Đọc split assignment cho action dataset theo cấu hình."""
 
     if split_root is None or not split_root.exists():
         return {}
@@ -84,10 +83,10 @@ def read_ucf101_split_assignments(
     split_root: Path,
     split_index: int = 1,
 ) -> dict[str, str]:
-    """Read official UCF-101 train/test list files for one split index.
+    """Đọc train/test list chính thức của UCF-101.
 
-    Returns a mapping from `ClassName/video.avi` to `train` or `test`; missing
-    files are tolerated so dry-run workflows can run before local data exists.
+    Trả về mapping từ `ClassName/video.avi` sang `train` hoặc `test`. Thiếu
+    file split được bỏ qua để dry-run vẫn chạy được trước khi có data local.
     """
 
     assignments: dict[str, str] = {}
@@ -111,10 +110,10 @@ def sample_frame_indices(
     sequence_length: int = 16,
     frame_stride: int = 2,
 ) -> tuple[int, ...]:
-    """Sample a deterministic centered frame sequence.
+    """Lấy mẫu frame sequence centered và tiền định.
 
-    Returns an empty tuple when the video has fewer frames than the required
-    span, letting callers skip short clips without raising.
+    Trả về tuple rỗng khi video quá ngắn so với span yêu cầu để caller có thể
+    bỏ qua clip ngắn mà không raise.
     """
 
     if frame_count <= 0 or sequence_length <= 0 or frame_stride <= 0:
@@ -134,7 +133,7 @@ def add_frame_sequence_columns(
     sequence_length: int = 16,
     frame_stride: int = 2,
 ) -> list[dict[str, str]]:
-    """Bổ sung cột frame sequence cho các video có đủ số frame."""
+    """Bổ sung cột frame sequence cho video có đủ frame."""
 
     sequence_rows: list[dict[str, str]] = []
     for row in rows:
@@ -207,7 +206,7 @@ def validate_video_manifest(
 
 
 def validate_video_open(path: Path, min_frames: int = 1) -> ValidationIssue | None:
-    """Open one video with OpenCV and check that it has enough frames."""
+    """Mở video bằng OpenCV và kiểm tra số frame tối thiểu."""
 
     try:
         import cv2  # type: ignore[import-untyped]
@@ -238,7 +237,7 @@ def read_action_classes(
     config_path: Path,
     class_key: str = "public_bootstrap",
 ) -> list[str]:
-    """Read the configured action-recognition class whitelist."""
+    """Đọc whitelist class nhận diện hành động từ config."""
 
     config = load_yaml(config_path)
     classes = config.get("classes", {})

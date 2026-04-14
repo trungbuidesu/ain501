@@ -16,3 +16,7 @@ nav:
           - Mở rộng (OCR, Chú thích video, TTS, Độ sâu): datasets/extended.md
   - Tài liệu hiện có:
       - Data Pipeline: data_pipeline.md
+
+plugins:
+  - search:
+      lang: vi

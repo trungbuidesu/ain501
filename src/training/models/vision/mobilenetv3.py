@@ -1,11 +1,10 @@
 # -*- coding: utf-8 -*-
-"""MobileNetV3-Small shared feature extractor.
+"""Shared feature extractor MobileNetV3-Small.
 
-MobileNetV3-Small is built from inverted residual blocks, uses
-squeeze-and-excitation in selected blocks, and relies on hard-swish/hard-sigmoid
-activations for mobile-friendly nonlinearities. This module removes the
-torchvision classification head and keeps the convolutional feature extractor,
-average pooling, and flattened 576-dimensional embedding output.
+MobileNetV3-Small dùng inverted residual blocks, squeeze-excitation ở một số
+block và hard-swish/hard-sigmoid activations. Module này bỏ classification
+head mặc định, giữ convolutional extractor + avgpool để xuất embedding 576
+chiều.
 """
 
 from __future__ import annotations
@@ -19,7 +18,7 @@ from torchvision.models import MobileNet_V3_Small_Weights, mobilenet_v3_small
 
 
 def _resolve_weights(weights: str | None) -> MobileNet_V3_Small_Weights | None:
-    """Map CLI/config weight aliases to torchvision weights objects."""
+    """Resolve weight aliases sang torchvision weight objects."""
 
     if weights is None or weights.lower() in {"none", "random"}:
         return None
@@ -31,24 +30,24 @@ def _resolve_weights(weights: str | None) -> MobileNet_V3_Small_Weights | None:
 def build_mobilenetv3_small_backbone(
     weights: str | None = "default",
 ) -> MobileNetV3SmallBackbone:
-    """Build a MobileNetV3-Small backbone with the requested weights."""
+    """Tạo backbone MobileNetV3-Small với weights được yêu cầu."""
 
     return MobileNetV3SmallBackbone(weights=weights)
 
 
 class MobileNetV3SmallBackbone(nn.Module):
-    """MobileNetV3-Small without the classification head.
+    """MobileNetV3-Small backbone không chứa classification head.
 
-    The kept path is `features -> avgpool -> flatten`. The removed torchvision
-    head is the MLP classifier that maps the 576-dimensional pooled embedding to
-    ImageNet logits. Downstream agents can use `forward_feature_map` for spatial
-    maps or `forward_embedding`/`forward` for compact vectors.
+    Luồng forward giữ `features -> avgpool -> flatten`. Classifier MLP của
+    torchvision, vốn ánh xạ embedding 576 chiều sang ImageNet logits, bị loại
+    bỏ. Downstream có thể gọi `forward_feature_map` để lấy tensor không gian
+    hoặc `forward_embedding`/`forward` để lấy compact vectors.
     """
 
     embedding_dim = 576
 
     def __init__(self, weights: str | None = "default") -> None:
-        """Load torchvision MobileNetV3-Small and drop its classifier."""
+        """Load torchvision model gốc và bỏ classifier head."""
 
         super().__init__()
         model = mobilenet_v3_small(weights=_resolve_weights(weights))
@@ -56,32 +55,32 @@ class MobileNetV3SmallBackbone(nn.Module):
         self.avgpool = model.avgpool
 
     def forward_feature_map(self, inputs: torch.Tensor) -> torch.Tensor:
-        """Return the final convolutional feature map, normally `[N,576,7,7]`."""
+        """Trả final convolutional feature map, thường là `[N,576,7,7]`."""
 
         return cast(torch.Tensor, self.features(inputs))
 
     def forward_embedding(self, inputs: torch.Tensor) -> torch.Tensor:
-        """Return the pooled 576-dimensional embedding for each image."""
+        """Trả pooled embedding 576 chiều cho từng ảnh."""
 
         feature_map = self.forward_feature_map(inputs)
         pooled = self.avgpool(feature_map)
         return torch.flatten(pooled, start_dim=1)
 
     def forward(self, inputs: torch.Tensor) -> torch.Tensor:
-        """Alias for `forward_embedding` so export defaults to embeddings."""
+        """Alias cho `forward_embedding`."""
 
         return self.forward_embedding(inputs)
 
 
 class MobileNetV3SmallWithHead(nn.Module):
-    """Temporary classifier wrapper used only for supervised fine-tuning."""
+    """Wrapper classifier tạm thời cho supervised fine-tuning."""
 
     def __init__(
         self,
         backbone: MobileNetV3SmallBackbone,
         num_classes: int,
     ) -> None:
-        """Attach a linear classifier to a MobileNetV3-Small backbone."""
+        """Gắn linear classifier lên MobileNetV3-Small backbone."""
 
         super().__init__()
         if num_classes <= 0:
@@ -90,7 +89,7 @@ class MobileNetV3SmallWithHead(nn.Module):
         self.classifier = nn.Linear(backbone.embedding_dim, num_classes)
 
     def forward(self, inputs: torch.Tensor) -> torch.Tensor:
-        """Return class logits from backbone embeddings."""
+        """Trả class logits từ backbone embeddings."""
 
         return cast(
             torch.Tensor, self.classifier(self.backbone.forward_embedding(inputs))
@@ -101,7 +100,7 @@ def freeze_mobilenetv3_early_layers(
     model: MobileNetV3SmallBackbone | MobileNetV3SmallWithHead,
     freeze_until: int = 7,
 ) -> None:
-    """Freeze early MobileNetV3 feature blocks and leave later blocks trainable."""
+    """Freeze early MobileNetV3 blocks và để later blocks trainable."""
 
     backbone = model.backbone if isinstance(model, MobileNetV3SmallWithHead) else model
     for index, layer in enumerate(backbone.features):
@@ -113,7 +112,7 @@ def freeze_mobilenetv3_early_layers(
 
 
 def _set_requires_grad(parameters: Iterable[nn.Parameter], value: bool) -> None:
-    """Set `requires_grad` on an iterable of parameters."""
+    """Set `requires_grad` cho một iterable parameters."""
 
     for parameter in parameters:
         parameter.requires_grad = value

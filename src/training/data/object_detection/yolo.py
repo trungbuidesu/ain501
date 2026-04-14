@@ -1,9 +1,8 @@
 # -*- coding: utf-8 -*-
-"""YOLO dataset helpers for object-detection artifacts.
+"""Tiện ích YOLO dataset cho object detection.
 
-This module validates Ultralytics-style image/label folder trees, reads
-class names, and previews or executes class-id remapping when merging
-custom exports with the canonical COCO subset.
+Module validate layout ảnh/label kiểu Ultralytics, đọc class names, preview
+hoặc execute remap class id khi merge custom exports với COCO.
 """
 
 from __future__ import annotations
@@ -40,16 +39,15 @@ class NormalizeYoloReport:
 
     @property
     def valid(self) -> bool:
-        """Return whether normalization completed without error-level issues."""
+        """Cho biết normalization không có issue cấp `error`."""
         return self.validation.valid
 
 
 def validate_yolo_dataset(root: Path, class_names: Sequence[str]) -> ValidationReport:
-    """Validate an Ultralytics-style YOLO dataset root.
+    """Validate layout YOLO kiểu Ultralytics.
 
-    Checks image readability, image/label pairing, class id bounds, and bbox
-    normalization ranges. Returns a `ValidationReport`; it never mutates the
-    dataset.
+    Kiểm tra ảnh corrupt, cặp label-image, class id và bbox range. Trả về
+    `ValidationReport` mà không thay đổi dữ liệu.
     """
 
     issues: list[ValidationIssue] = []
@@ -112,7 +110,7 @@ def validate_yolo_label_line(
     class_count: int,
     path: str,
 ) -> ValidationIssue | None:
-    """Kiểm tra một dòng label YOLO normalized."""
+    """Validate một dòng YOLO label đã chuẩn hóa."""
 
     parts = line.split()
     if len(parts) != 5:
@@ -138,11 +136,10 @@ def merge_yolo_datasets(
     canonical_names: Sequence[str],
     dry_run: bool = True,
 ) -> MergeReport:
-    """Merge YOLO datasets using canonical class names.
+    """Merge nhiều dataset YOLO theo canonical class names.
 
-    Dry-run mode scans labels and reports class remaps without writing.
-    Execute mode copies matching image/label files to `output_root` and writes
-    a canonical `classes.txt`.
+    Dry-run chỉ quét labels và cảnh báo remap. Execute mode copy ảnh/label vào
+    `output_root` và ghi `classes.txt` chuẩn.
     """
 
     issues: list[ValidationIssue] = []
@@ -201,7 +198,7 @@ def merge_yolo_datasets(
 
 
 def read_yolo_names(source: Path) -> list[str]:
-    """Đọc tên class YOLO từ `classes.txt` hoặc `data.yaml` của Ultralytics."""
+    """Đọc YOLO class names từ `classes.txt`, `.names` hoặc `data.yaml`."""
 
     for classes_path in (source / "classes.txt", source / "obj.names"):
         if classes_path.exists():
@@ -216,11 +213,9 @@ def read_yolo_names(source: Path) -> list[str]:
 
 
 def _read_yolo_names_from_file(classes_path: Path) -> list[str]:
-    """Read class names from one explicit YOLO metadata file.
+    """Đọc class names từ YOLO metadata file.
 
-    Text files such as `classes.txt` and `obj.names` are read line by line.
-    YAML files use the Ultralytics `names` field as either a list or id->name
-    mapping.
+    Text files được đọc theo từng dòng; YAML files dùng field `names`.
     """
 
     if classes_path.suffix.lower() in {".yaml", ".yml"}:
@@ -246,11 +241,10 @@ def normalize_custom_yolo_export(
     classes_path: Path | None = None,
     dry_run: bool = True,
 ) -> NormalizeYoloReport:
-    """Normalize a CVAT, Roboflow, or Ultralytics YOLO export.
+    """Normalize export YOLO từ CVAT, Roboflow hoặc Ultralytics.
 
-    The helper remaps source class ids into the canonical class order, copies
-    image/label pairs into the project `images/<split>` and `labels/<split>`
-    layout when `dry_run=False`, and validates the output after writing.
+    Source class IDs được remap về canonical class order. Execute mode copy
+    ảnh/label sang layout `images/<split>` + `labels/<split>` và validate lại.
     """
 
     if source_format not in {"roboflow_yolo", "cvat_yolo", "ultralytics_yolo"}:
@@ -326,7 +320,7 @@ def normalize_custom_yolo_export(
 
 
 def _custom_yolo_label_paths(export_root: Path) -> list[Path]:
-    """List annotation files while ignoring YOLO metadata text files."""
+    """Liệt kê label files và bỏ qua metadata text của YOLO export."""
 
     metadata_names = {
         "classes.txt",
@@ -350,7 +344,7 @@ def _custom_yolo_label_paths(export_root: Path) -> list[Path]:
 
 
 def _infer_yolo_split(relative_path: Path) -> str:
-    """Infer the output split from common YOLO and CVAT export paths."""
+    """Suy diễn output split từ đường dẫn export YOLO/CVAT."""
 
     for part in relative_path.parts:
         normalized = part.lower()
@@ -368,7 +362,7 @@ def _infer_yolo_split(relative_path: Path) -> str:
 
 
 def _find_custom_yolo_image(export_root: Path, label_path: Path) -> Path | None:
-    """Find the image paired with a YOLO label from common export layouts."""
+    """Tìm ảnh tương ứng với YOLO label trong export root."""
 
     stem = label_path.with_suffix("")
     for extension in IMAGE_EXTENSIONS:
@@ -392,7 +386,7 @@ def _find_custom_yolo_image(export_root: Path, label_path: Path) -> Path | None:
 
 
 def _find_matching_image(images_root: Path, relative_label: Path) -> Path | None:
-    """Tìm ảnh tương ứng với một label YOLO theo stem và extension hỗ trợ."""
+    """Tìm ảnh tương ứng từ label stem và các extension hỗ trợ."""
     stem = relative_label.with_suffix("")
     for extension in IMAGE_EXTENSIONS:
         candidate = stem.with_suffix(extension)
@@ -407,7 +401,7 @@ def remap_yolo_label_text(
     path: str,
     issues: list[ValidationIssue],
 ) -> str:
-    """Trả về label text đã remap và ghi nhận lỗi với class id không hợp lệ."""
+    """Remap label text và ghi issue khi class id không hợp lệ."""
 
     output_lines: list[str] = []
     for line_number, line in enumerate(label_text.splitlines(), start=1):
@@ -439,7 +433,7 @@ def canonical_class_names(
     class_key: str = "coco_subset",
     include_custom: bool = False,
 ) -> list[str]:
-    """Trả về danh sách class canonical từ config dataset."""
+    """Đọc canonical classes từ dataset config."""
 
     classes = config.get("classes", {})
     if not isinstance(classes, dict):
@@ -461,7 +455,7 @@ def write_classes_file(
     include_custom: bool = False,
     dry_run: bool = True,
 ) -> list[str]:
-    """Ghi hoặc preview file `classes.txt` từ config dataset."""
+    """Preview hoặc ghi `classes.txt` từ dataset config."""
 
     class_names = canonical_class_names(
         load_yaml(config_path),

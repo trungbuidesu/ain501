@@ -1,9 +1,8 @@
 # -*- coding: utf-8 -*-
-"""Image augmentation helpers for detection, scene, and OCR tasks.
+"""Tiện ích augmentation ảnh cho pipeline thị giác.
 
-Builds Albumentations presets from the shared Phase 0 config assumptions.
-Preview mode counts candidate images without writing; execute mode writes
-sample augmented images only.
+Module tạo preset Albumentations cho detection, scene và OCR. Preview mode chỉ
+đếm candidate images; execute mode mới ghi ảnh output xuống đĩa.
 """
 
 from __future__ import annotations
@@ -23,7 +22,7 @@ from src.training.data.core import (
 
 @dataclass(frozen=True)
 class AugmentationPreset:
-    """Mô tả preset augmentation dùng cho một image task."""
+    """Metadata preset augmentation cho một image task."""
 
     task: str
     size: int
@@ -33,10 +32,10 @@ class AugmentationPreset:
 
 
 def augmentation_preset(task: str, size: int = 640) -> AugmentationPreset:
-    """Return metadata for a supported image augmentation task.
+    """Trả về metadata preset augmentation theo task.
 
-    The task must be one of `detection`, `scene`, or `ocr`; detection is the
-    only preset that declares YOLO bbox support.
+    Task hợp lệ là `detection`, `scene`, hoặc `ocr`; riêng detection bật bbox
+    support theo format YOLO.
     """
 
     normalized_task = task.lower()
@@ -104,7 +103,7 @@ def augment_preview(
     task: str = "detection",
     size: int = 640,
 ) -> int:
-    """Tạo hoặc preview sample augmentation cho image dataset."""
+    """Preview hoặc ghi một số ảnh augmentation mẫu."""
 
     image_paths = [
         path

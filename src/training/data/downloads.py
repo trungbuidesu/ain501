@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Download plan and dataset path verification helpers."""
+"""Tiện ích tạo download plan và verify path dataset local."""
 
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ from src.training.data.core import ValidationIssue, ValidationReport, load_yaml
 
 
 def download_plan_lines(config_paths: Sequence[Path]) -> list[str]:
-    """Tạo nội dung download plan dễ đọc từ các config dataset."""
+    """Tạo các dòng download plan từ dataset configs."""
 
     lines: list[str] = []
     for config_path in config_paths:
@@ -23,7 +23,7 @@ def download_plan_lines(config_paths: Sequence[Path]) -> list[str]:
 
 
 def _append_download_details(node: Any, lines: list[str]) -> None:
-    """Duyệt một node config và thêm thông tin download vào output."""
+    """Duyệt config node và append thông tin download vào output lines."""
     if isinstance(node, dict):
         if "homepage" in node:
             lines.append(f"homepage: {node['homepage']}")
@@ -54,7 +54,7 @@ def verify_dataset_paths(
     include_outputs: bool = False,
     include_downloads: bool = True,
 ) -> ValidationReport:
-    """Kiểm tra các path local quan trọng được khai báo trong dataset config."""
+    """Verify các local paths quan trọng được khai báo trong dataset configs."""
 
     task_filter = set(tasks or [])
     issues: list[ValidationIssue] = []
@@ -93,7 +93,7 @@ def _declared_local_paths(
     prefix: str = "",
     include_downloads: bool = True,
 ) -> list[tuple[str, Path]]:
-    """Trích các path local trong config mà không coi URL là path."""
+    """Trích xuất local paths từ config node và bỏ qua URL paths."""
 
     paths: list[tuple[str, Path]] = []
     if isinstance(node, dict):
@@ -126,7 +126,7 @@ def _declared_local_paths(
 
 
 def _looks_like_local_path(value: str) -> bool:
-    """Cho biết chuỗi config có giống local path không."""
+    """Heuristic nhận diện chuỗi có vẻ là local path."""
 
     if "://" in value or value.startswith("Phase "):
         return False

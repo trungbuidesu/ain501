@@ -1,10 +1,9 @@
 # -*- coding: utf-8 -*-
-"""OCR scene-text dataset helpers.
+"""Tiện ích OCR scene text cho TextOCR và fixture ICDAR legacy.
 
-TextOCR is the current Phase 0 target and ICDAR parsing is kept only as a
-legacy fixture/helper. TextOCR annotations are normalized into text boxes
-with image id, optional image filename, bbox, polygon points, text, and an
-ignored flag.
+TextOCR là dataset chính của Phase 0; parser ICDAR được giữ cho fixture cũ.
+Metadata TextOCR được flatten thành text boxes chứa image id, bbox, polygon
+points, text gốc và ignored flags.
 """
 
 from __future__ import annotations
@@ -17,7 +16,7 @@ from typing import Any
 
 @dataclass(frozen=True)
 class IcdarTextBox:
-    """Một annotation text localization theo format ICDAR."""
+    """Text localization box theo chuẩn ICDAR legacy."""
 
     points: tuple[tuple[int, int], tuple[int, int], tuple[int, int], tuple[int, int]]
     text: str
@@ -26,7 +25,7 @@ class IcdarTextBox:
 
 @dataclass(frozen=True)
 class TextOcrTextBox:
-    """Một annotation text localization theo format TextOCR."""
+    """Text localization box theo schema TextOCR."""
 
     image_id: str
     image_file: str | None
@@ -37,10 +36,9 @@ class TextOcrTextBox:
 
 
 def parse_icdar_gt(path: Path) -> list[IcdarTextBox]:
-    """Parse legacy ICDAR 2015 ground-truth text boxes.
+    """Parse ground-truth text boxes theo chuẩn ICDAR 2015.
 
-    Kept for backwards-compatible fixtures and possible old exports. The
-    current OCR target is TextOCR, so new pipeline code should prefer
+    Hàm này được giữ để tương thích ngược; pipeline hiện tại nên ưu tiên
     `parse_textocr_annotations`.
     """
 
@@ -64,11 +62,10 @@ def parse_icdar_gt(path: Path) -> list[IcdarTextBox]:
 
 
 def parse_textocr_annotations(path: Path) -> list[TextOcrTextBox]:
-    """Normalize a TextOCR JSON annotation file into text boxes.
+    """Parse TextOCR JSON annotation file thành text boxes.
 
-    Supports the common `anns`/`imgs` mapping shape and a list-style
-    `annotations` fallback. Entries without bbox or polygon points are skipped;
-    empty or illegible text is marked ignored.
+    Hỗ trợ cả mapping `anns`/`imgs` và list `annotations`. Annotation thiếu
+    bbox hoặc polygon points sẽ bị bỏ qua; text rỗng/illegible được mark ignored.
     """
 
     data = json.loads(path.read_text(encoding="utf-8"))
@@ -107,7 +104,7 @@ def parse_textocr_annotations(path: Path) -> list[TextOcrTextBox]:
 
 
 def _textocr_annotation_values(data: Any) -> list[Any]:
-    """Trả về danh sách annotation từ TextOCR JSON dạng dict hoặc list."""
+    """Trích xuất annotations list từ JSON TextOCR."""
 
     if not isinstance(data, dict):
         raise ValueError("Expected TextOCR JSON mapping")
@@ -120,7 +117,7 @@ def _textocr_annotation_values(data: Any) -> list[Any]:
 
 
 def _textocr_images_by_id(images: Any) -> dict[str, dict[str, Any]]:
-    """Chuẩn hóa metadata ảnh TextOCR thành mapping theo image id."""
+    """Map image metadata theo image id."""
 
     if isinstance(images, dict):
         return {
@@ -138,7 +135,7 @@ def _textocr_images_by_id(images: Any) -> dict[str, dict[str, Any]]:
 
 
 def _textocr_bbox(raw_bbox: Any) -> tuple[float, float, float, float] | None:
-    """Chuẩn hóa bbox TextOCR `[x, y, width, height]`."""
+    """Chuẩn hóa bbox thô từ TextOCR."""
 
     if not isinstance(raw_bbox, list | tuple) or len(raw_bbox) != 4:
         return None
@@ -151,7 +148,7 @@ def _textocr_bbox(raw_bbox: Any) -> tuple[float, float, float, float] | None:
 
 
 def _textocr_points(raw_points: Any) -> tuple[tuple[float, float], ...] | None:
-    """Chuẩn hóa polygon TextOCR thành tuple point `(x, y)`."""
+    """Chuẩn hóa polygon points thành tuple `(x, y)`."""
 
     if not isinstance(raw_points, list | tuple):
         return None

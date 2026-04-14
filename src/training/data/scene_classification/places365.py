@@ -1,9 +1,8 @@
 # -*- coding: utf-8 -*-
-"""Places365 scene-classification helpers.
+"""Tiện ích scene classification cho Places365.
 
-Builds a balanced manifest for the configured accessibility scene subset
-from either Places-style folder trees or official Places365 filelists.
-Copying images is optional and separate from manifest generation.
+Module tạo balanced manifest từ Places-style folders hoặc filelists. Việc copy
+ảnh sang subset root tách riêng khỏi bước tạo manifest.
 """
 
 from __future__ import annotations
@@ -20,11 +19,10 @@ def build_scene_subset_manifest(
     class_names: Sequence[str],
     max_images_per_class: int = 1000,
 ) -> list[dict[str, str]]:
-    """Build a balanced scene manifest from local class/category folders.
+    """Tạo balanced scene manifest từ local category folders.
 
-    Rows include source path, relative path, selected label, and source
-    category. At most `max_images_per_class` rows are emitted for each target
-    class.
+    Mỗi row chứa source path, relative path, label và source category. Số ảnh
+    mỗi class không vượt `max_images_per_class`.
     """
 
     if max_images_per_class <= 0:
@@ -62,11 +60,10 @@ def build_scene_subset_manifest_from_places_filelist(
     class_names: Sequence[str],
     max_images_per_class: int = 1000,
 ) -> list[dict[str, str]]:
-    """Build a balanced scene manifest from Places365 filelist metadata.
+    """Tạo balanced manifest từ Places365 filelist metadata.
 
-    Uses `categories_places365.txt` to map filelist class indexes back to
-    category paths, then keeps only categories matching configured scene
-    classes.
+    Dùng `categories_places365.txt` để map class index sang category path, sau
+    đó lọc theo configured scene classes.
     """
 
     if max_images_per_class <= 0:
@@ -109,7 +106,7 @@ def build_scene_subset_manifest_from_places_filelist(
 
 
 def read_places_categories(categories_file: Path) -> dict[int, str]:
-    """Đọc `categories_places365.txt` thành mapping label index -> category."""
+    """Đọc `categories_places365.txt` thành mapping index -> category."""
 
     categories: dict[int, str] = {}
     with categories_file.open(encoding="utf-8") as file:
@@ -126,7 +123,7 @@ def read_places_categories(categories_file: Path) -> dict[int, str]:
 
 
 def _parse_places_filelist_line(line: str) -> tuple[str, int] | None:
-    """Parse một dòng Places365 filelist dạng `<path> <class_index>`."""
+    """Parse một dòng Places365 filelist."""
 
     parts = line.strip().split()
     if len(parts) < 2:
@@ -139,7 +136,7 @@ def _parse_places_filelist_line(line: str) -> tuple[str, int] | None:
 
 
 def _resolve_places_image_path(images_root: Path, relative_path: str) -> Path:
-    """Resolve path ảnh Places365 cho cả train folder và val_256 flat archive."""
+    """Resolve path cho layout train folder hoặc flat val archive."""
 
     relative = Path(relative_path)
     candidates = [
@@ -155,7 +152,7 @@ def _resolve_places_image_path(images_root: Path, relative_path: str) -> Path:
 
 
 def _find_default_places_filelist(root: Path) -> Path | None:
-    """Tìm filelist Places365 phổ biến nếu người dùng không truyền explicit."""
+    """Tìm default Places365 filelist khi caller không truyền path."""
 
     candidates = [
         root / "places365_train_standard.txt",
@@ -170,7 +167,7 @@ def _find_default_places_filelist(root: Path) -> Path | None:
 
 
 def _scene_path_matches_class(relative_parent: str, class_name: str) -> bool:
-    """Match class scene với category path Places-style."""
+    """Khớp class name với category path kiểu Places."""
 
     normalized_parent = relative_parent.replace("\\", "/").strip("/")
     normalized_class = class_name.strip("/")
@@ -189,7 +186,7 @@ def copy_scene_subset(
     rows: Sequence[dict[str, str]],
     subset_root: Path,
 ) -> int:
-    """Copy ảnh scene subset theo label vào `subset_root/images`."""
+    """Copy ảnh scene subset theo label vào `subset_root`."""
 
     copied = 0
     for row in rows:
@@ -203,7 +200,7 @@ def copy_scene_subset(
 
 
 def parse_places_categories(path: Path) -> dict[str, int]:
-    """Parse file categories Places365 thành mapping `category -> index`."""
+    """Parse category file thành mapping category -> index."""
 
     categories: dict[str, int] = {}
     for line in path.read_text(encoding="utf-8").splitlines():

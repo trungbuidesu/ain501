@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
-"""COCO 2017 object-detection helpers.
+"""Tiện ích object detection cho COCO 2017.
 
-This module owns the COCO JSON -> YOLO label conversion used by the
-Phase 0 object-detection pipeline. Inputs are already-loaded COCO
-annotation mappings or local COCO annotation/image paths; outputs are
-YOLO normalized label lines or an optional YOLO folder tree.
+Mô đun này đảm nhận logic chuyển dịch chú giải JSON (JSON Annotation) của COCO
+sang định dạng Nhãn YOLO, phục vụ Giai đoạn 0 (Phase 0). Dữ liệu đầu vào yêu cầu
+bản đồ ánh xạ COCO đã tải trong bộ nhớ; kết quả trả ra là chuỗi tọa độ YOLO đã
+chuẩn hóa.
 """
 
 from __future__ import annotations
@@ -21,11 +21,11 @@ def normalize_coco_bbox(
     image_width: int,
     image_height: int,
 ) -> tuple[float, float, float, float] | None:
-    """Convert one COCO `[x, y, width, height]` pixel bbox to YOLO format.
+    """Chuyển bbox COCO `[x, y, width, height]` sang YOLO.
 
-    Returns `(center_x, center_y, width, height)` normalized to `[0, 1]`,
-    clips boxes to image bounds, and returns `None` for malformed or empty
-    boxes.
+    Trả về `(center_x, center_y, width, height)` chuẩn hóa trong `[0, 1]`.
+    Bounding box được clip theo biên ảnh; bbox rỗng hoặc malformed trả về
+    `None`.
     """
 
     if len(bbox) != 4:
@@ -54,11 +54,10 @@ def coco_annotations_to_yolo_lines(
     coco: dict[str, Any],
     class_names: Sequence[str],
 ) -> dict[str, list[str]]:
-    """Build YOLO label lines for configured COCO classes.
+    """Tạo YOLO label lines cho các COCO classes đã cấu hình.
 
-    Only annotations whose category name appears in `class_names` are kept.
-    The returned mapping is keyed by COCO image filename and can be written
-    into split label files by `write_yolo_from_coco`.
+    Chỉ giữ annotations thuộc `class_names`. Mapping trả về được key bằng
+    COCO file name để `write_yolo_from_coco` có thể ghi thẳng ra disk.
     """
 
     images = {
@@ -105,11 +104,10 @@ def write_yolo_from_coco(
     split: str,
     dry_run: bool = True,
 ) -> int:
-    """Convert a COCO annotation file into one YOLO split.
+    """Convert một COCO annotation file thành YOLO split.
 
-    When `dry_run` is true, no files are written and the selected image count
-    is returned. Execute mode copies matching images, writes label files, and
-    refreshes `classes.txt` under `output_root`.
+    `dry_run=True` chỉ trả số ảnh được chọn. Execute mode copy ảnh khớp,
+    ghi labels và cập nhật `classes.txt` dưới `output_root`.
     """
 
     coco = json.loads(annotation_path.read_text(encoding="utf-8"))

@@ -53,7 +53,8 @@ conda activate <env-name>
 
 ### 3. Cài Đặt
 
-Cài project ở chế độ editable kèm dependency phát triển:
+Cài project ở chế độ editable kèm dependency phát triển. Extra `[dev]` bao gồm
+`black[jupyter]` để `black .` format được cả Python files và notebook code cells:
 
 ```bash
 pip install -e ".[dev]"
@@ -153,7 +154,7 @@ Quy tắc commit và kiểm tra code chi tiết nằm trong
 
 ### Kiểm Tra Nhanh
 
-- **Format**: `black .`
+- **Format**: `black .` (format cả `.py` và `.ipynb` code cells; cần `black[jupyter]` từ extra `[dev]`)
 - **Lint**: `ruff check .`
 - **Type check**: `mypy .`
 - **Test**: `pytest -p no:cacheprovider`

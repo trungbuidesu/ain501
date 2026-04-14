@@ -26,9 +26,10 @@ Example: `feat(api): add endpoint for user registration`
 Every contribution must pass the following checks:
 
 ### 1. Code Formatting (Black)
-- **Tool**: `black`
-- **Rule**: Code must be formatted with a line length of 88 characters.
+- **Tool**: `black` with the Jupyter extra (`black[jupyter]`), installed through the project dev extra.
+- **Rule**: Python files and committed notebook code cells must be formatted with a line length of 88 characters.
 - **Command**: `black .`
+- **Config**: `pyproject.toml` must include both Python and notebook files in `[tool.black].include`.
 
 ### 2. Linting (Ruff)
 - **Tool**: `ruff`

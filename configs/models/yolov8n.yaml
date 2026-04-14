@@ -1,0 +1,21 @@
+name: yolov8n
+role: object_detection_accessibility
+model:
+  weights: yolov8n.pt
+dataset:
+  config: configs/datasets/object_detection_accessibility.yaml
+  root: data/processed/object_detection_accessibility_merged
+  classes: data/processed/object_detection_accessibility_merged/classes.txt
+  data_yaml: data/processed/object_detection_accessibility_merged/yolov8n_data.yaml
+training:
+  imgsz: 640
+  epochs: 100
+  batch: 16
+  lr0: 0.01
+  mosaic: 1.0
+  mixup: 0.1
+  multi_scale: true
+output:
+  run_dir: runs/yolov8n
+  report_dir: reports/yolov8n
+  checkpoint_dir: models/vision/yolov8n

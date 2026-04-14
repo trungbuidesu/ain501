@@ -226,6 +226,73 @@ def test_compare_tsne_smoke(tmp_path: Path) -> None:
     assert (output_dir / "tsne_embeddings.png").exists()
 
 
+def test_prepare_scene_manifest_caps_splits_and_dry_run(tmp_path: Path) -> None:
+    """Scene manifest conversion is deterministic and dry-run safe."""
+
+    scene_manifest = _write_scene_manifest(tmp_path, labels=("street", "hall"))
+    output_csv = tmp_path / "prepared" / "manifest.csv"
+
+    exit_code = mobilenetv3.main(
+        [
+            "prepare-scene-manifest",
+            "--scene-manifest",
+            str(scene_manifest),
+            "--output-csv",
+            str(output_csv),
+            "--max-per-class",
+            "10",
+        ]
+    )
+
+    assert exit_code == 0
+    assert not output_csv.exists()
+    rows = mobilenetv3.prepare_scene_manifest(
+        scene_manifest=scene_manifest,
+        max_per_class=10,
+        train_ratio=0.8,
+        val_ratio=0.1,
+    )
+    assert len(rows) == 20
+    assert set(rows[0]) == {"path", "label", "split"}
+    assert rows == mobilenetv3.prepare_scene_manifest(
+        scene_manifest=scene_manifest,
+        max_per_class=10,
+        train_ratio=0.8,
+        val_ratio=0.1,
+    )
+    split_counts = {
+        split: sum(1 for row in rows if row["split"] == split)
+        for split in ("train", "val", "test")
+    }
+    assert split_counts == {"train": 16, "val": 2, "test": 2}
+
+
+def test_prepare_scene_manifest_execute_writes_csv(tmp_path: Path) -> None:
+    """Scene manifest execute mode writes canonical path,label,split CSV."""
+
+    scene_manifest = _write_scene_manifest(tmp_path, labels=("street",))
+    output_csv = tmp_path / "prepared" / "manifest.csv"
+
+    exit_code = mobilenetv3.main(
+        [
+            "prepare-scene-manifest",
+            "--scene-manifest",
+            str(scene_manifest),
+            "--output-csv",
+            str(output_csv),
+            "--max-per-class",
+            "10",
+            "--execute",
+        ]
+    )
+
+    assert exit_code == 0
+    with output_csv.open(newline="", encoding="utf-8") as file:
+        rows = list(csv.DictReader(file))
+    assert len(rows) == 10
+    assert list(rows[0]) == ["path", "label", "split"]
+
+
 def _write_manifest(tmp_path: Path, image_count: int) -> Path:
     """Create a small image manifest with train and val splits."""
 
@@ -242,6 +309,38 @@ def _write_manifest(tmp_path: Path, image_count: int) -> Path:
 
     with manifest.open("w", newline="", encoding="utf-8") as file:
         writer = csv.DictWriter(file, fieldnames=["path", "label", "split"])
+        writer.writeheader()
+        writer.writerows(rows)
+    return manifest
+
+
+def _write_scene_manifest(tmp_path: Path, labels: tuple[str, ...]) -> Path:
+    """Create a scene accessibility style manifest without split column."""
+
+    image_dir = tmp_path / "scene_images"
+    image_dir.mkdir()
+    manifest = tmp_path / "scene_manifest.csv"
+    rows: list[dict[str, str]] = []
+    for label in labels:
+        for index in range(12):
+            image_path = image_dir / f"{label}_{index}.jpg"
+            Image.new("RGB", (80, 80), color=(index * 20 % 255, 30, 120)).save(
+                image_path
+            )
+            rows.append(
+                {
+                    "label": label,
+                    "path": str(image_path),
+                    "relative_path": f"{label}/{image_path.name}",
+                    "source_category": label,
+                }
+            )
+
+    with manifest.open("w", newline="", encoding="utf-8") as file:
+        writer = csv.DictWriter(
+            file,
+            fieldnames=["label", "path", "relative_path", "source_category"],
+        )
         writer.writeheader()
         writer.writerows(rows)
     return manifest

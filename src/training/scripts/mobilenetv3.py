@@ -11,6 +11,7 @@ import platform
 import statistics
 import sys
 import time
+from collections import Counter, defaultdict
 from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -33,6 +34,10 @@ from src.training.models.vision import (
 from src.utils import TrainingLogger
 
 DEFAULT_CONFIG = Path("configs/models/mobilenetv3_small.yaml")
+DEFAULT_SCENE_MANIFEST = Path("data/processed/scene_accessibility/manifest.csv")
+DEFAULT_SCENE_OUTPUT_MANIFEST = Path(
+    "data/processed/mobilenetv3_small_scene/manifest.csv"
+)
 IMAGENET_MEAN = (0.485, 0.456, 0.406)
 IMAGENET_STD = (0.229, 0.224, 0.225)
 
@@ -130,6 +135,18 @@ def build_arg_parser() -> argparse.ArgumentParser:
     describe.add_argument("--weights", choices=["default", "imagenet", "none"])
     describe.add_argument("--freeze-until", type=int)
 
+    prepare_scene = subparsers.add_parser("prepare-scene-manifest")
+    prepare_scene.add_argument(
+        "--scene-manifest", type=Path, default=DEFAULT_SCENE_MANIFEST
+    )
+    prepare_scene.add_argument(
+        "--output-csv", type=Path, default=DEFAULT_SCENE_OUTPUT_MANIFEST
+    )
+    prepare_scene.add_argument("--max-per-class", type=int, default=100)
+    prepare_scene.add_argument("--train-ratio", type=float, default=0.8)
+    prepare_scene.add_argument("--val-ratio", type=float, default=0.1)
+    prepare_scene.add_argument("--execute", action="store_true")
+
     fine_tune = subparsers.add_parser("fine-tune")
     fine_tune.add_argument("--manifest-csv", type=Path, required=True)
     fine_tune.add_argument("--weights", choices=["default", "imagenet", "none"])
@@ -196,6 +213,19 @@ def main(argv: Sequence[str] | None = None) -> int:
         weights = args.weights or str(settings.get("weights", "default"))
         freeze_until = args.freeze_until or int(settings.get("freeze_until", 7))
         print(json.dumps(describe_model(weights, freeze_until), indent=2))
+        return 0
+
+    if args.command == "prepare-scene-manifest":
+        rows = prepare_scene_manifest(
+            scene_manifest=args.scene_manifest,
+            max_per_class=args.max_per_class,
+            train_ratio=args.train_ratio,
+            val_ratio=args.val_ratio,
+        )
+        if args.execute:
+            write_scene_manifest(rows, args.output_csv)
+        report = summarize_scene_manifest(rows, args.output_csv, not args.execute)
+        print(json.dumps(report, indent=2))
         return 0
 
     if args.command == "fine-tune":
@@ -270,6 +300,105 @@ def describe_model(weights: str | None, freeze_until: int) -> dict[str, Any]:
         "total_params": total_params,
         "trainable_params": trainable_params,
         "frozen_params": frozen_params,
+    }
+
+
+def prepare_scene_manifest(
+    scene_manifest: Path,
+    max_per_class: int,
+    train_ratio: float,
+    val_ratio: float,
+) -> list[dict[str, str]]:
+    """Convert the scene accessibility manifest into `path,label,split` rows."""
+
+    if max_per_class <= 0:
+        raise ValueError("--max-per-class must be positive")
+    if train_ratio <= 0.0 or val_ratio < 0.0 or train_ratio + val_ratio >= 1.0:
+        raise ValueError("ratios must satisfy train > 0, val >= 0, train + val < 1")
+    with scene_manifest.open(newline="", encoding="utf-8") as file:
+        source_rows = list(csv.DictReader(file))
+    required = {"path", "label"}
+    if source_rows and not required.issubset(source_rows[0]):
+        raise ValueError(f"scene manifest must include columns: {sorted(required)}")
+    by_label: dict[str, list[dict[str, str]]] = defaultdict(list)
+    for index, row in enumerate(source_rows, start=1):
+        missing = required - set(row)
+        if missing:
+            raise ValueError(f"row {index} missing columns: {sorted(missing)}")
+        image_path = Path(row["path"])
+        if not image_path.exists():
+            raise ValueError(f"row {index} missing image: {row['path']}")
+        by_label[row["label"]].append(row)
+    output_rows: list[dict[str, str]] = []
+    for label in sorted(by_label):
+        capped_rows = by_label[label][:max_per_class]
+        split_names = scene_split_names(
+            total=len(capped_rows), train_ratio=train_ratio, val_ratio=val_ratio
+        )
+        output_rows.extend(
+            {
+                "path": row["path"],
+                "label": label,
+                "split": split,
+            }
+            for row, split in zip(capped_rows, split_names, strict=True)
+        )
+    if not output_rows:
+        raise ValueError(f"scene manifest is empty: {scene_manifest}")
+    return output_rows
+
+
+def scene_split_names(total: int, train_ratio: float, val_ratio: float) -> list[str]:
+    """Return deterministic train/val/test split names for one class group."""
+
+    if total <= 0:
+        return []
+    test_ratio = 1.0 - train_ratio - val_ratio
+    targets = [total * train_ratio, total * val_ratio, total * test_ratio]
+    counts = [math.floor(target) for target in targets]
+    remainder = total - sum(counts)
+    order = sorted(
+        range(len(targets)),
+        key=lambda index: (targets[index] - counts[index], -index),
+        reverse=True,
+    )
+    for index in order[:remainder]:
+        counts[index] += 1
+    if total >= 3:
+        for index in range(3):
+            if counts[index] == 0 and targets[index] > 0:
+                donor = max(range(3), key=lambda donor_index: counts[donor_index])
+                if counts[donor] > 1:
+                    counts[donor] -= 1
+                    counts[index] += 1
+    train_count, val_count, test_count = counts
+    return ["train"] * train_count + ["val"] * val_count + ["test"] * test_count
+
+
+def write_scene_manifest(rows: Sequence[dict[str, str]], output_csv: Path) -> None:
+    """Write a MobileNetV3 scene manifest with canonical columns."""
+
+    output_csv.parent.mkdir(parents=True, exist_ok=True)
+    with output_csv.open("w", newline="", encoding="utf-8") as file:
+        writer = csv.DictWriter(file, fieldnames=["path", "label", "split"])
+        writer.writeheader()
+        writer.writerows(rows)
+
+
+def summarize_scene_manifest(
+    rows: Sequence[dict[str, str]], output_csv: Path, dry_run: bool
+) -> dict[str, Any]:
+    """Return a JSON-serializable manifest preparation report."""
+
+    split_counts = Counter(row["split"] for row in rows)
+    label_counts = Counter(row["label"] for row in rows)
+    return {
+        "dry_run": dry_run,
+        "output_csv": str(output_csv),
+        "rows": len(rows),
+        "labels": len(label_counts),
+        "split_counts": dict(sorted(split_counts.items())),
+        "max_label_count": max(label_counts.values(), default=0),
     }
 
 

@@ -7,7 +7,11 @@ nav:
   - Tài liệu:
       - Tổng quan: general/overview.md
       - Thí nghiệm: general/experiments.md
-      - Mô hình: general/models.md
+      - Kiến Trúc Mô Hình:
+          - Tổng hợp cấu trúc (Ontology): models/index.md
+          - Nền tảng YOLOv8n: models/yolov8n.md
+          - Máy xuất MobileNetV3: models/mobilenetv3.md
+          - Đọc giả TTS (Piper): models/piper_tts.md
       - Bộ dữ liệu:
           - Tổng hợp: datasets/index.md
           - Object Detection (Phát hiện đối tượng): datasets/object_detection.md

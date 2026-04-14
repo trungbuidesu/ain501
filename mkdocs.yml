@@ -9,8 +9,14 @@ nav:
       - Thí nghiệm: general/experiments.md
       - Kiến Trúc Mô Hình:
           - Tổng hợp cấu trúc (Ontology): models/index.md
-          - Nền tảng YOLOv8n: models/yolov8n.md
-          - Máy xuất MobileNetV3: models/mobilenetv3.md
+          - FastVLM-0.5B (Captioning): models/fastvlm.md
+          - YOLOv8-nano (Object Detection): models/yolov8n.md
+          - MoViNet-A0 (Action Recognition): models/movinet.md
+          - MobileNetV3-Small (Trích Xuất): models/mobilenetv3.md
+          - all-MiniLM-L6 (Nhúng RAG): models/all_minilm.md
+          - MediaPipe (Face & Pose): models/mediapipe.md
+          - PaddleOCR lite (Sign Reading): models/paddleocr.md
+          - Scene Classifier (SLM Router): models/scene_classifier.md
           - Đọc giả TTS (Piper): models/piper_tts.md
       - Bộ dữ liệu:
           - Tổng hợp: datasets/index.md

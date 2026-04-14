@@ -8,9 +8,15 @@ Bảng phân loại dưới đây tổng hợp các hạt nhân tư duy học s�
 
 | Mã Nhận Diện Đồ Án (Model ID) | Nền Tảng Khởi Sinh (Base Architecture) | Tác Vụ Đặc Thù (Task Mapping) | Rào Cản Triển Khai (Edge Constraints) |
 | --- | --- | --- | --- |
-| **[Biên Dịch Vật Thể (YOLOv8n)](yolov8n.md)** | `ultralytics/yolov8n` | Đóng khung giới hạn (Object Detection) đối với các vật tư chướng ngại công cộng. | Kích thước < 7MB, FP16/INT8, Tần số nội tại CPU/NPU. |
-| **[Xác Thực Không Gian (MobileNetV3)](mobilenetv3.md)** | `torchvision/mobilenet_v3_small` | Tách cụm và định tuyến nhãn quan (Scene/Action Classification) phục vụ cảnh báo bối cảnh. | Loại trừ MLP Head, Tối thiểu hóa kích thước Vector Embedding (576D). |
-| **[Kiến Trúc Đọc Âm Mộc (TTS Piper)](piper_tts.md)** | `rhasspy/piper/vits` | Kích hoạt đa luồng thông thư đàm thoại cảnh báo người dùng khiếm khuyết. | Lưu lượng âm tuyến cục bộ (On-device audio chunking). |
+| **[FastVLM-0.5B](fastvlm.md)** | ~500M params | Sinh mô tả hình ảnh cấp 2 (Tier 2 VLM captioning). | ~300MB Size |
+| **[YOLOv8-nano](yolov8n.md)** | ~3.2M params | Nhận diện đối tượng & chướng ngại vật (Object + hazard detection). | ~6MB Size (quantized) |
+| **[MoViNet-A0](movinet.md)** | ~3M params | Nhận diện hành động (Action recognition). | ~5MB Size |
+| **[MobileNetV3-Small](mobilenetv3.md)** | ~2.5M params | Bộ máy chiết xuất đặc trưng (Feature extraction). | ~4MB Size |
+| **[all-MiniLM-L6](all_minilm.md)** | ~22M params | Tạo cấu trúc từ vựng vector (Embedding for RAG). | ~80MB Size |
+| **[MediaPipe](mediapipe.md)** | ~1M params | Nhận diện mặt phẳng mặt & khung xương pose (Face mesh + pose). | ~3MB Size |
+| **[PaddleOCR lite](paddleocr.md)** | ~4M params | Đọc văn bản tự nhiên & biển báo (Text / sign reading). | ~8MB Size |
+| **[Scene classifier](scene_classifier.md)** | ~1M params | Bộ định tuyến đa nhiệm cảnh sắc (SLM router). | ~2MB Size |
+| **[Piper TTS](piper_tts.md)** | Hệ tiếng viễn âm | Sinh giọng nói tương tác (Voice model vi/en). | ~50MB Size |
 
 > [!NOTE] Cơ Chế Chuyển Tiếp Kháng Nước (Water-resistant Transfer Mechanism)
 > Dự án áp dụng nguyên lý Lượng tử hóa trước/sau đào tạo (QAT/PTQ) và chiết giảm trọng số (Pruning parameters). Các điểm dữ liệu này vốn được nhương lại từ không gian đồ án C++ trên môi trường Edge.

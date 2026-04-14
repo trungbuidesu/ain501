@@ -10,7 +10,7 @@ Các subcommand chính: ``download-plan``, ``verify-dataset-paths``,
 ``merge-yolo``, ``normalize-custom-yolo``, ``augment-preview``,
 ``build-action-manifest``, ``validate-video-manifest``, ``build-scene-subset``,
 ``validate-tts``. Thao tác ghi file hoặc tải dữ liệu lớn thường cần cờ
-``--execute`` hoặc tắt ``--dry-run`` sau khi đã xem kế hoạch.
+``--execute`` sau khi đã xem kế hoạch.
 """
 
 from __future__ import annotations
@@ -196,7 +196,9 @@ def build_arg_parser() -> argparse.ArgumentParser:
     merge.add_argument("--sources", type=Path, nargs="+", required=True)
     merge.add_argument("--output-root", type=Path, required=True)
     merge.add_argument("--classes", type=Path, required=True)
-    merge.add_argument("--dry-run", action="store_true")
+    merge_mode = merge.add_mutually_exclusive_group()
+    merge_mode.add_argument("--dry-run", action="store_true")
+    merge_mode.add_argument("--execute", action="store_true")
 
     normalize_custom_yolo = subparsers.add_parser("normalize-custom-yolo")
     normalize_custom_yolo.add_argument("--export-root", type=Path, required=True)
@@ -208,7 +210,9 @@ def build_arg_parser() -> argparse.ArgumentParser:
         default="roboflow_yolo",
     )
     normalize_custom_yolo.add_argument("--source-classes", type=Path)
-    normalize_custom_yolo.add_argument("--execute", action="store_true")
+    normalize_custom_yolo_mode = normalize_custom_yolo.add_mutually_exclusive_group()
+    normalize_custom_yolo_mode.add_argument("--dry-run", action="store_true")
+    normalize_custom_yolo_mode.add_argument("--execute", action="store_true")
 
     augment = subparsers.add_parser("augment-preview")
     augment.add_argument("--input-dir", type=Path, required=True)
@@ -377,7 +381,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             sources=args.sources,
             output_root=args.output_root,
             canonical_names=read_classes(args.classes),
-            dry_run=args.dry_run,
+            dry_run=not args.execute,
         )
         print_merge_report(merge_report)
         return 0 if merge_report.valid else 1

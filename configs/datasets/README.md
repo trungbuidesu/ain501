@@ -1,6 +1,6 @@
 # Cấu Hình Bộ Dữ Liệu (Dataset Configurations)
 
-Thư mục này chứa toàn bộ các tệp cấu hình (YAML) đóng vai trò là xương sống định hình nguồn dữ liệu cho Phase 0 của trợ lý hỗ trợ tiếp cận (Accessibility Assistant). Các file cấu hình sẽ được đọc tự động bởi hệ thống pipeline `src/training/scripts/data_utils.py`. Hệ thống hoạt động theo nguyên tắc **Dry-run by default** (không lưu/tải dữ liệu lớn nếu không có cờ `--execute` xác nhận).
+Thư mục này chứa toàn bộ các tệp cấu hình (YAML) đóng vai trò là xương sống định hình nguồn dữ liệu cho Phase 0 của trợ lý hỗ trợ tiếp cận (Accessibility Assistant). Các file cấu hình được đọc bởi package pipeline `src/training/data/`; CLI ổn định vẫn là `src/training/scripts/data_utils.py`. Hệ thống hoạt động theo nguyên tắc **Dry-run by default** cho các thao tác ghi/tải dữ liệu lớn nếu không có cờ `--execute` xác nhận.
 
 _Lưu ý: Dữ liệu thật (archive file, video, ảnh raw, label) không được đẩy lên Git mà nằm trong thư mục `data/` và `models/` trên máy local._
 
@@ -53,7 +53,7 @@ Tệp config: `scene_accessibility.yaml`
 
 ## Lệnh Pipeline Workflow (Cheatsheet)
 
-Module `src.training.scripts.data_utils` là trung tâm xử lý dữ liệu. Một số lệnh cơ bản bạn sẽ cần:
+Module `src.training.scripts.data_utils` là CLI facade cho các helper trong `src.training.data`. Một số lệnh cơ bản bạn sẽ cần:
 
 ```bash
 # 1. Kiểm tra plan download / tải dataset tự động dựa vào file config tải archive
@@ -71,5 +71,7 @@ python -m src.training.scripts.data_utils build-scene-subset --file-list data/ex
 
 # 5. Check Output cuối cho mọi dữ liệu đã build
 python -m src.training.scripts.data_utils validate --dataset-root data/processed/object_detection_accessibility --classes data/processed/object_detection_accessibility/classes.txt
+python -m src.training.scripts.data_utils validate-video-manifest --manifest-csv data/processed/action_accessibility/manifest.csv
+python -m src.training.scripts.data_utils normalize-custom-yolo --export-root data/custom/annotation_exports/export_001 --output-root data/custom/annotation_exports/export_001_normalized --classes data/processed/object_detection_accessibility/classes.txt --source-format ultralytics_yolo --dry-run
 python -m src.training.scripts.data_utils validate-tts --dry-run
 ```

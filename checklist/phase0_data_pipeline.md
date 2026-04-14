@@ -11,7 +11,7 @@ File này dùng để theo dõi tiến độ Phase 0. Quy ước:
 - [x] Download COCO 2017 train + val (~20GB)
   - Trạng thái: Đã tải/extract `train2017.zip`, `val2017.zip` và `annotations_trainval2017.zip` vào `data/external/coco2017`. Hiện có 118287 ảnh train, 5000 ảnh val; đã ghi `classes.txt`, convert COCO val -> YOLO với 3445 ảnh selected, tạo merged YOLO root và validate YOLO `checked_files=6890 valid=True`.
 - [x] Hiểu COCO annotation format (JSON, bbox, categories)
-  - Trạng thái: Đã implement parser/converter COCO bbox `[x, y, width, height]` sang YOLO trong `src/training/scripts/data_utils.py`, có test fixture.
+  - Trạng thái: Đã implement parser/converter COCO bbox `[x, y, width, height]` sang YOLO trong `src/training/data/object_detection/`, có CLI facade qua `src/training/scripts/data_utils.py` và test fixture.
 - [x] Viết data exploration notebook: phân tích distribution classes, bbox sizes
   - Trạng thái: `notebooks/0.3_coco_detection_explore.ipynb` đã có output text/table nhỏ cho COCO train+val thật: image counts, 16-class distribution, bbox width/height/area summary, và YOLO conversion counts. Dataset images/labels vẫn nằm trong `data/` ignored.
 
@@ -31,11 +31,11 @@ File này dùng để theo dõi tiến độ Phase 0. Quy ước:
 - [x] Download UCF-101
   - Trạng thái: Đã tải/extract UCF-101 vào `data/external/ucf101`; hiện có 13320 video dưới `UCF-101` và official split files dưới `ucfTrainTestlist`.
 - [x] Viết data loader: video -> frame sequences
-  - Trạng thái: Đã implement action manifest builder cho class-folder videos, official split parser cho UCF-101, frame-sequence sampler và video manifest validation trong `src/training/scripts/data_utils.py`, có test fixture. Đã chạy trên UCF-101 thật và tạo `data/processed/action_accessibility/manifest.csv` với 2449 rows.
+  - Trạng thái: Đã implement action manifest builder cho class-folder videos, official split parser cho UCF-101, frame-sequence sampler và video manifest validation trong `src/training/data/action_recognition/`, có CLI facade qua `src/training/scripts/data_utils.py` và test fixture. Đã chạy trên UCF-101 thật và tạo `data/processed/action_accessibility/manifest.csv` với 2449 rows.
 - [x] Phân tích: chọn 20-30 action classes phù hợp use case
   - Trạng thái: Đã chọn class public bootstrap và custom-required trong `configs/datasets/action_accessibility.yaml`. `approaching` được ghi rõ là extension Phase 9, không block Phase 0.
 - [x] Train/val/test split
-  - Trạng thái: Đã implement helper `stratified_split` và `group_aware_split` trong `src/training/scripts/data_utils.py`, có test.
+  - Trạng thái: Đã implement helper `stratified_split` và `group_aware_split` trong `src/training/data/splits.py`, có CLI facade qua `src/training/scripts/data_utils.py` và test.
 
 ## Scene Classification Dataset
 
@@ -64,7 +64,7 @@ File này dùng để theo dõi tiến độ Phase 0. Quy ước:
 - [x] Explore: các loại text (scene text, document, handwriting)
   - Trạng thái: `notebooks/0.7_textocr_explore.ipynb` đã có output text/table nhỏ cho TextOCR: 25119 image count, train/val text-box counts, text length stats, ignored/illegible rate, bbox size summary, và 5 sample text boxes. Không commit ảnh hoặc JSONL lớn trong `data/`.
 
-## Data Pipeline Utilities (`src/training/scripts/data_utils.py`)
+## Data Pipeline Utilities (`src/training/data/` + CLI `src/training/scripts/data_utils.py`)
 
 ### Augmentation Pipeline
 
@@ -94,5 +94,6 @@ File này dùng để theo dõi tiến độ Phase 0. Quy ước:
 ## Tổng Kết Hiện Tại
 
 - Hoàn thành scaffolding/config/docs/notebook exploration output/utility dry-run/test fixtures.
+- Code pipeline dữ liệu đã tách thành package `src/training/data/` theo từng miền; `src/training/scripts/data_utils.py` giữ vai trò CLI/import facade để không phá import path cũ.
 - Dataset public/local đã đồng bộ với config hiện tại: COCO train+val, UCF-101, Places365 val_256, TextOCR và MSVD đều có trong `data/external`; các output chính trong `data/processed` đã được tạo. `verify-dataset-paths --skip-downloads --include-outputs` hiện pass với `checked_files=26 valid=True`.
 - Các mục còn mở đều là human-gated với dữ liệu custom thật: record/capture thực tế, annotate 200-500 ảnh, và ingest export YOLO custom thật bằng `normalize-custom-yolo` trước khi merge. Các tiện ích code-first như video frame-sequence loader, augmentation presets, `verify-dataset-paths`, `write-classes`, `build-scene-subset`, `merge-yolo`, `normalize-custom-yolo`, và `validate-video-manifest` đã có test.

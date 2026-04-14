@@ -12,6 +12,10 @@ Metadata package, dependency và extras `[dev]`, `[tts]` khai báo trong
 
 - `src/`: Mã nguồn chính. Tiện ích dữ liệu hiện chạy qua
   `python -m src.training.scripts...`.
+- `src/training/data/`: Module triển khai pipeline dữ liệu theo từng miền
+  (COCO/YOLO, UCF-101, Places365, TextOCR, MSVD, Piper TTS, augmentation,
+  split/validation). `src/training/scripts/data_utils.py` là CLI facade giữ
+  import path cũ.
 - `configs/`: Cấu hình YAML/JSON.
 - `configs/datasets/`: Cấu hình dataset cho Phase 0. Xem
   [configs/datasets/README.md](configs/datasets/README.md).
@@ -96,7 +100,8 @@ python -m src.training.scripts.data_utils validate-tts --dry-run
 ### Lệnh con `data_utils` (CLI)
 
 Module [src/training/scripts/data_utils.py](src/training/scripts/data_utils.py)
-đăng ký các subcommand (mỗi lệnh có `--help`).
+đăng ký các subcommand (mỗi lệnh có `--help`) và gọi implementation trong
+[src/training/data](src/training/data).
 
 | Subcommand | Vai trò |
 | --- | --- |
@@ -107,8 +112,10 @@ Module [src/training/scripts/data_utils.py](src/training/scripts/data_utils.py)
 | `validate` | Kiểm tra layout YOLO: ảnh/nhãn, class id, phạm vi bbox. |
 | `convert` | Chuyển COCO JSON (bbox xywh pixel) sang nhãn YOLO đã chuẩn hóa. |
 | `merge-yolo` | Gộp nhiều thư mục YOLO; mặc định dry-run, dùng `--execute` khi ghi file. |
+| `normalize-custom-yolo` | Chuẩn hóa export YOLO từ Roboflow/CVAT/Ultralytics vào layout `images/<split>` + `labels/<split>`; mặc định dry-run, dùng `--execute` khi ghi file. |
 | `augment-preview` | Xem trước augmentation (Albumentations) theo `--task`; mặc định dry-run. |
 | `build-action-manifest` | Tạo manifest video / chuỗi frame cho thư mục class kiểu UCF-101. |
+| `validate-video-manifest` | Kiểm tra manifest video: file tồn tại, label hợp lệ, split/group leakage, và optional OpenCV frame-count check. |
 | `build-scene-subset` | Tạo subset cân bằng Places365 từ filelist hoặc thư mục ảnh. |
 | `validate-tts` | Kiểm tra cấu hình Piper và WAV; bỏ `--dry-run` khi cần ghi/kiểm âm thanh. |
 

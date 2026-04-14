@@ -189,6 +189,88 @@ def test_normalize_custom_yolo_dry_run_cvat_layout(tmp_path: Path) -> None:
     assert not output.exists()
 
 
+def test_yolo_cli_dry_run_flags_do_not_write_by_default(tmp_path: Path) -> None:
+    """Đảm bảo CLI YOLO mặc định dry-run và chỉ ghi khi có `--execute`."""
+    source = tmp_path / "source"
+    output = tmp_path / "merged"
+    (source / "labels" / "train").mkdir(parents=True)
+    _write_tiny_image(source / "images" / "train" / "sample.jpg")
+    (source / "labels" / "train" / "sample.txt").write_text(
+        "0 0.5 0.5 0.25 0.25\n",
+        encoding="utf-8",
+    )
+    (source / "classes.txt").write_text("dog\n", encoding="utf-8")
+    classes = tmp_path / "classes.txt"
+    classes.write_text("person\ndog\n", encoding="utf-8")
+
+    assert (
+        main(
+            [
+                "merge-yolo",
+                "--sources",
+                str(source),
+                "--output-root",
+                str(output),
+                "--classes",
+                str(classes),
+            ]
+        )
+        == 0
+    )
+    assert not output.exists()
+
+    assert (
+        main(
+            [
+                "merge-yolo",
+                "--sources",
+                str(source),
+                "--output-root",
+                str(output),
+                "--classes",
+                str(classes),
+                "--execute",
+            ]
+        )
+        == 0
+    )
+    assert (output / "labels" / "train" / "sample.txt").exists()
+
+
+def test_normalize_custom_yolo_cli_accepts_explicit_dry_run(tmp_path: Path) -> None:
+    """Đảm bảo `normalize-custom-yolo --dry-run` vẫn là lệnh hợp lệ."""
+    export = tmp_path / "roboflow"
+    output = tmp_path / "canonical"
+    (export / "train" / "labels").mkdir(parents=True)
+    _write_tiny_image(export / "train" / "images" / "sample.jpg")
+    (export / "train" / "labels" / "sample.txt").write_text(
+        "0 0.5 0.5 0.25 0.25\n",
+        encoding="utf-8",
+    )
+    (export / "data.yaml").write_text("names:\n  - dog\n", encoding="utf-8")
+    classes = tmp_path / "classes.txt"
+    classes.write_text("person\ndog\n", encoding="utf-8")
+
+    assert (
+        main(
+            [
+                "normalize-custom-yolo",
+                "--export-root",
+                str(export),
+                "--output-root",
+                str(output),
+                "--classes",
+                str(classes),
+                "--source-format",
+                "roboflow_yolo",
+                "--dry-run",
+            ]
+        )
+        == 0
+    )
+    assert not output.exists()
+
+
 def test_split_helpers_keep_expected_invariants() -> None:
     """Đảm bảo split helper giữ invariant về label và group."""
     rows = [{"path": f"a{i}", "label": "a", "group": f"ga{i}"} for i in range(10)] + [

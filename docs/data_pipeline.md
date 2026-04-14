@@ -7,6 +7,11 @@ file ngoài ý muốn.
 ## Cấu Trúc Thư Mục
 
 - `configs/datasets/`: Cấu hình dataset và model data có version.
+- `src/training/data/`: Implementation pipeline dữ liệu theo module miền
+  (COCO/YOLO, UCF-101, Places365, TextOCR, MSVD, Piper TTS, augmentation,
+  split/validation).
+- `src/training/scripts/data_utils.py`: CLI facade ổn định cho các lệnh
+  `python -m src.training.scripts.data_utils ...`.
 - `data/downloads/`: Archive tải thủ công hoặc tải bằng script opt-in.
 - `data/external/`: Dataset bên thứ ba sau khi giải nén.
 - `data/custom/raw_frames_private/`: Frame capture thô có thể chứa thông tin
@@ -33,7 +38,9 @@ python -m src.training.scripts.data_utils build-action-manifest
 python -m src.training.scripts.data_utils build-scene-subset
 python -m src.training.scripts.data_utils convert --coco-json path/to/instances.json --image-root path/to/images --output-root data/processed/demo --classes classes.txt
 python -m src.training.scripts.data_utils merge-yolo --sources data/custom/export --output-root data/processed/merged --classes classes.txt --dry-run
+python -m src.training.scripts.data_utils normalize-custom-yolo --export-root data/custom/annotation_exports/export_001 --output-root data/custom/annotation_exports/export_001_normalized --classes data/processed/object_detection_accessibility/classes.txt --source-format roboflow_yolo --dry-run
 python -m src.training.scripts.data_utils augment-preview --input-dir path/to/images --output-dir data/processed/augment_preview --task detection
+python -m src.training.scripts.data_utils validate-video-manifest --manifest-csv data/processed/action_accessibility/manifest.csv
 python -m src.training.scripts.data_utils validate-tts --dry-run
 python -m src.training.scripts.capture_frames --duration-seconds 3600 --fps 1
 ```
@@ -92,6 +99,12 @@ riêng tư.
   `data/processed`.
 - Image augmentation: `augment-preview` hỗ trợ `--task detection|scene|ocr` và
   `--size`; dry-run mặc định chỉ đếm ảnh, `--execute` mới ghi preview.
+- Custom YOLO export: `normalize-custom-yolo` đọc export YOLO Roboflow/CVAT/
+  Ultralytics, remap class ids theo canonical `classes.txt`, copy về layout
+  `images/<split>` + `labels/<split>`, và validate output khi có `--execute`.
+- Video manifest validation: `validate-video-manifest` kiểm tra file tồn tại,
+  label membership, split/group leakage, và có thể mở video bằng OpenCV khi thêm
+  `--check-video-open`.
 - Packaging: package editable expose `src*`; các data utility chạy qua
   `python -m src.training.scripts...` để toàn bộ source code nằm dưới `src/`.
 
@@ -112,12 +125,13 @@ riêng tư.
 4. Chỉ copy frame đã sanitize sang `data/custom/sanitized_frames/`.
 5. Annotate 200-500 ảnh bằng canonical class names trong object detection
    config.
-6. Export theo format Ultralytics YOLO.
-7. Validate và preview remap trước khi ghi merged output:
+6. Export theo format Ultralytics YOLO hoặc YOLO Roboflow/CVAT.
+7. Normalize export về layout canonical và preview remap trước khi merge:
 
 ```bash
-python -m src.training.scripts.data_utils validate --dataset-root data/custom/annotation_exports/export_001 --classes data/processed/object_detection_accessibility/classes.txt
-python -m src.training.scripts.data_utils merge-yolo --sources data/custom/annotation_exports/export_001 data/processed/object_detection_accessibility --output-root data/processed/object_detection_accessibility_merged --classes data/processed/object_detection_accessibility/classes.txt --dry-run
+python -m src.training.scripts.data_utils normalize-custom-yolo --export-root data/custom/annotation_exports/export_001 --output-root data/custom/annotation_exports/export_001_normalized --classes data/processed/object_detection_accessibility/classes.txt --source-format ultralytics_yolo --dry-run
+python -m src.training.scripts.data_utils normalize-custom-yolo --export-root data/custom/annotation_exports/export_001 --output-root data/custom/annotation_exports/export_001_normalized --classes data/processed/object_detection_accessibility/classes.txt --source-format ultralytics_yolo --execute
+python -m src.training.scripts.data_utils merge-yolo --sources data/custom/annotation_exports/export_001_normalized data/processed/object_detection_accessibility --output-root data/processed/object_detection_accessibility_merged --classes data/processed/object_detection_accessibility/classes.txt --dry-run
 ```
 
 ## Checklist Riêng Tư

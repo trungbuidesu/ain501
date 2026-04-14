@@ -10,9 +10,13 @@
 ain501/
 ├── src/                    # Source code chính
 │   ├── __init__.py
+│   ├── training/
+│   │   ├── data/           # Phase 0 data pipeline implementation modules
+│   │   └── scripts/        # CLI entrypoints / compatibility facades
 │   └── utils/
 │       ├── __init__.py     # export: TrainingLogger
-│       └── logger.py       # Unified TensorBoard / W&B logger
+│       ├── logger.py       # Compatibility shim for TrainingLogger
+│       └── loggers/        # TensorBoard / W&B logger implementation
 ├── models/                 # Model definitions, weights, checkpoints
 ├── configs/                # YAML / JSON config files
 ├── data/                   # Data directory (git-ignored)
@@ -57,7 +61,7 @@ data = data.to(device)
 
 ## 3. Shared Utilities Reference
 
-### 3.1 TrainingLogger (`src/utils/logger.py`)
+### 3.1 TrainingLogger (`src/utils/loggers/training.py`, shim: `src/utils/logger.py`)
 
 Unified logging interface cho TensorBoard và W&B. Dùng chung cho mọi training pipeline.
 
@@ -65,6 +69,9 @@ Unified logging interface cho TensorBoard và W&B. Dùng chung cho mọi trainin
 ```python
 from src.utils import TrainingLogger
 ```
+
+`src.utils.logger.TrainingLogger` vẫn là shim tương thích import path cũ; implementation
+chính nằm ở `src.utils.loggers.training.TrainingLogger`.
 
 #### Khởi tạo
 ```python

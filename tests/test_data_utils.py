@@ -7,6 +7,7 @@ import json
 import subprocess
 import sys
 import wave
+from collections.abc import Sequence
 from pathlib import Path
 
 import pytest
@@ -26,6 +27,7 @@ from src.training.scripts.data_utils import (
     main,
     merge_yolo_datasets,
     normalize_coco_bbox,
+    normalize_custom_yolo_export,
     parse_icdar_gt,
     parse_msvd_captions,
     parse_places_categories,
@@ -34,6 +36,7 @@ from src.training.scripts.data_utils import (
     stratified_split,
     validate_tts_config,
     validate_video_manifest,
+    validate_video_open,
     validate_wav,
     validate_yolo_dataset,
     verify_dataset_paths,
@@ -41,6 +44,25 @@ from src.training.scripts.data_utils import (
 )
 
 FIXTURES = Path(__file__).parent / "fixtures"
+
+
+def _write_tiny_image(path: Path) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    Image.new("RGB", (8, 8), color="white").save(path)
+
+
+def _write_csv(path: Path, rows: Sequence[dict[str, str]]) -> None:
+    fieldnames = sorted({key for row in rows for key in row})
+    path.write_text(
+        "\n".join(
+            [
+                ",".join(fieldnames),
+                *(",".join(row.get(field, "") for field in fieldnames) for row in rows),
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
 
 
 def test_coco_to_yolo_keeps_dog_class() -> None:
@@ -102,6 +124,65 @@ def test_merge_yolo_dry_run_previews_remap_without_writing(tmp_path: Path) -> No
     assert report.valid
     assert report.scanned_labels == 1
     assert report.class_remap[str(source)] == {0: 1}
+    assert not output.exists()
+
+
+def test_normalize_custom_yolo_executes_roboflow_layout(tmp_path: Path) -> None:
+    """Đảm bảo normalizer remap export YOLO dạng Roboflow/Ultralytics."""
+    export = tmp_path / "roboflow"
+    output = tmp_path / "canonical"
+    (export / "train" / "labels").mkdir(parents=True)
+    _write_tiny_image(export / "train" / "images" / "sample.jpg")
+    (export / "train" / "labels" / "sample.txt").write_text(
+        "0 0.5 0.5 0.25 0.25\n",
+        encoding="utf-8",
+    )
+    (export / "data.yaml").write_text(
+        "names:\n  - dog\n",
+        encoding="utf-8",
+    )
+
+    report = normalize_custom_yolo_export(
+        export_root=export,
+        output_root=output,
+        canonical_names=["person", "dog"],
+        source_format="roboflow_yolo",
+        dry_run=False,
+    )
+
+    assert report.valid
+    assert report.scanned_labels == 1
+    assert report.copied_files == 2
+    assert (output / "classes.txt").read_text(encoding="utf-8") == "person\ndog\n"
+    assert (output / "labels" / "train" / "sample.txt").read_text(
+        encoding="utf-8"
+    ) == "1 0.5 0.5 0.25 0.25\n"
+    assert (output / "images" / "train" / "sample.jpg").exists()
+
+
+def test_normalize_custom_yolo_dry_run_cvat_layout(tmp_path: Path) -> None:
+    """Đảm bảo normalizer đọc CVAT YOLO flat layout mà không ghi khi dry-run."""
+    export = tmp_path / "cvat"
+    output = tmp_path / "canonical"
+    (export / "obj_train_data").mkdir(parents=True)
+    _write_tiny_image(export / "obj_train_data" / "sample.jpg")
+    (export / "obj_train_data" / "sample.txt").write_text(
+        "0 0.5 0.5 0.25 0.25\n",
+        encoding="utf-8",
+    )
+    (export / "obj.names").write_text("dog\n", encoding="utf-8")
+
+    report = normalize_custom_yolo_export(
+        export_root=export,
+        output_root=output,
+        canonical_names=["person", "dog"],
+        source_format="cvat_yolo",
+        dry_run=True,
+    )
+
+    assert report.valid
+    assert report.scanned_labels == 1
+    assert report.copied_files == 0
     assert not output.exists()
 
 
@@ -271,6 +352,69 @@ def test_frame_sequence_sampling_and_manifest_validation(tmp_path: Path) -> None
     report = validate_video_manifest(leaking_rows, ["walk"])
     assert not report.valid
     assert any("multiple splits" in issue.message for issue in report.issues)
+
+    bad_rows = [
+        {
+            **rows[0],
+            "path": str(tmp_path / "missing.avi"),
+        },
+        {
+            **rows[0],
+            "label": "run",
+        },
+    ]
+    bad_report = validate_video_manifest(bad_rows, ["walk"])
+    assert not bad_report.valid
+    assert any("missing video file" in issue.message for issue in bad_report.issues)
+    assert any("unknown class" in issue.message for issue in bad_report.issues)
+
+
+def test_validate_video_manifest_cli_and_open_check(tmp_path: Path) -> None:
+    """Đảm bảo CLI validate manifest và optional OpenCV check báo lỗi file giả."""
+    video = tmp_path / "walk.avi"
+    video.write_bytes(b"fake")
+    classes = tmp_path / "classes.txt"
+    classes.write_text("walk\n", encoding="utf-8")
+    manifest = tmp_path / "manifest.csv"
+    _write_csv(
+        manifest,
+        [
+            {
+                "path": str(video),
+                "relative_path": "walk/walk.avi",
+                "label": "walk",
+                "group": "walk_g01",
+                "split": "train",
+            }
+        ],
+    )
+
+    assert (
+        main(
+            [
+                "validate-video-manifest",
+                "--manifest-csv",
+                str(manifest),
+                "--classes",
+                str(classes),
+            ]
+        )
+        == 0
+    )
+    assert validate_video_open(video) is not None
+    assert (
+        main(
+            [
+                "validate-video-manifest",
+                "--manifest-csv",
+                str(manifest),
+                "--classes",
+                str(classes),
+                "--check-video-open",
+            ]
+        )
+        == 1
+    )
 
 
 def test_augmentation_presets_and_dry_run_do_not_write(tmp_path: Path) -> None:

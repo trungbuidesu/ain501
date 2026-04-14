@@ -7,9 +7,10 @@ Entrypoint CLI::
 
 Các subcommand chính: ``download-plan``, ``verify-dataset-paths``,
 ``write-classes``, ``split``, ``validate`` (YOLO), ``convert`` (COCO→YOLO),
-``merge-yolo``, ``augment-preview``, ``build-action-manifest``,
-``build-scene-subset``, ``validate-tts``. Thao tác ghi file hoặc tải dữ liệu
-lớn thường cần cờ ``--execute`` hoặc tắt ``--dry-run`` sau khi đã xem kế hoạch.
+``merge-yolo``, ``normalize-custom-yolo``, ``augment-preview``,
+``build-action-manifest``, ``validate-video-manifest``, ``build-scene-subset``,
+``validate-tts``. Thao tác ghi file hoặc tải dữ liệu lớn thường cần cờ
+``--execute`` hoặc tắt ``--dry-run`` sau khi đã xem kế hoạch.
 
 Dataset configs live in ``configs/datasets/*.yaml``.
 """
@@ -74,6 +75,21 @@ class MergeReport:
     def valid(self) -> bool:
         """Cho biết quá trình merge không có lỗi mức `error`."""
         return not any(issue.level == "error" for issue in self.issues)
+
+
+@dataclass(frozen=True)
+class NormalizeYoloReport:
+    """Báo cáo khi chuẩn hóa một YOLO export về layout canonical."""
+
+    dry_run: bool
+    scanned_labels: int
+    copied_files: int
+    validation: ValidationReport
+
+    @property
+    def valid(self) -> bool:
+        """Cho biết bước normalize và validate không có lỗi mức `error`."""
+        return self.validation.valid
 
 
 @dataclass(frozen=True)
@@ -417,13 +433,20 @@ def merge_yolo_datasets(
 def read_yolo_names(source: Path) -> list[str]:
     """Đọc tên class YOLO từ `classes.txt` hoặc `data.yaml` của Ultralytics."""
 
-    classes_path = source / "classes.txt"
-    if classes_path.exists():
-        return [
-            line.strip()
-            for line in classes_path.read_text(encoding="utf-8").splitlines()
-            if line.strip()
-        ]
+    for classes_path in (source / "classes.txt", source / "obj.names"):
+        if classes_path.exists():
+            return [
+                line.strip()
+                for line in classes_path.read_text(encoding="utf-8").splitlines()
+                if line.strip()
+            ]
+    for classes_path in source.glob("*.names"):
+        if classes_path.exists():
+            return [
+                line.strip()
+                for line in classes_path.read_text(encoding="utf-8").splitlines()
+                if line.strip()
+            ]
     data_yaml_path = source / "data.yaml"
     if data_yaml_path.exists():
         data = load_yaml(data_yaml_path)
@@ -433,6 +456,172 @@ def read_yolo_names(source: Path) -> list[str]:
         if isinstance(names, dict):
             return [str(names[key]) for key in sorted(names)]
     raise ValueError(f"Cannot find YOLO class names in {source}")
+
+
+def _read_yolo_names_from_file(classes_path: Path) -> list[str]:
+    """Đọc tên class YOLO từ file text hoặc `data.yaml` cụ thể."""
+
+    if classes_path.suffix.lower() in {".yaml", ".yml"}:
+        data = load_yaml(classes_path)
+        names = data.get("names")
+        if isinstance(names, list):
+            return [str(name) for name in names]
+        if isinstance(names, dict):
+            return [str(names[key]) for key in sorted(names)]
+        raise ValueError(f"Cannot find names in {classes_path}")
+    return [
+        line.strip()
+        for line in classes_path.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+
+
+def normalize_custom_yolo_export(
+    export_root: Path,
+    output_root: Path,
+    canonical_names: Sequence[str],
+    source_format: str,
+    classes_path: Path | None = None,
+    dry_run: bool = True,
+) -> NormalizeYoloReport:
+    """Chuẩn hóa YOLO export từ CVAT/Roboflow/Ultralytics về layout canonical."""
+
+    if source_format not in {"roboflow_yolo", "cvat_yolo", "ultralytics_yolo"}:
+        raise ValueError("Unsupported YOLO source format")
+    if not export_root.exists():
+        validation = ValidationReport(
+            0,
+            (ValidationIssue("error", str(export_root), "missing export root"),),
+        )
+        return NormalizeYoloReport(dry_run, 0, 0, validation)
+
+    source_names = (
+        _read_yolo_names_from_file(classes_path)
+        if classes_path is not None
+        else read_yolo_names(export_root)
+    )
+    canonical_index = {name: index for index, name in enumerate(canonical_names)}
+    class_remap: dict[int, int] = {}
+    issues: list[ValidationIssue] = []
+    for source_id, name in enumerate(source_names):
+        if name in canonical_index:
+            class_remap[source_id] = canonical_index[name]
+        else:
+            issues.append(
+                ValidationIssue(
+                    "error",
+                    str(export_root),
+                    f"source class '{name}' not in canonical names",
+                )
+            )
+
+    scanned_labels = 0
+    copied_files = 0
+    label_paths = _custom_yolo_label_paths(export_root)
+    if not label_paths:
+        issues.append(
+            ValidationIssue("error", str(export_root), "no YOLO label files found")
+        )
+    for label_path in label_paths:
+        scanned_labels += 1
+        split = _infer_yolo_split(label_path.relative_to(export_root))
+        image_path = _find_custom_yolo_image(export_root, label_path)
+        if image_path is None:
+            issues.append(
+                ValidationIssue("error", str(label_path), "missing matching image")
+            )
+            continue
+        remapped = remap_yolo_label_text(
+            label_path.read_text(encoding="utf-8"),
+            class_remap,
+            str(label_path),
+            issues,
+        )
+        if dry_run:
+            continue
+        output_label = output_root / "labels" / split / label_path.name
+        output_image = output_root / "images" / split / image_path.name
+        output_label.parent.mkdir(parents=True, exist_ok=True)
+        output_image.parent.mkdir(parents=True, exist_ok=True)
+        output_label.write_text(remapped, encoding="utf-8")
+        shutil.copy2(image_path, output_image)
+        copied_files += 2
+
+    if not dry_run:
+        output_root.mkdir(parents=True, exist_ok=True)
+        (output_root / "classes.txt").write_text(
+            "\n".join(canonical_names) + "\n",
+            encoding="utf-8",
+        )
+        issues.extend(validate_yolo_dataset(output_root, canonical_names).issues)
+    validation = ValidationReport(scanned_labels, tuple(issues))
+    return NormalizeYoloReport(dry_run, scanned_labels, copied_files, validation)
+
+
+def _custom_yolo_label_paths(export_root: Path) -> list[Path]:
+    """Liệt kê label YOLO, bỏ qua các file class metadata."""
+
+    metadata_names = {
+        "classes.txt",
+        "obj.names",
+        "test.txt",
+        "train.txt",
+        "valid.txt",
+        "val.txt",
+    }
+    cvat_dirs = {"obj_train_data", "obj_valid_data", "obj_test_data"}
+    label_paths: list[Path] = []
+    for path in sorted(export_root.rglob("*.txt")):
+        if path.name in metadata_names:
+            continue
+        lowercase_parts = {part.lower() for part in path.parts}
+        is_images_labels_layout = "labels" in lowercase_parts
+        is_cvat_flat_layout = path.parent.name.lower() in cvat_dirs
+        if is_images_labels_layout or is_cvat_flat_layout:
+            label_paths.append(path)
+    return label_paths
+
+
+def _infer_yolo_split(relative_path: Path) -> str:
+    """Suy ra split từ path YOLO phổ biến."""
+
+    for part in relative_path.parts:
+        normalized = part.lower()
+        if normalized == "valid":
+            return "val"
+        if normalized in {"train", "val", "test"}:
+            return normalized
+        if normalized == "obj_valid_data":
+            return "val"
+        if normalized == "obj_test_data":
+            return "test"
+        if normalized == "obj_train_data":
+            return "train"
+    return "train"
+
+
+def _find_custom_yolo_image(export_root: Path, label_path: Path) -> Path | None:
+    """Tìm ảnh tương ứng cho layout YOLO dạng `images/labels` hoặc CVAT flat."""
+
+    stem = label_path.with_suffix("")
+    for extension in IMAGE_EXTENSIONS:
+        flat_candidate = stem.with_suffix(extension)
+        if flat_candidate.exists():
+            return flat_candidate
+    parts = list(label_path.relative_to(export_root).parts)
+    lowercase_parts = [part.lower() for part in parts]
+    if "labels" in lowercase_parts:
+        parts[lowercase_parts.index("labels")] = "images"
+        candidate_relative = Path(*parts).with_suffix("")
+        for extension in IMAGE_EXTENSIONS:
+            candidate = export_root / candidate_relative.with_suffix(extension)
+            if candidate.exists():
+                return candidate
+    for extension in IMAGE_EXTENSIONS:
+        matches = sorted(export_root.rglob(f"{label_path.stem}{extension}"))
+        if matches:
+            return matches[0]
+    return None
 
 
 def _find_matching_image(images_root: Path, relative_label: Path) -> Path | None:
@@ -658,6 +847,8 @@ def add_frame_sequence_columns(
 def validate_video_manifest(
     rows: Sequence[dict[str, str]],
     class_names: Sequence[str],
+    check_video_open: bool = False,
+    min_frames: int = 1,
 ) -> ValidationReport:
     """Validate manifest video cơ bản cho action pipeline."""
 
@@ -671,12 +862,18 @@ def validate_video_manifest(
         group = row.get("group", path.stem)
         row_path = str(path) if str(path) else f"row:{index}"
 
-        if not path.exists():
+        path_exists = path.exists()
+        supported_extension = path.suffix.lower() in VIDEO_EXTENSIONS
+        if not path_exists:
             issues.append(ValidationIssue("error", row_path, "missing video file"))
-        if path.suffix.lower() not in VIDEO_EXTENSIONS:
+        if not supported_extension:
             issues.append(
                 ValidationIssue("error", row_path, "unsupported video extension")
             )
+        if check_video_open and path_exists and supported_extension:
+            open_issue = validate_video_open(path, min_frames=min_frames)
+            if open_issue is not None:
+                issues.append(open_issue)
         if label not in allowed_classes:
             issues.append(ValidationIssue("error", row_path, f"unknown class: {label}"))
         if split and split not in {"train", "val", "test", "unused", "unassigned"}:
@@ -694,6 +891,34 @@ def validate_video_manifest(
                 )
             )
     return ValidationReport(len(rows), tuple(issues))
+
+
+def validate_video_open(path: Path, min_frames: int = 1) -> ValidationIssue | None:
+    """Mở video bằng OpenCV và kiểm tra số frame tối thiểu."""
+
+    try:
+        import cv2  # type: ignore[import-untyped]
+    except ImportError:
+        return ValidationIssue(
+            "error",
+            str(path),
+            "opencv-python is required for video open validation",
+        )
+
+    capture = cv2.VideoCapture(str(path))
+    try:
+        if not bool(capture.isOpened()):
+            return ValidationIssue("error", str(path), "cannot open video")
+        frame_count = int(capture.get(cv2.CAP_PROP_FRAME_COUNT) or 0)
+        if frame_count < min_frames:
+            return ValidationIssue(
+                "error",
+                str(path),
+                f"video has {frame_count} frames, expected at least {min_frames}",
+            )
+    finally:
+        capture.release()
+    return None
 
 
 def write_manifest_csv(rows: Sequence[dict[str, str]], output_path: Path) -> None:
@@ -1426,6 +1651,21 @@ def read_classes(path: Path) -> list[str]:
     ]
 
 
+def read_action_classes(
+    config_path: Path, class_key: str = "public_bootstrap"
+) -> list[str]:
+    """Đọc class action từ config dataset."""
+
+    config = load_yaml(config_path)
+    classes = config.get("classes", {})
+    if not isinstance(classes, dict):
+        raise ValueError("Action config missing classes mapping")
+    names = classes.get(class_key, [])
+    if not isinstance(names, list):
+        raise ValueError(f"Action config classes.{class_key} must be a list")
+    return [str(name) for name in names]
+
+
 def write_split_csvs(
     splits: dict[str, list[dict[str, str]]],
     output_dir: Path,
@@ -1507,6 +1747,20 @@ def build_arg_parser() -> argparse.ArgumentParser:
     merge.add_argument("--classes", type=Path, required=True)
     merge.add_argument("--dry-run", action="store_true")
 
+    normalize_custom_yolo = subparsers.add_parser("normalize-custom-yolo")
+    normalize_custom_yolo.add_argument("--export-root", type=Path, required=True)
+    normalize_custom_yolo.add_argument("--output-root", type=Path, required=True)
+    normalize_custom_yolo.add_argument("--classes", type=Path, required=True)
+    normalize_custom_yolo.add_argument("--source-classes", type=Path)
+    normalize_custom_yolo.add_argument(
+        "--source-format",
+        choices=["roboflow_yolo", "cvat_yolo", "ultralytics_yolo"],
+        required=True,
+    )
+    normalize_custom_yolo_mode = normalize_custom_yolo.add_mutually_exclusive_group()
+    normalize_custom_yolo_mode.add_argument("--dry-run", action="store_true")
+    normalize_custom_yolo_mode.add_argument("--execute", action="store_true")
+
     augment = subparsers.add_parser("augment-preview")
     augment.add_argument("--input-dir", type=Path, required=True)
     augment.add_argument("--output-dir", type=Path, required=True)
@@ -1530,6 +1784,18 @@ def build_arg_parser() -> argparse.ArgumentParser:
     action_manifest.add_argument("--output-csv", type=Path)
     action_manifest.add_argument("--split-index", type=int, default=1)
     action_manifest.add_argument("--execute", action="store_true")
+
+    validate_video = subparsers.add_parser("validate-video-manifest")
+    validate_video.add_argument("--manifest-csv", type=Path, required=True)
+    validate_video.add_argument("--classes", type=Path)
+    validate_video.add_argument(
+        "--config",
+        type=Path,
+        default=Path("configs/datasets/action_accessibility.yaml"),
+    )
+    validate_video.add_argument("--class-key", default="public_bootstrap")
+    validate_video.add_argument("--check-video-open", action="store_true")
+    validate_video.add_argument("--min-frames", type=int, default=1)
 
     scene_subset = subparsers.add_parser("build-scene-subset")
     scene_subset.add_argument(
@@ -1646,6 +1912,18 @@ def main(argv: Sequence[str] | None = None) -> int:
         print_merge_report(merge_report)
         return 0 if merge_report.valid else 1
 
+    if args.command == "normalize-custom-yolo":
+        normalize_report = normalize_custom_yolo_export(
+            export_root=args.export_root,
+            output_root=args.output_root,
+            canonical_names=read_classes(args.classes),
+            source_format=args.source_format,
+            classes_path=args.source_classes,
+            dry_run=not args.execute,
+        )
+        print_normalize_yolo_report(normalize_report)
+        return 0 if normalize_report.valid else 1
+
     if args.command == "augment-preview":
         count = augment_preview(
             input_dir=args.input_dir,
@@ -1697,6 +1975,23 @@ def main(argv: Sequence[str] | None = None) -> int:
         else:
             print(f"planned_manifest={output_csv} rows={len(rows)} dry_run=True")
         return 0
+
+    if args.command == "validate-video-manifest":
+        with args.manifest_csv.open(newline="", encoding="utf-8") as file:
+            rows = list(csv.DictReader(file))
+        class_names = (
+            read_classes(args.classes)
+            if args.classes
+            else read_action_classes(args.config, args.class_key)
+        )
+        video_report = validate_video_manifest(
+            rows,
+            class_names,
+            check_video_open=args.check_video_open,
+            min_frames=args.min_frames,
+        )
+        print_report(video_report)
+        return 0 if video_report.valid else 1
 
     if args.command == "build-scene-subset":
         config = load_yaml(args.config)
@@ -1782,6 +2077,24 @@ def print_merge_report(report: MergeReport) -> None:
     )
     print(json.dumps(report.class_remap, indent=2, sort_keys=True))
     for issue in report.issues:
+        print(f"{issue.level}: {issue.path}: {issue.message}")
+
+
+def print_normalize_yolo_report(report: NormalizeYoloReport) -> None:
+    """In report normalize YOLO custom export cho CLI."""
+
+    print(
+        " ".join(
+            [
+                f"dry_run={report.dry_run}",
+                f"scanned_labels={report.scanned_labels}",
+                f"copied_files={report.copied_files}",
+                f"checked_files={report.validation.checked_files}",
+                f"valid={report.valid}",
+            ]
+        )
+    )
+    for issue in report.validation.issues:
         print(f"{issue.level}: {issue.path}: {issue.message}")
 
 

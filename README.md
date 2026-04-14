@@ -26,11 +26,33 @@ Metadata package, dependency và extras `[dev]`, `[tts]` khai báo trong
 - `docs/`: Tài liệu dự án. Pipeline dữ liệu chính nằm ở
   [docs/data_pipeline.md](docs/data_pipeline.md).
 - `notebooks/`: Notebook khởi động và khám phá cho từng dataset Phase 0.
-- `checklist/`: Theo dõi tiến độ thực tế theo từng task dữ liệu
+- `checklist/`: Theo dõi tiến độ thực tế theo từng task dữ liệu và model
   ([checklist/phase0_data_pipeline.md](checklist/phase0_data_pipeline.md)).
 - `tests/`: Kiểm thử đơn vị và kiểm thử tích hợp.
 - `agents/`: Quy tắc làm việc, rà soát code và commit dành cho agent. Bản đồ
   dependency nhanh: [agents/reference.md](agents/reference.md).
+
+## Xem Tài Liệu (MkDocs)
+
+Tài liệu web dùng [MkDocs](https://www.mkdocs.org/) với theme
+[Material](https://squidfunk.github.io/mkdocs-material/). Cấu hình nằm ở
+[mkdocs.yml](mkdocs.yml); nội dung Markdown trong [docs/](docs/).
+
+Cài gói (một lần, ngoài dependency của project trong `pyproject.toml`):
+
+```bash
+pip install mkdocs mkdocs-material
+```
+
+Từ thư mục gốc repo:
+
+- **Xem local:** `mkdocs serve` — mở trình duyệt tại địa chỉ hiển thị (thường
+  `http://127.0.0.1:8000`).
+- **Build tĩnh:** `mkdocs build` — output vào `site/` (thư mục này đã được
+  git-ignore).
+
+Tài liệu vận hành pipeline chi tiết vẫn có thể đọc trực tiếp file
+[docs/data_pipeline.md](docs/data_pipeline.md) trên Git.
 
 ## Bắt Đầu
 
@@ -184,6 +206,12 @@ $AIN501_PY=Join-Path $env:CONDA_PREFIX "python.exe"
 
 Chi tiết trạng thái dataset và task:
 [checklist/phase0_data_pipeline.md](checklist/phase0_data_pipeline.md).
+
+Checklist model shared feature extractor:
+[checklist/mobilenetv3_small.md](checklist/mobilenetv3_small.md).
+
+Checklist object detection model:
+[checklist/yolov8n.md](checklist/yolov8n.md).
 
 ## License
 

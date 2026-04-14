@@ -211,6 +211,7 @@ __marimo__/
 models/vision/
 runs/
 reports/
+/site/
 *.onnx
 *.pt
 src/training/data/**/__pycache__/

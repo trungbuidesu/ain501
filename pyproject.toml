@@ -51,6 +51,7 @@ dev = [
     "ruff>=0.1.0",
     "black[jupyter]>=23.9.0",
     "mypy>=1.5.0",
+    "mkdocs-material>=9.5.0",
 ]
 tts = [
     "piper-tts>=1.2.0",

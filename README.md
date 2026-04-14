@@ -38,10 +38,10 @@ Tài liệu web dùng [MkDocs](https://www.mkdocs.org/) với theme
 [Material](https://squidfunk.github.io/mkdocs-material/). Cấu hình nằm ở
 [mkdocs.yml](mkdocs.yml); nội dung Markdown trong [docs/](docs/).
 
-Cài gói (một lần, ngoài dependency của project trong `pyproject.toml`):
+Cài gói qua dev extra của project:
 
 ```bash
-pip install mkdocs mkdocs-material
+pip install -e ".[dev]"
 ```
 
 Từ thư mục gốc repo:

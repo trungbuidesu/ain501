@@ -17,12 +17,12 @@ File này dùng để theo dõi tiến độ dựng docs tạm với MkDocs Mate
 
 - [x] Tạo landing page `docs/index.md`
   - Trạng thái: Đã có nội dung placeholder cho scaffold docs.
-- [x] Tạo các dummy pages (`docs/overview.md`, `docs/experiments.md`, `docs/models.md`)
-  - Trạng thái: Đã tạo nội dung placeholder để test điều hướng.
+- [x] Tạo các dummy pages (`docs/general/overview.md`, `docs/general/experiments.md`, `docs/general/models.md`)
+  - Trạng thái: Đã tạo nội dung placeholder để test điều hướng và đã map trong `mkdocs.yml`.
 
 ## Local Validation
 
-- [ ] Chạy `mkdocs serve` để kiểm tra render local
-  - Trạng thái: Chờ verify trong môi trường hiện tại.
-- [ ] Chạy `mkdocs build` để kiểm tra build output
-  - Trạng thái: Chờ verify trong môi trường hiện tại.
+- [x] Chạy `mkdocs serve` để kiểm tra render local
+  - Trạng thái: Đã cài `mkdocs-material` trong env `ain501`, chạy `python -m mkdocs serve --dev-addr 127.0.0.1:8001 --no-livereload`, request local trả `status=200`, sau đó đã stop server.
+- [x] Chạy `mkdocs build` để kiểm tra build output
+  - Trạng thái: Đã chạy `python -m mkdocs build --strict --site-dir %TEMP%/ain501_mkdocs_site_check`, build pass. `site/` được git-ignore cho build mặc định.

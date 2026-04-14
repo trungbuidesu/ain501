@@ -1,250 +1,147 @@
-# Tài liệu tham chiếu triển khai — AIN501
+# Tài Liệu Tham Chiếu Triển Khai - AIN501
 
-> Tài liệu này tổng hợp kiến trúc project, shared utilities, API reference, và các patterns chuẩn để tham chiếu khi triển khai tính năng mới.
+Tài liệu này là bản tham chiếu nhanh cho agent/engineer khi làm việc trong
+repo. Nội dung được chuẩn hóa theo [README.md](../README.md).
 
----
+## 1. Kiến Trúc Project
 
-## 1. Kiến trúc Project
-
-```
+```text
 ain501/
-├── src/                    # Source code chính
-│   ├── __init__.py
+├── src/                    # Mã nguồn chính
 │   ├── training/
-│   │   ├── data/           # Phase 0 data pipeline implementation modules
-│   │   └── scripts/        # CLI entrypoints / compatibility facades
+│   │   ├── data/           # Pipeline dữ liệu theo từng miền
+│   │   ├── models/         # Model/backbone training utilities
+│   │   └── scripts/        # CLI entrypoints
 │   └── utils/
-│       ├── __init__.py     # export: TrainingLogger
-│       ├── logger.py       # Compatibility shim for TrainingLogger
+│       ├── logger.py       # Compatibility shim cho TrainingLogger
 │       └── loggers/        # TensorBoard / W&B logger implementation
-├── models/                 # Model definitions, weights, checkpoints
-├── configs/                # YAML / JSON config files
-├── data/                   # Data directory (git-ignored)
-├── tests/                  # Unit & integration tests
-├── docs/                   # Documentation
-├── agents/                 # Agent docs, rules, phase plans
-├── pyproject.toml          # Dependencies + tool config
-└── README.md
+├── configs/                # YAML/JSON config files
+├── data/                   # Dữ liệu local, git-ignored
+├── docs/                   # Tài liệu dự án
+├── notebooks/              # Notebook khám phá dataset Phase 0
+├── tests/                  # Unit/integration tests
+└── agents/                 # Rule, reference và ghi chú vận hành
 ```
 
-### Package install (editable mode)
+Pipeline dữ liệu chạy qua CLI thống nhất:
+
 ```bash
-conda activate ain501
+python -m src.training.scripts.data_utils download-plan
+python -m src.training.scripts.data_utils verify-dataset-paths --skip-downloads
+python -m src.training.scripts.data_utils validate-tts --dry-run
+```
+
+Các model utilities hiện có:
+
+```bash
+python -m src.training.scripts.mobilenetv3 describe
+python -m src.training.scripts.yolov8n describe
+```
+
+## 2. Môi Trường Và Phần Cứng
+
+Mặc định làm theo README: dùng Miniconda/Anaconda, Python 3.10+ và cài dev
+extra.
+
+```bash
+conda activate <env-name>
 pip install -e ".[dev]"
 ```
-Sau khi install, import bằng `from src.utils import ...`
 
----
-
-## 2. Môi trường & Phần cứng
+Trạng thái kiểm tra local gần nhất:
 
 | Item | Value |
-|------|-------|
-| Python | 3.10+ |
-| Conda env | `ain501` |
-| GPU | Intel Arc A770 |
-| PyTorch | `2.11.0+xpu` (cài từ `--index-url https://download.pytorch.org/whl/xpu`) |
-| Device string | `"xpu"` (**không** dùng `"cuda"`) |
+| --- | --- |
+| Conda env | `trungbd` |
+| Python | `3.11.13` |
+| XPU detected by pytest warning | `Intel(R) UHD Graphics 730` |
+| XPU support note | UHD 730 không phải Intel Arc-supported device |
 
-### Device selection pattern (BẮT BUỘC)
+Không giả định máy luôn có Intel Arc A770. Nếu cần cài PyTorch XPU hoặc ghi chú
+Arc-specific, xem [intel_arc_xpu_notes.md](intel_arc_xpu_notes.md).
+
+Device selection trong code nên dùng fallback `xpu -> cpu`, không hardcode
+`cuda`:
+
 ```python
 import torch
 
 device = torch.device("xpu" if torch.xpu.is_available() else "cpu")
 model = model.to(device)
-data = data.to(device)
+batch = batch.to(device)
 ```
 
-> ⚠️ **KHÔNG BAO GIỜ hardcode `"cuda"`** trong project này. Xem chi tiết: `agents/intel_arc_xpu_notes.md`
+## 3. Shared Utilities
 
----
+### TrainingLogger
 
-## 3. Shared Utilities Reference
+Import chuẩn:
 
-### 3.1 TrainingLogger (`src/utils/loggers/training.py`, shim: `src/utils/logger.py`)
-
-Unified logging interface cho TensorBoard và W&B. Dùng chung cho mọi training pipeline.
-
-#### Import
 ```python
 from src.utils import TrainingLogger
 ```
 
-`src.utils.logger.TrainingLogger` vẫn là shim tương thích import path cũ; implementation
-chính nằm ở `src.utils.loggers.training.TrainingLogger`.
+`src.utils.logger.TrainingLogger` vẫn là shim tương thích import path cũ; logic
+chính nằm trong `src.utils.loggers.training.TrainingLogger`.
 
-#### Khởi tạo
+Ví dụ tối thiểu:
+
 ```python
-logger = TrainingLogger(
-    project="ain501-yolo",          # Tên project (W&B dùng)
-    run_name="exp-001",             # Tên experiment
-    backends=["tensorboard"],       # ["tensorboard"], ["wandb"], hoặc cả hai
-    log_dir="runs",                 # Thư mục output (default: "runs")
-    config={"lr": 1e-3, "epochs": 100},  # Hyperparameters
-    tags=["baseline", "v1"],        # Tags (W&B only)
-)
-```
-
-#### API Methods
-
-| Method | Mô tả | TensorBoard | W&B |
-|--------|--------|:-----------:|:---:|
-| `log_scalar(tag, value, step)` | Log 1 scalar | ✅ | ✅ |
-| `log_scalars(main_tag, {k: v}, step)` | Log nhiều scalar grouped | ✅ | ✅ |
-| `log_image(tag, image, step)` | Log ảnh (Tensor CHW / numpy HWC) | ✅ | ✅ |
-| `log_histogram(tag, values, step)` | Log histogram (weights, grads) | ✅ | ✅ |
-| `log_text(tag, text, step)` | Log text | ✅ | ✅ |
-| `log_artifact(path, type)` | Log file/dir as artifact | ❌ | ✅ |
-| `log_model_graph(model, input)` | Log model architecture | ✅ | ✅ |
-| `finish()` | Flush & close tất cả backends | ✅ | ✅ |
-
-#### Ví dụ training loop đầy đủ
-```python
-import torch
-import torch.nn as nn
-from src.utils import TrainingLogger
-
-device = torch.device("xpu" if torch.xpu.is_available() else "cpu")
-
-model = MyModel().to(device)
-optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
-criterion = nn.CrossEntropyLoss()
-
 with TrainingLogger(
     project="ain501",
     run_name="exp-001",
-    backends=["tensorboard", "wandb"],
-    config={"lr": 1e-3, "batch_size": 32, "device": str(device)},
+    backends=["tensorboard"],
+    log_dir="runs",
+    config={"lr": 1e-4, "batch_size": 32},
 ) as logger:
-
-    for epoch in range(num_epochs):
-        # Training
-        train_loss = train_one_epoch(model, train_loader, criterion, optimizer, device)
-        logger.log_scalar("train/loss", train_loss, step=epoch)
-
-        # Validation
-        val_loss, val_acc = validate(model, val_loader, criterion, device)
-        logger.log_scalars("val", {"loss": val_loss, "acc": val_acc}, step=epoch)
-
-        # Log weights histogram mỗi 10 epochs
-        if epoch % 10 == 0:
-            for name, param in model.named_parameters():
-                logger.log_histogram(f"weights/{name}", param.data.cpu(), step=epoch)
-
-    # Lưu model & log artifact
-    torch.save(model.state_dict(), "models/best_model.pt")
-    logger.log_artifact("models/best_model.pt", type="model")
+    logger.log_scalar("train/loss", 0.5, step=1)
 ```
 
-#### Xem kết quả TensorBoard
+Metrics training chính thức nên dùng tag nhóm như `train/loss`, `val/loss`,
+`val/accuracy`, `val/mAP50`, `val/mAP50-95`, và `system/epoch_time_s`.
+
+## 4. Dataset Và Model State
+
+Dataset Phase 0 được cấu hình trong `configs/datasets/` và ghi tiến độ ở
+`checklist/phase0_data_pipeline.md`. Dữ liệu thật nằm dưới `data/` và không được
+commit.
+
+Model configs hiện có trong `configs/models/`:
+
+- `mobilenetv3_small.yaml`: shared feature extractor MobileNetV3-Small.
+- `yolov8n.yaml`: config train/evaluate dry-run-safe cho YOLOv8n.
+
+YOLOv8n training thật chỉ nên chạy sau khi YOLO train/val processed đã tồn tại
+và data YAML trỏ đúng `images/train` + `images/val`.
+
+## 5. Quy Tắc Kiểm Tra
+
+Theo [rules.md](rules.md), trước khi commit cần chạy:
+
 ```bash
-tensorboard --logdir runs/
-# Mở http://localhost:6006
+python -m black --check .
+python -m ruff check .
+python -m mypy .
+python -m pytest -q
 ```
 
----
+Với PowerShell và env đã activate:
 
-## 4. Dependencies chính
-
-### Deep Learning & Vision
-| Package | Mục đích | Docs |
-|---------|----------|------|
-| `torch` + `torchvision` + `torchaudio` | Core DL framework | https://pytorch.org/docs/ |
-| `ultralytics` | YOLOv8 object detection | https://docs.ultralytics.com/ |
-| `onnx` + `onnxruntime` | Model export & inference | https://onnxruntime.ai/docs/ |
-| `opencv-python` | Image/video processing | https://docs.opencv.org/ |
-| `Pillow` | Image I/O | https://pillow.readthedocs.io/ |
-
-### OCR & Pose
-| Package | Mục đích | Docs |
-|---------|----------|------|
-| `paddleocr` | OCR (text detection + recognition) | https://paddlepaddle.github.io/PaddleOCR/ |
-| `mediapipe` | Pose estimation, hand tracking | https://ai.google.dev/edge/mediapipe |
-
-### Vector Search & NLP
-| Package | Mục đích | Docs |
-|---------|----------|------|
-| `faiss-cpu` | Vector similarity search | https://github.com/facebookresearch/faiss |
-| `sentence-transformers` | Text embeddings | https://www.sbert.net/ |
-
-### GUI & Screen Capture
-| Package | Mục đích | Docs |
-|---------|----------|------|
-| `PySide6` | Qt6 GUI framework | https://doc.qt.io/qtforpython-6/ |
-| `dxcam` | DirectX screen capture (Windows) | https://github.com/ra1nty/DXcam |
-| `mss` | Cross-platform screenshot | https://python-mss.readthedocs.io/ |
-
-### Logging & Monitoring
-| Package | Mục đích | Docs |
-|---------|----------|------|
-| `tensorboard` | Local training visualization | https://www.tensorflow.org/tensorboard |
-| `wandb` | Cloud experiment tracking | https://docs.wandb.ai/ |
-
----
-
-## 5. Coding Patterns
-
-### 5.1 Config loading
-```python
-import yaml
-from pathlib import Path
-
-def load_config(name: str) -> dict:
-    path = Path("configs") / f"{name}.yaml"
-    with open(path) as f:
-        return yaml.safe_load(f)
+```powershell
+$AIN501_PY=Join-Path $env:CONDA_PREFIX "python.exe"
+& $AIN501_PY -m black --check .
+& $AIN501_PY -m ruff check .
+& $AIN501_PY -m mypy .
+& $AIN501_PY -m pytest -q
 ```
 
-### 5.2 Device-agnostic training
-```python
-device = torch.device("xpu" if torch.xpu.is_available() else "cpu")
+Commit message theo Conventional Commits: `<type>(<scope>): <description>`.
 
-# Mixed precision trên XPU
-with torch.autocast(device_type="xpu", dtype=torch.float16):
-    output = model(input_tensor)
-```
+## 6. Checklist Khi Triển Khai Tính Năng
 
-### 5.3 Model save/load
-```python
-# Save
-torch.save({
-    "epoch": epoch,
-    "model_state_dict": model.state_dict(),
-    "optimizer_state_dict": optimizer.state_dict(),
-    "loss": loss,
-}, "models/checkpoint.pt")
-
-# Load
-checkpoint = torch.load("models/checkpoint.pt", map_location=device)
-model.load_state_dict(checkpoint["model_state_dict"])
-```
-
-### 5.4 ONNX export
-```python
-dummy_input = torch.randn(1, 3, 640, 640, device=device)
-torch.onnx.export(model, dummy_input, "models/model.onnx", opset_version=17)
-```
-
----
-
-## 6. Tham chiếu nhanh các file trong `agents/`
-
-| File | Nội dung |
-|------|----------|
-| `phase0.md` | Checklist khởi tạo project |
-| `rules.md` | Quy tắc commit (Conventional Commits) + check rules (ruff, black, mypy, pytest) |
-| `intel_arc_xpu_notes.md` | Hướng dẫn sử dụng Intel Arc A770, cài đặt PyTorch XPU, lưu ý quan trọng |
-| `reference.md` | **(file này)** Tài liệu tham chiếu tổng hợp |
-
----
-
-## 7. Checklist khi triển khai tính năng mới
-
-- [ ] Tạo branch theo convention: `feat/<tên>`, `fix/<tên>`, `refactor/<tên>`
-- [ ] Device selection: dùng `"xpu"` pattern, **không** hardcode `"cuda"`
-- [ ] Logging: dùng `TrainingLogger` từ `src/utils` (không tự viết logging riêng)
-- [ ] Config: đặt file YAML trong `configs/`
-- [ ] Tests: viết test kèm trong `tests/test_<tên>.py`
-- [ ] Linting: chạy `ruff check .` và `black .` trước khi commit
-- [ ] Type hints: tất cả public functions phải có type annotations
-- [ ] Commit message: theo Conventional Commits (xem `agents/rules.md`)
+- Dùng import path `src.*` và CLI `python -m src.training.scripts...`.
+- Không ghi artifact nặng vào git: `data/`, `models/`, `runs/`, `reports/`.
+- Dùng `TrainingLogger` cho mọi training run thay vì logging tự phát.
+- Không hardcode `cuda`; dùng device fallback `xpu -> cpu`.
+- Cập nhật checklist/docs khi trạng thái dữ liệu hoặc model artifact thay đổi.
+- Chạy black, ruff, mypy, pytest và các validation dataset liên quan.

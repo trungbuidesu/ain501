@@ -30,20 +30,20 @@ File này theo dõi trạng thái MobileNetV3-Small sau batch implement shared f
 - [x] Log loss + accuracy mỗi epoch lên TensorBoard
   - Trạng thái: CLI `fine-tune` log `train/loss`, `train/accuracy`, `val/loss`, `val/accuracy` qua `TrainingLogger`; smoke test xác minh TensorBoard event file.
 - [x] Fine-tune trên domain/custom data thật
-  - Trạng thái: Đã thêm `prepare-scene-manifest` để dùng `data/processed/scene_accessibility/manifest.csv` làm domain image dataset thật, xuất local/ignored tại `data/processed/mobilenetv3_small_scene/manifest.csv`; acceptance `scene_acceptance` chạy 2 epochs CPU và lưu checkpoint local trong `models/vision/`.
+  - Trạng thái: Đã thêm `prepare-scene-manifest` để dùng `data/processed/scene_accessibility/manifest.csv` làm domain image dataset thật. Manifest local/ignored tại `data/processed/mobilenetv3_small_scene/manifest.csv` có 1600 rows; smoke run `scene_smoke` chạy 1 epoch CPU và lưu checkpoint local trong `models/vision/mobilenetv3_small/scene_smoke/`.
 
 ## Evaluate And Export
 
 - [x] So sánh features pretrained vs fine-tuned bằng t-SNE
   - Trạng thái: Đã implement CLI `compare-tsne`, xuất `tsne_embeddings.csv` và `tsne_embeddings.png`; smoke test dùng ảnh synthetic.
 - [x] Chạy t-SNE trên model fine-tuned thật
-  - Trạng thái: Đã chạy `compare-tsne` với checkpoint `scene_acceptance`; CSV/PNG report lưu local/ignored trong `reports/mobilenetv3_small/scene_acceptance/`.
+  - Trạng thái: Đã chạy `compare-tsne` với checkpoint `scene_smoke`; CSV/PNG report lưu local/ignored trong `reports/mobilenetv3_small/scene_smoke/`.
 - [x] Export ONNX FP32
   - Trạng thái: Đã implement CLI `export-onnx` cho `embedding` mặc định và optional `feature_map`; dùng dynamic batch axis; smoke test bằng `onnx.checker` và ONNX Runtime.
 - [x] Benchmark latency, RAM trên CPU target
   - Trạng thái: Đã implement CLI `benchmark` cho PyTorch và ONNX Runtime CPU, report `latency_ms_p50`, `latency_ms_p95`, `ram_mb_start`, `ram_mb_end`, `ram_mb_delta`; smoke test tiny iterations pass.
-- [x] Lưu benchmark report chính thức cho CPU target thật
-  - Trạng thái: Đã chạy PyTorch CPU benchmark cho checkpoint `scene_acceptance`; JSON report lưu local/ignored tại `reports/mobilenetv3_small/scene_acceptance/benchmark_current_cpu.json`.
+- [ ] Lưu benchmark report chính thức cho CPU target thật
+  - Trạng thái: Đã chạy PyTorch CPU benchmark smoke cho checkpoint `scene_smoke`; JSON report lưu local/ignored tại `reports/mobilenetv3_small/scene_smoke/benchmark_current_cpu_smoke.json` với `latency_ms_p50=17.66`, `latency_ms_p95=250.68`. Trường RAM hiện trả `NaN`, nên report chính thức cho CPU target thật vẫn mở.
 
 ## CLI And Config
 
@@ -63,4 +63,4 @@ File này theo dõi trạng thái MobileNetV3-Small sau batch implement shared f
 - [x] Unit tests ONNX / benchmark / t-SNE
   - Trạng thái: Test export ONNX FP32, ONNX Runtime inference, PyTorch + ONNX Runtime benchmark, và t-SNE output.
 - [x] Quality gate
-  - Trạng thái: Sau batch YOLOv8n/MobileNetV3 scene đã pass `black --check .`, `ruff check .`, `mypy .`, `pytest -q` với `41 passed`; dataset checks `verify-dataset-paths --skip-downloads --include-outputs` và YOLO validate đều pass.
+  - Trạng thái: Sau batch đồng bộ dữ liệu/docs đã pass `black --check .`, `ruff check .`, `mypy .`, `pytest -q` với `40 passed, 1 skipped`; dataset checks `verify-dataset-paths --skip-downloads --include-outputs`, YOLO source/merged validate, notebook execution và MkDocs strict build đều pass.

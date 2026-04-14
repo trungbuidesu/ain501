@@ -23,6 +23,6 @@ File này dùng để theo dõi tiến độ dựng docs tạm với MkDocs Mate
 ## Local Validation
 
 - [x] Chạy `mkdocs serve` để kiểm tra render local
-  - Trạng thái: Đã cài `mkdocs-material` trong env `ain501`, chạy `python -m mkdocs serve --dev-addr 127.0.0.1:8001 --no-livereload`, request local trả `status=200`, sau đó đã stop server.
+  - Trạng thái: Đã cài `mkdocs-material` qua dev extra; lần kiểm tra gần nhất dùng env `trungbd`. Trước đó đã chạy `python -m mkdocs serve --dev-addr 127.0.0.1:8001 --no-livereload`, request local trả `status=200`, sau đó đã stop server.
 - [x] Chạy `mkdocs build` để kiểm tra build output
-  - Trạng thái: Đã chạy `python -m mkdocs build --strict --site-dir %TEMP%/ain501_mkdocs_site_check`, build pass. `site/` được git-ignore cho build mặc định.
+  - Trạng thái: Đã chạy `python -m mkdocs build --strict --site-dir %TEMP%/ain501_mkdocs_check`, build pass. `site/` được git-ignore cho build mặc định.

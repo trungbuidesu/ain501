@@ -30,11 +30,11 @@ File này theo dõi trạng thái YOLOv8n cho object detection. Quy ước:
 - [x] COCO/custom -> YOLO dataset helpers
   - Trạng thái: Đã có `convert`, `validate`, `merge-yolo`, `normalize-custom-yolo` trong `src.training.scripts.data_utils`; dùng để chuẩn bị layout `images/<split>` + `labels/<split>`.
 - [x] Training config YAML cho YOLOv8n
-  - Trạng thái: Đã có `configs/models/yolov8n.yaml` và CLI `write-data-yaml` sinh Ultralytics data YAML từ canonical YOLO dataset/classes.
+  - Trạng thái: Đã có `configs/models/yolov8n.yaml` và CLI `write-data-yaml`; data YAML local/ignored tại `data/processed/object_detection_accessibility_merged/yolov8n_data.yaml` hiện trỏ đúng `train: images/train`, `val: images/val`, `nc: 16`.
 - [x] Classes + augmentations + hyperparams trong training config
   - Trạng thái: Config đã khai báo `lr0=0.01`, `epochs=100`, `batch=16`, `imgsz=640`, `mosaic=1.0`, `mixup=0.1`, `multi_scale=true`.
 - [ ] Train trên COCO hoặc custom dataset
-  - Trạng thái: Đã có CLI `train` dry-run mặc định và `--execute` mới gọi Ultralytics; chưa chạy real long training/mAP trong batch này.
+  - Trạng thái: COCO YOLO train+val đã sẵn sàng ở `data/processed/object_detection_accessibility_merged` với 81563 ảnh train selected và 3445 ảnh val selected; CLI `train` vẫn dry-run mặc định và chưa chạy real long training/mAP trong batch này.
 - [x] Base LR `0.01`, epochs `50-100`
   - Trạng thái: Đã cấu hình `lr0=0.01`, `epochs=100` trong `configs/models/yolov8n.yaml` và expose override qua CLI.
 - [x] Mosaic + mixup augmentation

@@ -9,7 +9,7 @@ File này dùng để theo dõi tiến độ Phase 0. Quy ước:
 ## Object Detection Dataset
 
 - [x] Download COCO 2017 train + val (~20GB)
-  - Trạng thái: Đã tải/extract `train2017.zip`, `val2017.zip` và `annotations_trainval2017.zip` vào `data/external/coco2017`. Hiện có 118287 ảnh train, 5000 ảnh val; đã ghi `classes.txt`, convert COCO val -> YOLO với 3445 ảnh selected, tạo merged YOLO root và validate YOLO `checked_files=6890 valid=True`.
+  - Trạng thái: Đã tải/extract `train2017.zip`, `val2017.zip` và `annotations_trainval2017.zip` vào `data/external/coco2017`. Hiện có 118287 ảnh train, 5000 ảnh val; đã ghi `classes.txt`, convert COCO train+val -> YOLO với 81563 ảnh train selected và 3445 ảnh val selected. YOLO root validate `checked_files=170016 valid=True`.
 - [x] Hiểu COCO annotation format (JSON, bbox, categories)
   - Trạng thái: Đã implement parser/converter COCO bbox `[x, y, width, height]` sang YOLO trong `src/training/data/object_detection/`, có CLI facade qua `src/training/scripts/data_utils.py` và test fixture.
 - [x] Viết data exploration notebook: phân tích distribution classes, bbox sizes
@@ -24,7 +24,7 @@ File này dùng để theo dõi tiến độ Phase 0. Quy ước:
 - [ ] Convert annotation sang YOLO format
   - Trạng thái: Đã có COCO -> YOLO converter, YOLO validator, và CLI `normalize-custom-yolo` cho export YOLO dạng Roboflow/CVAT/Ultralytics với remap class theo `classes.txt`/`obj.names`/`data.yaml`, copy về layout canonical `images/<split>` + `labels/<split>`, ghi `classes.txt`, và validate sau khi `--execute`. Còn mở vì chưa có export custom thật sau privacy review + annotation để ingest.
 - [x] Merge với subset COCO nếu cần
-  - Trạng thái: Đã implement `merge-yolo`; hiện đã merge COCO YOLO subset vào `data/processed/object_detection_accessibility_merged` với 3445 ảnh và 3445 label, validate `checked_files=6890 valid=True`. Chưa có custom export thật để merge thêm.
+  - Trạng thái: Đã implement `merge-yolo`; hiện đã merge COCO YOLO train+val vào `data/processed/object_detection_accessibility_merged` với 85008 ảnh và 85008 label, validate `checked_files=170016 valid=True`. Chưa có custom export thật để merge thêm.
 
 ## Action Recognition Dataset
 
@@ -95,5 +95,5 @@ File này dùng để theo dõi tiến độ Phase 0. Quy ước:
 
 - Hoàn thành scaffolding/config/docs/notebook exploration output/utility dry-run/test fixtures.
 - Code pipeline dữ liệu đã tách thành package `src/training/data/` theo từng miền; `src/training/scripts/data_utils.py` giữ vai trò CLI/import facade để không phá import path cũ.
-- Dataset public/local đã đồng bộ với config hiện tại: COCO train+val, UCF-101, Places365 val_256, TextOCR và MSVD đều có trong `data/external`; các output chính trong `data/processed` đã được tạo. `verify-dataset-paths --skip-downloads --include-outputs` hiện pass với `checked_files=26 valid=True`.
+- Dataset public/local đã đồng bộ với config hiện tại: COCO train+val, UCF-101, Places365 val_256, TextOCR và MSVD đều có trong `data/external`; các output chính trong `data/processed` đã được tạo. COCO YOLO train+val và merged YOLO root hiện validate `checked_files=170016 valid=True`. `verify-dataset-paths --skip-downloads --include-outputs` hiện pass với `checked_files=26 valid=True`.
 - Các mục còn mở đều là human-gated với dữ liệu custom thật: record/capture thực tế, annotate 200-500 ảnh, và ingest export YOLO custom thật bằng `normalize-custom-yolo` trước khi merge. Các tiện ích code-first như video frame-sequence loader, augmentation presets, `verify-dataset-paths`, `write-classes`, `build-scene-subset`, `merge-yolo`, `normalize-custom-yolo`, và `validate-video-manifest` đã có test.

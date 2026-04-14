@@ -48,17 +48,15 @@ conda activate <env-name>
 pip install -e ".[dev]"
 ```
 
-Trạng thái kiểm tra local gần nhất:
+Yêu cầu môi trường chuẩn:
 
 | Item | Value |
 | --- | --- |
-| Conda env | `trungbd` |
-| Python | `3.11.13` |
-| XPU detected by pytest warning | `Intel(R) UHD Graphics 730` |
-| XPU support note | UHD 730 không phải Intel Arc-supported device |
+| Conda env | `<env-name>` (tự quy định khi khởi tạo) |
+| Python | `3.10+` |
+| XPU Support | Hỗ trợ natively qua `torch.xpu` (ví dụ `Intel(R) Arc(TM) A770 Graphics`) |
 
-Không giả định máy luôn có Intel Arc A770. Nếu cần cài PyTorch XPU hoặc ghi chú
-Arc-specific, xem [intel_arc_xpu_notes.md](intel_arc_xpu_notes.md).
+Ghi chú Arc-specific, xem [intel_arc_xpu_notes.md](intel_arc_xpu_notes.md).
 
 Device selection trong code nên dùng fallback `xpu -> cpu`, không hardcode
 `cuda`:

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Kiểu dữ liệu và tiện ích dùng chung cho data pipeline."""
 
 from __future__ import annotations

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Tiện ích validate Piper TTS.
 
 Module kiểm tra config/model voice local và có thể synthesize WAV mẫu để sanity

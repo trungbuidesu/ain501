@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Public helpers cho training data pipeline."""
 
 from src.training.data.action_recognition import (

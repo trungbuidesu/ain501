@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Tiện ích OCR scene text cho TextOCR và fixture ICDAR legacy.
 
 TextOCR là dataset chính của Phase 0; parser ICDAR được giữ cho fixture cũ.

@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-"""Shared logging backend protocol."""
+"""Giao thức (protocol) cho các backend logging dùng chung."""
 
 from __future__ import annotations
 
@@ -7,7 +6,7 @@ from typing import Any, Protocol
 
 
 class LoggerBackend(Protocol):
-    """Interface implemented by training logger backends."""
+    """Giao diện (interface) được triển khai bởi các backend của training logger."""
 
     def log_scalar(self, tag: str, value: float, step: int) -> None: ...
 

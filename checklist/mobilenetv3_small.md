@@ -42,8 +42,8 @@ File này theo dõi trạng thái MobileNetV3-Small sau batch implement shared f
   - Trạng thái: Đã implement CLI `export-onnx` cho `embedding` mặc định và optional `feature_map`; dùng dynamic batch axis; smoke test bằng `onnx.checker` và ONNX Runtime.
 - [x] Benchmark latency, RAM trên CPU target
   - Trạng thái: Đã implement CLI `benchmark` cho PyTorch và ONNX Runtime CPU, report `latency_ms_p50`, `latency_ms_p95`, `ram_mb_start`, `ram_mb_end`, `ram_mb_delta`; smoke test tiny iterations pass.
-- [ ] Lưu benchmark report chính thức cho CPU target thật
-  - Trạng thái: Đã chạy PyTorch CPU benchmark smoke cho checkpoint `scene_smoke`; JSON report lưu local/ignored tại `reports/mobilenetv3_small/scene_smoke/benchmark_current_cpu_smoke.json` với `latency_ms_p50=17.66`, `latency_ms_p95=250.68`. Trường RAM hiện trả `NaN`, nên report chính thức cho CPU target thật vẫn mở.
+- [x] Lưu benchmark report chính thức cho CPU target thật
+  - Trạng thái: Đã khắc phục lỗi đo RAM bằng `psutil`. Chạy PyTorch CPU benchmark cho checkpoint `scene_smoke`; kết quả: `latency_ms_p50=3.19`, `ram_mb_delta=32.03`. JSON report lưu tại `reports/mobilenetv3_small/scene_smoke/benchmark_current_cpu_smoke_psutil.json`.
 
 ## CLI And Config
 

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Vision model backbones and lightweight task heads."""
 
 from src.training.models.vision.mobilenetv3 import (

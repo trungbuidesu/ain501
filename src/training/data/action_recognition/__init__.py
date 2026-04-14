@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Action-recognition dataset helpers."""
 
 from src.training.data.action_recognition.ucf101 import (

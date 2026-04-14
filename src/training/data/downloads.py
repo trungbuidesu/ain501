@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Tiện ích tạo download plan và verify path dataset local."""
 
 from __future__ import annotations

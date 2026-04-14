@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Tiện ích YOLO dataset cho object detection.
 
 Module validate layout ảnh/label kiểu Ultralytics, đọc class names, preview
@@ -26,10 +25,10 @@ from src.training.data.core import (
 
 @dataclass(frozen=True)
 class NormalizeYoloReport:
-    """Report returned after normalizing a third-party YOLO export.
+    """Báo cáo trả về sau khi chuẩn hóa một export YOLO từ bên thứ ba.
 
-    `validation` contains all blocking issues discovered while reading,
-    remapping, copying, and optionally revalidating the normalized output.
+    `validation` chứa tất cả các vấn đề nghiêm trọng (blocking issues) phát hiện
+    trong quá trình đọc, remapping, copy và tùy chọn validate lại output đã chuẩn hóa.
     """
 
     dry_run: bool

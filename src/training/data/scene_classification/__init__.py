@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Scene-classification dataset helpers."""
 
 from src.training.data.scene_classification.places365 import (

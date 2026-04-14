@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-"""TensorBoard backend for TrainingLogger."""
+"""Backend TensorBoard cho TrainingLogger."""
 
 from __future__ import annotations
 
@@ -12,7 +11,7 @@ log = logging.getLogger(__name__)
 
 
 class _TensorBoardBackend:
-    """Backend ghi log TensorBoard."""
+    """Backend ghi log vào TensorBoard event files sử dụng torch.utils.tensorboard."""
 
     def __init__(self, log_dir: str, config: dict[str, Any] | None = None) -> None:
         """Khởi tạo SummaryWriter và ghi config ban đầu nếu có."""

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Text-to-speech validation helpers."""
 
 from src.training.data.tts.piper import (

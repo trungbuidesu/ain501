@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-"""Tests for YOLOv8n code-first CLI utilities."""
+"""Kiểm thử cho các tiện ích CLI YOLOv8n theo hướng code-first."""
 
 from __future__ import annotations
 
@@ -14,7 +13,7 @@ from src.training.scripts import yolov8n
 
 
 def test_describe_contains_architecture_fields(capsys: CaptureFixture[str]) -> None:
-    """Describe prints the checklist architecture summary."""
+    """Lệnh describe in ra tóm tắt kiến trúc cho checklist."""
 
     exit_code = yolov8n.main(["describe"])
 
@@ -29,7 +28,7 @@ def test_describe_contains_architecture_fields(capsys: CaptureFixture[str]) -> N
 def test_write_data_yaml_dry_run_and_execute(
     tmp_path: Path, capsys: CaptureFixture[str]
 ) -> None:
-    """data.yaml generation is dry-run by default and writes only with execute."""
+    """Việc tạo data.yaml mặc định là dry-run và chỉ ghi file khi có --execute."""
 
     dataset_root = _write_tiny_yolo_dataset(tmp_path)
     output = tmp_path / "data.yaml"
@@ -77,7 +76,7 @@ def test_write_data_yaml_dry_run_and_execute(
 def test_train_evaluate_predict_and_ablate_are_dry_run_safe(
     tmp_path: Path, capsys: CaptureFixture[str]
 ) -> None:
-    """Dry-run command surface should not require Ultralytics execution."""
+    """Các bề mặt lệnh dry-run không được yêu cầu Ultralytics phải thực thi thật."""
 
     dataset_root = _write_tiny_yolo_dataset(tmp_path)
     data_yaml = tmp_path / "data.yaml"
@@ -135,7 +134,7 @@ def test_train_evaluate_predict_and_ablate_are_dry_run_safe(
 def test_pilot_preset_and_summary_writer(
     tmp_path: Path, capsys: CaptureFixture[str]
 ) -> None:
-    """Pilot preset applies short-run defaults and summary JSON writes."""
+    """Preset pilot áp dụng các mặc định chạy ngắn và ghi file summary JSON."""
 
     dataset_root = _write_tiny_yolo_dataset(tmp_path)
     data_yaml = tmp_path / "data.yaml"
@@ -160,19 +159,20 @@ def test_pilot_preset_and_summary_writer(
     assert json.loads(output.read_text(encoding="utf-8")) == summary
 
 
-def test_qat_guard_reports_unsupported(capsys: CaptureFixture[str]) -> None:
-    """QAT command reports the explicit Phase 0 guard."""
+def test_qat_plan_and_report_supported(capsys: CaptureFixture[str]) -> None:
+    """Lệnh QAT báo cáo kế hoạch hợp lệ và phương pháp được hỗ trợ."""
 
     exit_code = yolov8n.main(["qat"])
 
     assert exit_code == 0
     report = json.loads(capsys.readouterr().out)
-    assert report["supported"] is False
-    assert "Ultralytics YOLOv8n" in report["method"]
+    assert report["supported"] is True
+    assert "int8" in report["method"]
+    assert "weights" in report["plan"]
 
 
 def _write_tiny_yolo_dataset(tmp_path: Path) -> Path:
-    """Create a tiny canonical YOLO dataset fixture."""
+    """Tạo một fixture dataset YOLO chuẩn siêu nhỏ."""
 
     root = tmp_path / "yolo"
     for split in ("train", "val"):
@@ -191,7 +191,7 @@ def _write_tiny_yolo_dataset(tmp_path: Path) -> Path:
 
 
 def _write_config(tmp_path: Path, dataset_root: Path, data_yaml: Path) -> Path:
-    """Write a YOLOv8n test config that points at temp fixtures."""
+    """Ghi cấu hình test YOLOv8n trỏ vào các fixture tạm thời."""
 
     config = tmp_path / "yolov8n.yaml"
     config.write_text(

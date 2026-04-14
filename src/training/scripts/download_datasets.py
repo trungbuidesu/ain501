@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Wrapper mỏng chuyển tiếp sang ``data_utils`` subcommand ``download-plan``.
 
 Dùng khi muốn một entrypoint tên gọn (ví dụ script hoặc doc) mà không gõ đủ

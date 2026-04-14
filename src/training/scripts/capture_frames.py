@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Ghi frame màn hình phục vụ bộ dữ liệu tùy chỉnh (accessibility).
 
 Chạy qua ``python -m src.training.scripts.capture_frames``. Mặc định **không**

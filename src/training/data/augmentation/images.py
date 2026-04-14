@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Tiện ích augmentation ảnh cho pipeline thị giác.
 
 Module tạo preset Albumentations cho detection, scene và OCR. Preview mode chỉ

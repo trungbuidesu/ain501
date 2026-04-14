@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Tiện ích scene classification cho Places365.
 
 Module tạo balanced manifest từ Places-style folders hoặc filelists. Việc copy

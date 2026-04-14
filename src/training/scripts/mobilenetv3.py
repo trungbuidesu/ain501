@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-"""CLI for MobileNetV3-Small backbone fine-tuning, export, and benchmarking."""
+"""CLI cho việc fine-tuning, export và benchmark backbone MobileNetV3-Small."""
 
 from __future__ import annotations
 
@@ -44,14 +43,14 @@ IMAGENET_STD = (0.229, 0.224, 0.225)
 
 @dataclass(frozen=True)
 class EpochMetrics:
-    """Aggregated loss and accuracy for one epoch split."""
+    """Tổng hợp loss và accuracy cho một lần chạy epoch subset."""
 
     loss: float
     accuracy: float
 
 
 class ImageManifestDataset(Dataset[tuple[torch.Tensor, torch.Tensor, str]]):
-    """Image classification dataset backed by a `path,label,split` CSV manifest."""
+    """Dataset phân loại ảnh dựa trên file manifest CSV."""
 
     def __init__(
         self,
@@ -59,7 +58,7 @@ class ImageManifestDataset(Dataset[tuple[torch.Tensor, torch.Tensor, str]]):
         label_to_index: dict[str, int],
         image_size: int,
     ) -> None:
-        """Create a manifest dataset with ImageNet-style preprocessing."""
+        """Khởi tạo manifest dataset với tiền xử lý kiểu ImageNet."""
 
         self.rows = list(rows)
         self.label_to_index = label_to_index
@@ -72,12 +71,12 @@ class ImageManifestDataset(Dataset[tuple[torch.Tensor, torch.Tensor, str]]):
         )
 
     def __len__(self) -> int:
-        """Return number of manifest rows."""
+        """Trả về số lượng dòng trong manifest."""
 
         return len(self.rows)
 
     def __getitem__(self, index: int) -> tuple[torch.Tensor, torch.Tensor, str]:
-        """Load and transform one image row."""
+        """Tải ảnh, áp dụng transforms và trả về (tensor, label_index, path)."""
 
         row = self.rows[index]
         image_path = Path(row["path"])
@@ -92,20 +91,20 @@ class ImageManifestDataset(Dataset[tuple[torch.Tensor, torch.Tensor, str]]):
 
 
 class _FeatureMapExportWrapper(nn.Module):
-    """ONNX export wrapper that returns MobileNetV3 feature maps."""
+    """Wrapper export ONNX để trả về MobileNetV3 feature maps."""
 
     def __init__(self, backbone: MobileNetV3SmallBackbone) -> None:
         super().__init__()
         self.backbone = backbone
 
     def forward(self, inputs: torch.Tensor) -> torch.Tensor:
-        """Return backbone feature maps."""
+        """Trả về feature maps của backbone."""
 
         return self.backbone.forward_feature_map(inputs)
 
 
 def load_config(path: Path) -> dict[str, Any]:
-    """Load a YAML config mapping, returning an empty mapping when missing."""
+    """Đọc cấu hình YAML, trả về mapping trống nếu không tìm thấy file."""
 
     if not path.exists():
         return {}
@@ -118,14 +117,14 @@ def load_config(path: Path) -> dict[str, Any]:
 
 
 def _config_section(config: dict[str, Any], section: str) -> dict[str, Any]:
-    """Read a config section as a mapping."""
+    """Đọc một phần cấu hình dưới dạng mapping."""
 
     value = config.get(section, {})
     return value if isinstance(value, dict) else {}
 
 
 def build_arg_parser() -> argparse.ArgumentParser:
-    """Build the MobileNetV3-Small CLI parser."""
+    """Xây dựng trình phân tích đối số CLI cho MobileNetV3-Small."""
 
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG)
@@ -202,7 +201,7 @@ def build_arg_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    """Run the MobileNetV3-Small CLI."""
+    """Chạy CLI cho MobileNetV3-Small."""
 
     parser = build_arg_parser()
     args = parser.parse_args(argv)
@@ -254,25 +253,25 @@ def main(argv: Sequence[str] | None = None) -> int:
 
 
 def _model_settings(config: dict[str, Any]) -> dict[str, Any]:
-    """Return the model section from config."""
+    """Trả về phần model từ cấu hình."""
 
     return _config_section(config, "model")
 
 
 def _training_settings(config: dict[str, Any]) -> dict[str, Any]:
-    """Return the training section from config."""
+    """Trả về phần training từ cấu hình."""
 
     return _config_section(config, "training")
 
 
 def _output_settings(config: dict[str, Any]) -> dict[str, Any]:
-    """Return the output section from config."""
+    """Trả về phần output từ cấu hình."""
 
     return _config_section(config, "output")
 
 
 def describe_model(weights: str | None, freeze_until: int) -> dict[str, Any]:
-    """Return a JSON-serializable MobileNetV3-Small architecture summary."""
+    """Trả về tóm tắt kiến trúc MobileNetV3-Small dưới dạng JSON-serializable."""
 
     backbone = MobileNetV3SmallBackbone(weights=weights)
     with_head = MobileNetV3SmallWithHead(backbone, num_classes=2)
@@ -309,7 +308,7 @@ def prepare_scene_manifest(
     train_ratio: float,
     val_ratio: float,
 ) -> list[dict[str, str]]:
-    """Convert the scene accessibility manifest into `path,label,split` rows."""
+    """Chuyển đổi manifest scene accessibility sang các dòng `path,label,split`."""
 
     if max_per_class <= 0:
         raise ValueError("--max-per-class must be positive")
@@ -349,7 +348,7 @@ def prepare_scene_manifest(
 
 
 def scene_split_names(total: int, train_ratio: float, val_ratio: float) -> list[str]:
-    """Return deterministic train/val/test split names for one class group."""
+    """Trả về tên split train/val/test ổn định cho một nhóm class."""
 
     if total <= 0:
         return []
@@ -376,7 +375,7 @@ def scene_split_names(total: int, train_ratio: float, val_ratio: float) -> list[
 
 
 def write_scene_manifest(rows: Sequence[dict[str, str]], output_csv: Path) -> None:
-    """Write a MobileNetV3 scene manifest with canonical columns."""
+    """Ghi manifest scene MobileNetV3 với các cột chuẩn."""
 
     output_csv.parent.mkdir(parents=True, exist_ok=True)
     with output_csv.open("w", newline="", encoding="utf-8") as file:
@@ -388,7 +387,7 @@ def write_scene_manifest(rows: Sequence[dict[str, str]], output_csv: Path) -> No
 def summarize_scene_manifest(
     rows: Sequence[dict[str, str]], output_csv: Path, dry_run: bool
 ) -> dict[str, Any]:
-    """Return a JSON-serializable manifest preparation report."""
+    """Trả về báo cáo chuẩn bị manifest dưới dạng JSON-serializable."""
 
     split_counts = Counter(row["split"] for row in rows)
     label_counts = Counter(row["label"] for row in rows)
@@ -403,7 +402,7 @@ def summarize_scene_manifest(
 
 
 def fine_tune_model(args: argparse.Namespace, config: dict[str, Any]) -> None:
-    """Fine-tune later MobileNetV3 layers with a temporary classifier head."""
+    """Huấn luyện (fine-tune) các layer sau của MobileNetV3."""
 
     model_settings = _model_settings(config)
     training = _training_settings(config)
@@ -514,7 +513,7 @@ def fine_tune_model(args: argparse.Namespace, config: dict[str, Any]) -> None:
 
 
 def read_manifest_rows(path: Path) -> list[dict[str, str]]:
-    """Read and validate a `path,label,split` image manifest."""
+    """Đọc và xác thực manifest ảnh `path,label,split`."""
 
     with path.open(newline="", encoding="utf-8") as file:
         rows = list(csv.DictReader(file))
@@ -534,7 +533,7 @@ def read_manifest_rows(path: Path) -> list[dict[str, str]]:
 
 
 def label_mapping(rows: Sequence[dict[str, str]]) -> dict[str, int]:
-    """Build a deterministic label-to-index mapping."""
+    """Xây dựng mapping label-to-index xác định."""
 
     labels = sorted({row["label"] for row in rows})
     if not labels:
@@ -543,7 +542,7 @@ def label_mapping(rows: Sequence[dict[str, str]]) -> dict[str, int]:
 
 
 def filter_split(rows: Sequence[dict[str, str]], split: str) -> list[dict[str, str]]:
-    """Filter manifest rows by split name."""
+    """Lọc các dòng manifest theo tên split."""
 
     return [row for row in rows if row["split"] == split]
 
@@ -556,7 +555,7 @@ def make_loader(
     shuffle: bool,
     num_workers: int,
 ) -> DataLoader[tuple[torch.Tensor, torch.Tensor, tuple[str, ...]]]:
-    """Create a DataLoader for manifest rows."""
+    """Tạo DataLoader cho các dòng manifest."""
 
     dataset = ImageManifestDataset(rows, label_to_index, image_size)
     loader = DataLoader(
@@ -569,7 +568,7 @@ def make_loader(
 
 
 def resolve_device(requested: str) -> torch.device:
-    """Resolve `cpu`, `cuda`, `xpu`, or `auto` without selecting unsupported XPU."""
+    """Giải quyết thiết bị `cpu`, `cuda`, `xpu` hoặc `auto`."""
 
     requested = requested.lower()
     if requested != "auto":
@@ -595,7 +594,7 @@ def run_epoch(
     device: torch.device,
     optimizer: optim.Optimizer | None,
 ) -> EpochMetrics:
-    """Run one supervised training or evaluation epoch."""
+    """Chạy một epoch huấn luyện hoặc đánh giá có giám sát."""
 
     model.train(optimizer is not None)
     total_loss = 0.0
@@ -627,7 +626,7 @@ def save_backbone_checkpoint(
     label_to_index: dict[str, int],
     image_size: int,
 ) -> None:
-    """Save only the fine-tuned backbone state and metadata."""
+    """Lưu chỉ state backbone đã fine-tune và metadata."""
 
     path.parent.mkdir(parents=True, exist_ok=True)
     torch.save(
@@ -645,7 +644,7 @@ def load_backbone(
     weights: str | None,
     checkpoint: Path | None = None,
 ) -> MobileNetV3SmallBackbone:
-    """Build a backbone and optionally load a fine-tuned state dict."""
+    """Xây dựng backbone và tùy chọn tải state dict đã fine-tune."""
 
     backbone = MobileNetV3SmallBackbone(weights=weights)
     if checkpoint is None:
@@ -661,7 +660,7 @@ def load_backbone(
 
 
 def export_onnx(args: argparse.Namespace, config: dict[str, Any]) -> None:
-    """Export a FP32 ONNX backbone graph."""
+    """Export model sang ONNX (chỉ backbone embedding hoặc feature map)."""
 
     model_settings = _model_settings(config)
     weights = args.weights or str(model_settings.get("weights", "default"))
@@ -688,7 +687,7 @@ def export_onnx(args: argparse.Namespace, config: dict[str, Any]) -> None:
 
 
 def compare_tsne(args: argparse.Namespace, config: dict[str, Any]) -> None:
-    """Compare pretrained and fine-tuned embeddings with t-SNE."""
+    """So sánh embeddings pretrained và fine-tuned bằng t-SNE."""
 
     from matplotlib import pyplot as plt
     from sklearn.manifold import TSNE
@@ -767,7 +766,7 @@ def collect_embeddings(
     backbone: MobileNetV3SmallBackbone,
     loader: DataLoader[tuple[torch.Tensor, torch.Tensor, tuple[str, ...]]],
 ) -> tuple[np.ndarray, list[str], list[str]]:
-    """Collect embeddings, image paths, and numeric labels from a loader."""
+    """Trích xuất feature embeddings cho t-SNE plot."""
 
     embeddings: list[np.ndarray] = []
     paths: list[str] = []
@@ -784,7 +783,7 @@ def collect_embeddings(
 
 
 def benchmark_model(args: argparse.Namespace, config: dict[str, Any]) -> dict[str, Any]:
-    """Benchmark CPU latency and RAM for PyTorch or ONNX Runtime."""
+    """Đo độ trễ inference trên CPU bằng PyTorch hoặc ONNX Runtime."""
 
     model_settings = _model_settings(config)
     benchmark = _config_section(config, "benchmark")
@@ -835,7 +834,7 @@ def benchmark_pytorch(
     warmup: int,
     iterations: int,
 ) -> list[float]:
-    """Benchmark PyTorch CPU inference and return per-iteration milliseconds."""
+    """Benchmark inference CPU PyTorch và trả về mili giây mỗi lần lặp."""
 
     timings: list[float] = []
     with torch.no_grad():
@@ -854,7 +853,7 @@ def benchmark_onnxruntime(
     warmup: int,
     iterations: int,
 ) -> list[float]:
-    """Benchmark ONNX Runtime CPU inference and return milliseconds."""
+    """Benchmark inference CPU ONNX Runtime và trả về mili giây."""
 
     import onnxruntime as ort
 
@@ -871,7 +870,7 @@ def benchmark_onnxruntime(
 
 
 def percentile(values: Sequence[float], fraction: float) -> float:
-    """Return a nearest-rank percentile from a non-empty value sequence."""
+    """Trả về percentile theo thứ hạng gần nhất từ chuỗi giá trị."""
 
     if not values:
         raise ValueError("values must not be empty")
@@ -881,7 +880,7 @@ def percentile(values: Sequence[float], fraction: float) -> float:
 
 
 def current_process_rss_mb() -> float:
-    """Return current process resident memory in MiB when the platform supports it."""
+    """Ước tính tiêu thụ bộ nhớ RAM (RSS) của process hiện tại."""
 
     if sys.platform == "win32":
         return _windows_rss_mb()

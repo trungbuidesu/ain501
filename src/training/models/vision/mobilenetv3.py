@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Shared feature extractor MobileNetV3-Small.
 
 MobileNetV3-Small dùng inverted residual blocks, squeeze-excitation ở một số

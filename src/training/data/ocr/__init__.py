@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """OCR dataset helpers."""
 
 from src.training.data.ocr.textocr import (

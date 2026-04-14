@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Kiểm thử các tiện ích chuẩn bị dataset Phase 0."""
 
 from __future__ import annotations

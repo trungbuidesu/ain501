@@ -218,3 +218,4 @@ chromadb/
 *.pt
 src/training/data/**/__pycache__/
 src/training/data/**/*.py[codz]
+scratch/

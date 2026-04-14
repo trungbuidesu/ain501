@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-"""Weights & Biases backend for TrainingLogger."""
+"""Backend Weights & Biases cho TrainingLogger."""
 
 from __future__ import annotations
 
@@ -12,7 +11,7 @@ log = logging.getLogger(__name__)
 
 
 class _WandbBackend:
-    """Backend ghi log Weights & Biases."""
+    """Backend ghi log vào Weights & Biases cloud sử dụng wandb SDK."""
 
     def __init__(
         self,

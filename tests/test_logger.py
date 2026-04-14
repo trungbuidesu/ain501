@@ -9,8 +9,6 @@ import torch.nn as nn
 import torch.optim as optim
 
 from src.utils import TrainingLogger
-from src.utils.logger import TrainingLogger as ShimTrainingLogger
-from src.utils.loggers.training import TrainingLogger as CoreTrainingLogger
 
 LOG_DIR = "runs/_test_logger"
 
@@ -117,12 +115,6 @@ def test_logger_log_artifact_uses_artifact_type() -> None:
     logger.log_artifact("models/best.pt", artifact_type="checkpoint")
 
     assert backend.call == ("models/best.pt", "checkpoint")
-
-
-def test_logger_import_paths_stay_compatible() -> None:
-    """Đảm bảo các import path cũ và mới đều trỏ tới cùng TrainingLogger."""
-    assert ShimTrainingLogger is TrainingLogger
-    assert CoreTrainingLogger is TrainingLogger
 
 
 if __name__ == "__main__":

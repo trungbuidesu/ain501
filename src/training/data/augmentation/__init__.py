@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Augmentation helpers for image datasets."""
 
 from src.training.data.augmentation.images import (

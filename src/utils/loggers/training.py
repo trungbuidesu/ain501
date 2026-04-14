@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Unified training logger facade."""
 
 from __future__ import annotations

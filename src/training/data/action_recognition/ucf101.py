@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Tiện ích nhận diện hành động cho UCF-101.
 
 Module dựng manifest từ thư mục video theo class, đọc split chính thức

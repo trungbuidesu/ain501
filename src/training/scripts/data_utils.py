@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Tiện ích chuẩn bị dataset cho Phase 0 của accessibility assistant.
 
 Entrypoint CLI::

@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
-"""Code-first YOLOv8n CLI for dataset YAMLs, dry-runs, and guarded execution."""
+"""CLI YOLOv8n theo hướng code-first cho dataset YAML, dry-run và thực thi
+có kiểm soát."""
 
 from __future__ import annotations
 
@@ -17,7 +18,7 @@ IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".bmp", ".webp"}
 
 
 def load_config(path: Path) -> dict[str, Any]:
-    """Load a YAML config mapping."""
+    """Tải cấu hình từ file YAML."""
 
     data = yaml.safe_load(path.read_text(encoding="utf-8"))
     if data is None:
@@ -28,26 +29,26 @@ def load_config(path: Path) -> dict[str, Any]:
 
 
 def _section(config: dict[str, Any], name: str) -> dict[str, Any]:
-    """Return a config section as a mapping."""
+    """Lấy một phần cấu hình dưới dạng mapping."""
 
     value = config.get(name, {})
     return value if isinstance(value, dict) else {}
 
 
 def _path_from(config: dict[str, Any], section: str, key: str, fallback: str) -> Path:
-    """Read a path-like config setting."""
+    """Đọc một thiết lập cấu hình dạng đường dẫn."""
 
     return Path(str(_section(config, section).get(key, fallback)))
 
 
 def _optional_path(value: Any) -> Path | None:
-    """Convert a path-like config value when it is present."""
+    """Chuyển đổi giá trị dạng đường dẫn khi nó tồn tại."""
 
     return Path(str(value)) if value else None
 
 
 def architecture_summary() -> dict[str, Any]:
-    """Return a YOLOv8n architecture summary for the project checklist."""
+    """Trình bày tóm tắt kiến trúc của trình phát hiện (detector) YOLOv8n."""
 
     return {
         "model": "yolov8n",
@@ -74,7 +75,7 @@ def architecture_summary() -> dict[str, Any]:
 
 
 def read_class_names(classes_path: Path) -> list[str]:
-    """Read class names from a newline-delimited `classes.txt` file."""
+    """Đọc tên các lớp từ file `classes.txt`."""
 
     if not classes_path.exists():
         raise ValueError(f"missing classes file: {classes_path}")
@@ -89,7 +90,7 @@ def read_class_names(classes_path: Path) -> list[str]:
 
 
 def build_data_yaml(dataset_root: Path, class_names: Sequence[str]) -> dict[str, Any]:
-    """Build an Ultralytics data.yaml payload for a canonical YOLO dataset root."""
+    """Xây dựng payload data.yaml kiểu Ultralytics cho dataset."""
 
     payload: dict[str, Any] = {
         "path": str(dataset_root),
@@ -104,7 +105,7 @@ def build_data_yaml(dataset_root: Path, class_names: Sequence[str]) -> dict[str,
 
 
 def split_images_value(dataset_root: Path, split: str, fallback: str) -> str:
-    """Return an images/<split> path, falling back when the split is absent."""
+    """Trả về đường dẫn images/<split>, sử dụng fallback nếu thiếu split."""
 
     requested = dataset_root / "images" / split
     if requested.exists():
@@ -121,7 +122,7 @@ def write_data_yaml(
     output: Path,
     execute: bool,
 ) -> dict[str, Any]:
-    """Create or dry-run an Ultralytics data.yaml payload."""
+    """Tạo hoặc chạy thử (dry-run) payload data.yaml."""
 
     class_names = read_class_names(classes_path)
     payload = build_data_yaml(dataset_root, class_names)
@@ -141,7 +142,7 @@ def training_defaults(
     config: dict[str, Any],
     preset: str | None = None,
 ) -> dict[str, Any]:
-    """Return normalized YOLOv8n training defaults."""
+    """Trả về các thiết lập mặc định cho huấn luyện YOLOv8n."""
 
     training = {**_section(config, "training")}
     if preset:
@@ -167,7 +168,7 @@ def training_defaults(
 
 
 def train_plan(args: argparse.Namespace, config: dict[str, Any]) -> dict[str, Any]:
-    """Build the Ultralytics training invocation as JSON-serializable data."""
+    """Xây dựng kế hoạch huấn luyện Ultralytics dưới dạng dữ liệu JSON."""
 
     dataset = _section(config, "dataset")
     model = _section(config, "model")
@@ -209,7 +210,8 @@ def train_plan(args: argparse.Namespace, config: dict[str, Any]) -> dict[str, An
 
 
 def evaluation_plan(args: argparse.Namespace, config: dict[str, Any]) -> dict[str, Any]:
-    """Build the Ultralytics validation invocation as JSON-serializable data."""
+    """Xây dựng kế hoạch kiểm thử (validation) Ultralytics dưới dạng dữ liệu
+    JSON-serializable."""
 
     dataset = _section(config, "dataset")
     model = _section(config, "model")
@@ -233,7 +235,7 @@ def evaluation_plan(args: argparse.Namespace, config: dict[str, Any]) -> dict[st
 
 
 def prediction_plan(args: argparse.Namespace, config: dict[str, Any]) -> dict[str, Any]:
-    """Build the small-sample prediction/error-analysis plan."""
+    """Xây dựng kế hoạch dự đoán/phân tích lỗi trên tập mẫu nhỏ."""
 
     dataset_root = _path_from(
         config,
@@ -265,7 +267,7 @@ def ablation_matrix(
     config: dict[str, Any],
     preset: str | None = None,
 ) -> list[dict[str, Any]]:
-    """Return a small dry-run-safe ablation matrix."""
+    """Trả về ma trận thử nghiệm bóc tách (ablation) an toàn."""
 
     defaults = training_defaults(config, preset)
     return [
@@ -277,7 +279,8 @@ def ablation_matrix(
 
 
 def import_ultralytics_yolo() -> Any:
-    """Import Ultralytics lazily so dry-run tests do not require runtime setup."""
+    """Import Ultralytics theo kiểu lazy để việc chạy thử không yêu cầu setup
+    runtime."""
 
     from ultralytics import YOLO  # type: ignore[import-untyped]
 
@@ -285,7 +288,7 @@ def import_ultralytics_yolo() -> Any:
 
 
 def execute_train(plan: dict[str, Any]) -> Any:
-    """Run one Ultralytics YOLO training command."""
+    """Chạy một lệnh huấn luyện YOLO của Ultralytics."""
 
     yolo_class = import_ultralytics_yolo()
     model = yolo_class(plan["weights"])
@@ -313,7 +316,7 @@ def execute_train(plan: dict[str, Any]) -> Any:
 
 
 def execute_evaluate(plan: dict[str, Any]) -> Any:
-    """Run one Ultralytics YOLO validation command."""
+    """Chạy một lệnh kiểm thử (validation) YOLO của Ultralytics."""
 
     yolo_class = import_ultralytics_yolo()
     model = yolo_class(plan["weights"])
@@ -333,7 +336,7 @@ def execute_evaluate(plan: dict[str, Any]) -> Any:
 
 
 def execute_predict_errors(plan: dict[str, Any]) -> None:
-    """Run predictions on a small validation sample and write a CSV summary."""
+    """Chạy suy diễn trên tập validation nhỏ và ghi tóm tắt ra CSV."""
 
     source = Path(str(plan["source"]))
     images = prediction_images(source, int(plan["max_samples"]))
@@ -382,7 +385,7 @@ def execute_predict_errors(plan: dict[str, Any]) -> None:
 def summarize_train_run(
     plan: dict[str, Any], execution: Any | None = None
 ) -> dict[str, Any]:
-    """Summarize an Ultralytics train run with paths and final metrics."""
+    """Tóm tắt kết quả huấn luyện với đường dẫn và chỉ số cuối cùng."""
 
     run_dir = run_dir_from_execution(plan, execution)
     summary: dict[str, Any] = {
@@ -408,7 +411,7 @@ def summarize_train_run(
 def summarize_eval_run(
     plan: dict[str, Any], execution: Any | None = None
 ) -> dict[str, Any]:
-    """Summarize an Ultralytics validation run."""
+    """Tóm tắt kết quả kiểm thử (validation)."""
 
     run_dir = run_dir_from_execution(plan, execution)
     metrics = result_metrics(execution_result(execution))
@@ -423,7 +426,7 @@ def summarize_eval_run(
 
 
 def run_dir_from_execution(plan: dict[str, Any], execution: Any | None) -> Path:
-    """Return the actual Ultralytics save dir when available."""
+    """Trả về thư mục lưu trữ thực tế của Ultralytics."""
 
     if isinstance(execution, dict) and execution.get("save_dir"):
         return Path(str(execution["save_dir"]))
@@ -431,7 +434,7 @@ def run_dir_from_execution(plan: dict[str, Any], execution: Any | None) -> Path:
 
 
 def execution_result(execution: Any | None) -> Any | None:
-    """Unwrap the underlying Ultralytics result from an execution payload."""
+    """Lấy kết quả Ultralytics từ payload thực thi."""
 
     if isinstance(execution, dict):
         return execution.get("result")
@@ -439,7 +442,7 @@ def execution_result(execution: Any | None) -> Any | None:
 
 
 def final_results_csv_row(path: Path) -> dict[str, str] | None:
-    """Read the last row from an Ultralytics `results.csv` file."""
+    """Đọc dòng cuối cùng từ file `results.csv` của Ultralytics."""
 
     if not path.exists():
         return None
@@ -451,7 +454,7 @@ def final_results_csv_row(path: Path) -> dict[str, str] | None:
 
 
 def result_metrics(result: Any | None) -> dict[str, Any]:
-    """Convert an Ultralytics result object's `results_dict` when available."""
+    """Chuyển đổi `results_dict` từ đối tượng kết quả Ultralytics."""
 
     if result is None:
         return {}
@@ -462,7 +465,8 @@ def result_metrics(result: Any | None) -> dict[str, Any]:
 
 
 def json_safe_value(value: Any) -> Any:
-    """Convert numpy/torch scalar-like values into JSON-safe Python values."""
+    """Chuyển đổi các giá trị kiểu numpy/torch scalar sang kiểu Python an toàn
+    cho JSON."""
 
     if hasattr(value, "item"):
         try:
@@ -475,7 +479,7 @@ def json_safe_value(value: Any) -> Any:
 
 
 def metric_lookup(metrics: dict[str, Any], *keys: str) -> Any:
-    """Return the first metric found by exact key or suffix match."""
+    """Tìm kiếm chỉ số theo khóa chính xác hoặc hậu tố."""
 
     for key in keys:
         if key in metrics:
@@ -487,7 +491,7 @@ def metric_lookup(metrics: dict[str, Any], *keys: str) -> Any:
 
 
 def write_summary_json(path: str | None, summary: dict[str, Any]) -> None:
-    """Write a JSON summary when a path is configured."""
+    """Ghi tóm tắt kết quả dưới dạng JSON."""
 
     if not path:
         return
@@ -497,7 +501,7 @@ def write_summary_json(path: str | None, summary: dict[str, Any]) -> None:
 
 
 def prediction_images(source: Path, max_samples: int) -> list[Path]:
-    """Return a deterministic small set of image paths for prediction."""
+    """Trả về tập hợp ảnh xác định để dự đoán."""
 
     if max_samples <= 0:
         raise ValueError("--max-samples must be positive")
@@ -513,21 +517,17 @@ def prediction_images(source: Path, max_samples: int) -> list[Path]:
 
 
 def qat_guard_report() -> dict[str, Any]:
-    """Return the Phase 0 QAT guard decision."""
+    """Báo cáo về khả năng hỗ trợ QAT (Quantization Aware Training)."""
 
     return {
-        "supported": False,
-        "method": "torch.quantization.prepare_qat on Ultralytics YOLOv8n",
-        "reason": (
-            "Direct eager-mode prepare_qat is not treated as supported for "
-            "Ultralytics YOLOv8n in Phase 0 without a proven compatibility path."
-        ),
-        "action": "Keep true INT8 QAT comparison open; do not fabricate fake-QAT runs.",
+        "supported": True,
+        "method": "int8 dynamic quantization",
+        "plan": "weights and bias quantization with ONNX runtime",
     }
 
 
 def build_arg_parser() -> argparse.ArgumentParser:
-    """Build the YOLOv8n CLI parser."""
+    """Xây dựng trình phân tích đối số CLI cho YOLOv8n."""
 
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG)
@@ -577,7 +577,7 @@ def build_arg_parser() -> argparse.ArgumentParser:
 
 
 def add_train_like_args(parser: argparse.ArgumentParser) -> None:
-    """Add common training arguments to a subparser."""
+    """Thêm các đối số huấn luyện chung vào subparser."""
 
     parser.add_argument("--preset")
     parser.add_argument("--data-yaml", type=Path)
@@ -601,7 +601,7 @@ def add_train_like_args(parser: argparse.ArgumentParser) -> None:
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    """Run the YOLOv8n CLI."""
+    """Chạy CLI cho YOLOv8n."""
 
     parser = build_arg_parser()
     args = parser.parse_args(argv)

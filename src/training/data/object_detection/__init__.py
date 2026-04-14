@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Object detection dataset helpers for COCO and YOLO formats."""
 
 from src.training.data.object_detection.coco import (

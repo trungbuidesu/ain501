@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Tiện ích chia dataset ổn định."""
 
 from __future__ import annotations

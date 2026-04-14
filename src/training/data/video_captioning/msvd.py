@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Tiện ích video captioning cho MSVD.
 
 Phase 0 vẫn xếp video captioning vào nhóm Tier 2/deferred, nhưng module này

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Tiện ích object detection cho COCO 2017.
 
 Mô đun này đảm nhận logic chuyển dịch chú giải JSON (JSON Annotation) của COCO

@@ -22,7 +22,7 @@ training:
 pilot:
   epochs: 5
   batch: 16
-  device: cpu
+  device: auto
   name: pilot_5e
   fraction: 0.005
   workers: 0

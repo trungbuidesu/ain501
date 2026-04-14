@@ -208,5 +208,10 @@ __marimo__/
  
 # Project Data
 /data/
+models/vision/
+runs/
+reports/
+*.onnx
+*.pt
 src/training/data/**/__pycache__/
 src/training/data/**/*.py[codz]

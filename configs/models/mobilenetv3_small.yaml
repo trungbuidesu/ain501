@@ -1,0 +1,22 @@
+name: mobilenetv3_small
+role: shared_vision_feature_extractor
+model:
+  weights: default
+  image_size: 224
+  embedding_dim: 576
+  feature_map_shape: [576, 7, 7]
+  freeze_until: 7
+training:
+  lr: 0.0001
+  batch_size: 32
+  epochs: 20
+output:
+  checkpoint_dir: models/vision/mobilenetv3_small
+  log_dir: runs/mobilenetv3_small
+  report_dir: reports/mobilenetv3_small
+benchmark:
+  profile_name: current-cpu
+  runtime: pytorch
+  batch_size: 1
+  warmup: 20
+  iterations: 100

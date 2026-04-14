@@ -17,9 +17,6 @@ training:
   frame_stride: 2
   temporal_jitter: true
   random_crop: true
-qat:
-  lr: 0.0001
-  epochs: 10
 output:
   checkpoint_dir: models/video/movinet_a0
   log_dir: runs/movinet_a0

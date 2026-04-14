@@ -208,7 +208,7 @@ __marimo__/
  
 # Project Data
 /data/
-models/vision/
+models/
 runs/
 reports/
 /site/

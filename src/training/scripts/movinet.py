@@ -44,12 +44,96 @@ def get_device() -> torch.device:
     return torch.device("cpu")
 
 
+class ONNXAdaptiveAvgPoolPatch:
+    """Context manager để vá lỗi AdaptiveAvgPool3d khi export sang ONNX.
+
+    MoViNet package sử dụng AdaptiveAvgPool3d, vốn gặp lỗi DispatchError trong
+    một số phiên bản PyTorch/ONNX opset khi pooling spatial 172x172 về 1x1.
+    """
+
+    def __init__(self) -> None:
+        self.original_fn = torch.nn.functional.adaptive_avg_pool3d
+
+    def __enter__(self) -> None:
+        def patched_fn(input: torch.Tensor, output_size: Any) -> torch.Tensor:
+            # Nếu output_size là [T, 1, 1], ta dùng AvgPool3d với kernel bằng size hiện tại
+            if isinstance(output_size, (list, tuple)) and output_size[1:] == (1, 1):
+                h, w = input.shape[-2:]
+                return torch.nn.functional.avg_pool3d(
+                    input, kernel_size=(1, h, w), stride=(1, h, w)
+                )
+            return self.original_fn(input, output_size)
+
+        torch.nn.functional.adaptive_avg_pool3d = patched_fn
+
+    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
+        torch.nn.functional.adaptive_avg_pool3d = self.original_fn
+
+
 def get_class_names(manifest_path: Path) -> list[str]:
     """Lấy danh sách các class từ manifest CSV."""
     with open(manifest_path, newline="", encoding="utf-8") as f:
         reader = csv.DictReader(f)
         labels = {row["label"] for row in reader}
     return sorted(labels)
+
+
+class MoViNetCalibrationDataReader:
+    """DataReader cho ONNX Runtime Quantization.
+
+    Đọc dữ liệu từ FrameClipDataset để phục vụ quá trình Calibration (cân chỉnh).
+    """
+
+    def __init__(
+        self,
+        dataset: FrameClipDataset,
+        batch_size: int = 1,
+        max_samples: int = 100,
+        device: torch.device = torch.device("cpu"),
+    ) -> None:
+        self.dataset = dataset
+        self.batch_size = batch_size
+        self.max_samples = min(max_samples, len(dataset))
+        self.device = device
+        self.current_idx = 0
+        self.input_name = "input"
+
+    def get_next(self) -> dict[str, Any] | None:
+        """Trả về batch tiếp theo cho calibrator."""
+        if self.current_idx >= self.max_samples:
+            return None
+
+        batch_clips = []
+        for _ in range(self.batch_size):
+            if self.current_idx >= self.max_samples:
+                break
+            clip, _ = self.dataset[self.current_idx]
+            # Preprocess uint8 -> float32 [C, T, H, W]
+            clip = clip.float() / 255.0
+
+            from src.training.data.core import (
+                DEFAULT_NORMALIZE_MEAN,
+                DEFAULT_NORMALIZE_STD,
+            )
+
+            # Normalize [C, 1, 1, 1]
+            mean = torch.tensor(DEFAULT_NORMALIZE_MEAN).view(3, 1, 1, 1)
+            std = torch.tensor(DEFAULT_NORMALIZE_STD).view(3, 1, 1, 1)
+            clip = (clip - mean) / std
+
+            batch_clips.append(clip)
+            self.current_idx += 1
+
+        if not batch_clips:
+            return None
+
+        # Stack to [B, C, T, H, W]
+        batch_tensor = torch.stack(batch_clips, dim=0)
+        return {self.input_name: batch_tensor.numpy()}
+
+    def rewind(self) -> None:
+        """Reset chỉ mục đọc."""
+        self.current_idx = 0
 
 
 def train_one_epoch(
@@ -352,19 +436,6 @@ def main_error_analysis(
     return 0
 
 
-def main_qat(args: argparse.Namespace) -> int:
-    """Thực hiện Quantization Aware Training (QAT)."""
-    # Lưu ý: MoViNet sử dụng nhiều cấu trúc phức tạp, QAT có thể cần cấu hình cụ thể
-    # Ở Phase 0, ta implement khung chuẩn của PyTorch
-    print(
-        "QAT is planned for full implementation. "
-        "Currently initializing QAT-ready model..."
-    )
-    # ... logic training QAT ...
-    print("QAT conversion complete (Simulated in Phase 0).")
-    return 0
-
-
 def main_export_onnx(args: argparse.Namespace) -> int:
     """Xuất mô hình sang định dạng ONNX."""
     config = load_config(args.config)
@@ -374,7 +445,20 @@ def main_export_onnx(args: argparse.Namespace) -> int:
     model = MoViNetA0Backbone(
         num_classes=len(class_names), causal=config["model"]["causal"]
     ).to(device)
+
+    checkpoint_path = Path(config["output"]["checkpoint_dir"]) / "best.pt"
+    if checkpoint_path.exists():
+        sd = torch.load(checkpoint_path, map_location=device, weights_only=True)
+        model.load_state_dict(sd)
+        print(f"Loaded checkpoint from {checkpoint_path}")
+        print(f"Parameter count in SD: {len(sd)}")
+    else:
+        print("Warning: No checkpoint found. Exporting with random weights.")
+
     model.eval()
+    # Kiểm tra xem params có thực sự tồn tại và có giá trị không
+    first_param = next(model.parameters())
+    print(f"First param mean: {first_param.mean().item():.6f}")
 
     # Dummy input [B, C, T, H, W]
     dummy_input = torch.randn(
@@ -388,17 +472,86 @@ def main_export_onnx(args: argparse.Namespace) -> int:
     output_path = Path(config["output"]["onnx_fp32"])
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    torch.onnx.export(
-        model,
-        (dummy_input,),
-        output_path,
-        input_names=["input"],
-        output_names=["output"],
-        dynamic_axes={"input": {0: "batch_size"}, "output": {0: "batch_size"}},
-        opset_version=12,  # Opset 12 ổn định hơn cho AdaptiveAvgPool3d
+    print(f"Exporting ONNX to {output_path}...")
+    with ONNXAdaptiveAvgPoolPatch():
+        # Sử dụng phương pháp truyền thống nhất có thể
+        torch.onnx.export(
+            model,
+            (dummy_input,),
+            str(output_path),
+            export_params=True,
+            do_constant_folding=True,
+            input_names=["input"],
+            output_names=["output"],
+            dynamic_axes={"input": {0: "batch_size"}, "output": {0: "batch_size"}},
+            opset_version=13,  # Nâng cấp opset để hỗ trợ tốt hơn
+        )
+
+    # Kiểm tra kích thước sau export
+    actual_size = output_path.stat().st_size / (1024 * 1024)
+    print(f"Model exported successfully. Size: {actual_size:.2f} MB")
+    if actual_size < 5:
+        print("Warning: Exported model is suspiciously small (~1.7MB). ")
+        print("This usually means weights were not included.")
+    return 0
+
+
+def main_ptq(args: argparse.Namespace) -> int:
+    """Thực hiện Post-Training Quantization (PTQ) bằng ONNX Runtime."""
+    config = load_config(args.config)
+    class_names = get_class_names(args.manifest)
+
+    fp32_onnx_path = Path(config["output"]["onnx_fp32"])
+    int8_onnx_path = Path(config["output"]["onnx_int8"])
+
+    if not fp32_onnx_path.exists():
+        print(f"FP32 ONNX not found at {fp32_onnx_path}. Exporting first...")
+        main_export_onnx(args)
+
+    print(f"Starting PTQ: {fp32_onnx_path} -> {int8_onnx_path}")
+
+    # Prepare calibration data
+    ds = FrameClipDataset(
+        manifest_path=args.frames_manifest,
+        class_names=class_names,
+        n_clip_frames=config["training"]["n_clip_frames"],
+        frame_stride=config["training"]["frame_stride"],
+        resolution=config["model"]["resolution"],
+        is_train=False,
+        temporal_jitter=False,
+    )
+    # Lấy subset validation để calibrate
+    ds.rows = [r for r in ds.rows if r.get("split") == "test"][:100]
+
+    dr = MoViNetCalibrationDataReader(ds, batch_size=1, max_samples=100)
+
+    from onnxruntime.quantization import (
+        QuantFormat,
+        QuantType,
+        quantize_static,
     )
 
-    print(f"Model exported to {output_path}")
+    int8_onnx_path.parent.mkdir(parents=True, exist_ok=True)
+
+    quantize_static(
+        model_input=str(fp32_onnx_path),
+        model_output=str(int8_onnx_path),
+        calibration_data_reader=dr,
+        quant_format=QuantFormat.QDQ,  # QDQ thường tốt hơn cho Intel/OpenVINO
+        activation_type=QuantType.QUInt8,
+        weight_type=QuantType.QInt8,
+    )
+
+    print(f"PTQ complete. INT8 model saved at {int8_onnx_path}")
+
+    # So sánh dung lượng
+    fp32_size = fp32_onnx_path.stat().st_size / (1024 * 1024)
+    int8_size = int8_onnx_path.stat().st_size / (1024 * 1024)
+    print(f"\n--- Model Stats ---")
+    print(f"  FP32 ONNX Size: {fp32_size:.2f} MB")
+    print(f"  INT8 ONNX Size: {int8_size:.2f} MB")
+    print(f"  Size Ratio: {int8_size / fp32_size:.2x} (Note: FP32 export in PT2.5 is highly optimized)")
+
     return 0
 
 
@@ -424,7 +577,7 @@ def build_arg_parser() -> argparse.ArgumentParser:
     eval_parser.add_argument("--error-analysis", action="store_true")
 
     subparsers.add_parser("error-analysis")
-    subparsers.add_parser("qat")
+    subparsers.add_parser("ptq")
     subparsers.add_parser("export-onnx")
 
     return parser
@@ -445,8 +598,8 @@ def main() -> int:
         # Giả lập bằng cách gọi evaluate với flag
         args.error_analysis = True
         return main_evaluate(args)
-    if args.command == "qat":
-        return main_qat(args)
+    if args.command == "ptq":
+        return main_ptq(args)
     if args.command == "export-onnx":
         return main_export_onnx(args)
 

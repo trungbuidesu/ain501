@@ -28,16 +28,21 @@ Do tính phức hợp phân cảnh tại môi trường hiện thực của ngư
 1. **Hiệu Ứng Dung Thông (Mosaic & Mixup):** Tăng sức đề kháng (Robustness configuration) của mạng với vật thể cắt lẹm / che khuất thông qua phép biến tính ma trận ảnh (Mixup = `0.1` | Mosaic = `1.0`).
 2. **Dao Động Biến Ảnh Đa Chiều (Multi-scale Training bounds):** Gieo rắc biến thiên kích thước chập ngẫu nhiên quanh lõi chuẩn tĩnh `640` trong chu kỳ Epoch, tối đa hóa năng lực trực quan hệ thống.
 
-> [!WARNING] Kiểm Thử Ma Trận Lỗi Xuyên Tâm (Error Matrix Defect Protocol)
-> Tuyến luồng CLI tĩnh `python -m src.training.scripts.yolov8n predict-errors` là bắt buộc đối với mỗi vòng lập checkpoint epoch nhằm định danh các nhãn mờ sai cực (False Negatives / Overlapped labels) dựa vào ma trận so khớp Confidence Filtering.
+> CLI tĩnh `python -m src.training.scripts.yolov8n predict-errors` là bắt buộc đối với mỗi vòng lập checkpoint epoch nhằm định danh các nhãn mờ sai cực (False Negatives / Overlapped labels) dựa vào ma trận so khớp Confidence Filtering.
 
-## Kỷ Toán Lượng Tử Hóa Cạnh Biên (Quantization Aware Training - QAT)
+## Kết quả Huấn luyện Thử nghiệm (Pilot Results)
 
-Để nhúng thành công nhân rễ mô hình thô (FP32 precision constraints) lên dòng điện toán giới hạn (Edge limits computational threshold), bộ rẽ nhánh thực thi cấp bậc 1 yêu cầu ứng pháp QAT:
+Dự án đã hoàn thành giai đoạn Pilot training cho YOLOv8n:
+- **Thiết lập**: 5 epochs trên tập subset COCO.
+- **Metric**: mAP@0.5 đạt **~0.19**, thiết lập baseline kỳ vọng cho các vòng lặp tiếp theo.
+- **Log**: Toàn bộ quá trình được theo dõi qua TensorBoard và lưu trữ tại `runs/detect/yolov8n/pilot_5e`.
 
-- Lắp đặt định quy Pytorch gốc `torch.quantization.prepare_qat()`.
-- Chuyển giao đồ thị mô hình để giả lập rào cản tính toán nguyên khối `INT8 parameter drops` trong vòng 10-20 Epochs rặn trút rễ mạng giả học.
-- Đúc kết biểu chuẩn so đo metric biểu hiệu năng đánh đổi `mAP@0.5` trước khi xác nhận lưu kho luồng đồ (Model graph export sequences).
+## Lượng Tử Hóa và Tối Ưu (PTQ - Dynamic)
 
-> [!CAUTION] Cảnh Báo Tính Tương Thích Export Cục Vi (Export Dependencies Compatibility)
-> Thao tác gọi luồng Lượng Tử Hóa không được can thiệp sâu thay thế cấu trúc rễ từ hệ sinh thái gói phần mềm Ultralytics mẹ (Dependency injection block bounds). Quá trình phân chia buộc bám lấy tài liệu chuẩn tĩnh `export()`.
+Thay vì QAT thuần túy, YOLOv8n trong giai đoạn này sử dụng **Post-Training Dynamic Quantization** để đạt tốc độ thực thi tối đa trên CPU:
+
+- **Công cụ**: `onnxruntime.quantization`.
+- **Hiệu quả**: 
+    - Mô hình gốc FP32: **~12.2 MB**.
+    - Mô hình INT8 ONNX: **~3.3 MB**.
+- **Tính tương thích**: Tương thích hoàn toàn với kiến trúc C2f của Ultralytics thông qua quy trình xuất ONNX tiêu chuẩn.

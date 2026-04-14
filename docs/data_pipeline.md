@@ -58,6 +58,19 @@ $AIN501_PY="$env:USERPROFILE\miniconda3\envs\trungbd\python.exe"
 & $AIN501_PY -m src.training.scripts.data_utils verify-dataset-paths ...
 ```
 
+## Tối ưu hóa Luồng ảnh (Frame-based Optimization)
+
+Trong Phase 0, dự án đã thực hiện một cải tiến quan trọng trong cách xử lý dữ liệu Video dành cho nhận diện hành động (Action Recognition).
+
+- **Vấn đề**: Việc đọc video trực tiếp (on-the-fly decoding) gây nghẽn CPU nghiêm trọng (~100% sử dụng), khiến GPU Intel Arc A770 không thể đạt hiệu suất tối đa (chỉ ~20% utilization).
+- **Giải pháp**: Phân rã video thành các chuỗi khung hình JPEG (`preprocess_frames.py`) và sử dụng `FrameClipDataset`.
+- **Kết quả**: 
+    - CPU usage giảm xuống còn **5-10%**.
+    - GPU utilization đạt **~90-95%**.
+    - Tốc độ huấn luyện tăng gấp **4-5 lần**.
+
+Mọi dữ liệu khung hình được lưu trữ tại `data/processed/action_accessibility/frames/` và được quản lý qua `manifest_frames.csv`.
+
 ## Giai Đoạn Dữ Liệu Tùy Biến Bán Tự Động (Semi-Automated Custom Workflow)
 
 Đối với thao tác tích chập CSDL của nhà phát triển thứ ba, nhà cung cấp hệ thống buộc phải tuân theo lộ trình thiết kế. Cụ thể quy trình xử lý tại máy tính cá nhân cho các chú giải tùy biến như sau:

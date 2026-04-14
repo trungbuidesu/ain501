@@ -1,152 +1,56 @@
-# Bộ Dữ Liệu Mở Rộng
+# Ngữ Cảnh Xử Lý Siêu Dữ Liệu Phụ Trợ (Extended Datasets Architecture)
 
-Trang này gom nhóm các dataset không thuộc core hoặc đang ở trạng thái dự phòng.
+Bản tài liệu này tổng quan hóa các bộ CSDL nằm ngoài trục phát triển lõi (Phase 0 Core block), tuy không tác động trực tiếp đến tiến độ hoàn thành mốc khởi điểm nhưng giữ vai trò nền móng (Foundational placeholders) cho các chu kỳ phát triển nâng cao tính năng nội hệ.
 
-## Vai Trò Trong Lộ Trình
+## Lược Đồ Tương Quan Khối Dự Phòng (Deferred Modules Topology)
 
-- Các tác vụ trong trang này giúp mở rộng năng lực hệ thống, nhưng không chặn mốc core Phase 0.
-- Mục tiêu chính là chuẩn bị sẵn config, IO contract và utility để kích hoạt khi cần.
+```mermaid
+flowchart TD
+    A[Hệ Sinh Thái Phụ Trợ <br/> Extended Modules] --> B(Mô Đun Đặc Điểm Nhận Dạng OCR <br/> Scene Text Recognition)
+    A --> C(Mô Đun Phiên Lời Video <br/> Video Captioning)
+    A --> D(Mô Đun Giả Lập Giọng Nói <br/> Text-to-Speech Engine)
+    A --> E(Mô Đun Chiều Sâu Đơn <br/> Monocular Depth Slot)
+```
 
-## OCR Scene Text (Nhận diện chữ trong cảnh)
+## 1. Mô Đun Trích Lọc Hình Thái Chữ (OCR Scene Text)
 
-- Config: `configs/datasets/ocr_textocr.yaml`
-- Nguồn: TextOCR 0.1
-- Mục tiêu: nhận dạng chữ trong bối cảnh thực tế
-- Input:
-  - `data/external/textocr/train_val_images`
-  - `data/external/textocr/TextOCR_0.1_train.json`
-  - `data/external/textocr/TextOCR_0.1_val.json`
-- Output:
-  - `data/processed/ocr_textocr/annotations.jsonl`
-- Lưu ý format:
-  - Text field: `utf8_string`
-  - BBox: `xywh_pixels`
-  - Polygon field: `points`
-  - Bỏ qua annotation `empty_text` hoặc `illegible`
+Khai thác năng lực phân tích khung văn bản từ tệp TextOCR.
 
-### Nguồn Tải OCR
+| Chỉ Báo Thông Số (Metrics) | Tham Biến (Variable) | Hoán Trị Đầu Ra (Output Target) | Khảo Cứu Sổ Tay (Ref Notebook) |
+| --- | --- | --- | --- |
+| Lớp Căn Bản (Metadata) | `task` | `ocr_scene_text` | N/A |
+| Phiên Bản Gốc (Source) | `annotation_version` | `0.1` | N/A |
+| Điểm Hội Tụ (Output Root) | `normalized_output`| `data/processed/ocr_textocr/annotations.jsonl` | [Notebook 0.7](file:///d:/workspace/GitHub/ain501/notebooks/0.7_textocr_explore.ipynb) |
 
-- Trang dữ liệu: [https://textvqa.org/textocr/](https://textvqa.org/textocr/)
-- URL theo config:
-  - `https://dl.fbaipublicfiles.com/textvqa/images/train_val_images.zip`
-  - `https://dl.fbaipublicfiles.com/textvqa/data/textocr/TextOCR_0.1_train.json`
-  - `https://dl.fbaipublicfiles.com/textvqa/data/textocr/TextOCR_0.1_val.json`
+> [!WARNING] Thuật Toán Phân Rã Không Gian OCR (OCR Space Omissions)
+> Bố cục kỹ thuật yêu cầu hệ thống lược bỏ vĩnh viễn (Permament discard) các chú thích thuộc định dạng `empty_text` và `illegible` để đảm bảo nồng độ tín hiệu cao (high signal-to-noise ratio). 
 
-### Thông Số OCR
+## 2. Mô Đun Trình Biên Giới Thiệu Chuyển Động (Video Captioning)
 
-| Thông số | Giá trị |
-| --- | --- |
-| `task` | `ocr_scene_text` |
-| `phase` | `0.7` |
-| `annotation_version` | `0.1` |
-| `source_format` | `textocr_json` |
-| `normalized_output` | `data/processed/ocr_textocr/annotations.jsonl` |
+Kết xuất siêu ngữ nghĩa diễn đạt chuỗi khung hình từ hệ thống MSVD.
 
-## Video Captioning (Chú thích video)
+| Chỉ Báo Thông Số (Metrics) | Tham Biến (Variable) | Hoán Trị Đầu Ra (Output Target) | Khảo Cứu Sổ Tay (Ref Notebook) |
+| --- | --- | --- | --- |
+| Lớp Căn Bản (Metadata) | `task` | `video_captioning` | N/A |
+| Giao Diện Khớp Lệnh (Mapping) | `normalized_mapping` | `video_id -> captions[]` | [Notebook 0.6](file:///d:/workspace/GitHub/ain501/notebooks/0.6_msvd_captioning_explore.ipynb) |
+| Kho Phông Chữ (Output Root) | `normalized_output` | `.../video_captioning_msvd/captions.json` | N/A |
 
-- Config: `configs/datasets/video_captioning_msvd.yaml`
-- Nguồn: MSVD
-- Trạng thái: Tier 2 deferred
-- Mục tiêu: ánh xạ `video_id` sang tập caption ứng viên
-- Input:
-  - `data/external/msvd/videos`
-  - `data/external/msvd/annotations/msvd_captions.json`
-- Output:
-  - `data/processed/video_captioning_msvd/captions.json`
-- Mapping chuẩn:
-  - `video_id -> captions[]`
+## 3. Khâu Validation Lõi Tổng Hợp Tiếng Nói (TTS Generation Validation)
 
-### Nguồn Tải Captioning
-
-- Dataset mirror: [https://huggingface.co/datasets/friedrichor/MSVD](https://huggingface.co/datasets/friedrichor/MSVD)
-
-### Thông Số Captioning
-
-| Thông số | Giá trị |
-| --- | --- |
-| `task` | `video_captioning` |
-| `phase` | `0.6` |
-| `tier` | `2` |
-| `normalized_mapping` | `video_id -> captions[]` |
-| `normalized_output` | `data/processed/video_captioning_msvd/captions.json` |
-
-## TTS Validation (Kiểm tra chuyển văn bản thành giọng nói)
-
-- Config: `configs/datasets/tts_piper_accessibility.yaml`
-- Nguồn: voice Piper local dưới `models/voices/piper`
-- Mục tiêu: kiểm tra chất lượng output speech và runtime setup
-- Voices mặc định:
-  - `vi_VN-vais1000-medium`
-  - `en_US-lessac-medium`
-- Fallback voices:
-  - `vi_VN-vivos-x_low`
-  - `en_US-amy-medium`
-- Kiểm tra chính:
-  - đọc được config JSON,
-  - WAV đọc được và có duration dương,
-  - mono PCM,
-  - sample rate khớp config.
-
-### Nguồn Tải TTS
-
-- Piper engine: [https://github.com/OHF-Voice/piper1-gpl](https://github.com/OHF-Voice/piper1-gpl)
-- Piper voices: [https://huggingface.co/rhasspy/piper-voices](https://huggingface.co/rhasspy/piper-voices)
-
-### Thông Số TTS
-
-| Thông số | Giá trị |
-| --- | --- |
-| `task` | `tts_validation` |
-| `phase` | `0.8` |
-| `install_extra` | `.[tts]` |
-| `voices_root` | `models/voices/piper` |
-| `validation_output` | `data/tts_validation` |
-| `expected_sample_rate_hz` | `22050` (mặc định vi/en) |
+Bảo đảm tương quan đồng bộ cho thư viện động cơ (Piper Engine) đối đáp thông tin văn bản sang dạng sóng ngữ thanh (Wav representations). Băng thông mặc định tại mức `22050 Hz`.
 
 ```bash
 python -m src.training.scripts.data_utils validate-tts --dry-run
 ```
 
-## Depth Estimation (Ước lượng độ sâu, dự phòng)
+> [!NOTE] Cấu Trúc Khối Fallback (Fallback Voice Mechanism)
+> Hệ thống thiết đặt chéo cơ chế tương quan bổ trợ, khi giọng chuẩn `vi_VN-vais1000-medium` bị khuyết, engine lập tức rớt về phân mảnh thay thế `vi_VN-vivos-x_low`. (Tra cứu nguyên lý hoạt động tại sổ tay [0.8_tts_piper_validation.ipynb](file:///d:/workspace/GitHub/ain501/notebooks/0.8_tts_piper_validation.ipynb))
 
-- Config: `configs/datasets/depth_midas_reserved.yaml`
-- Trạng thái: reserved, không chặn mốc core hiện tại
-- Mục tiêu: hỗ trợ monocular depth trong các phase sau
-- Model family dự kiến: MiDaS/DPT
-- IO contract:
-  - Input: RGB image
-  - Output: relative depth map
-  - Không cam kết metric distance ở phase hiện tại.
+## 4. Slots Tích Hợp Chiều Sâu Phân Cảnh (Depth Estimation Reserves)
 
-### Nguồn Tải Depth
+- Mục tiêu: Ánh xạ ảnh ma trận tương khắc RGB (RGB array) kết xuất tỷ lượng phân khúc khoảng cách (distance gradient/depth map).
+- Module: MiDaS/DPT.
+- Tài liệu sổ tay: Khảo cấu luồng dữ liệu ảo tham chiếu qua [0.9_depth_midas_reserved.ipynb](file:///d:/workspace/GitHub/ain501/notebooks/0.9_depth_midas_reserved.ipynb).
 
-- Repository: [https://github.com/isl-org/MiDaS](https://github.com/isl-org/MiDaS)
-
-### Thông Số Depth
-
-| Thông số | Giá trị |
-| --- | --- |
-| `task` | `monocular_depth_estimation` |
-| `phase` | `0.9` |
-| `status` | `reserved` |
-| `model_root` | `models/depth/midas` |
-| `input_root` | `data/processed/depth/input_frames` |
-| `output_root` | `data/processed/depth/predictions` |
-
-## Ghi Chú Chung
-
-- Giữ dry-run làm mặc định khi có hỗ trợ.
-- Chỉ dùng `--execute` sau khi đã check path local và yêu cầu riêng tư.
-- Không commit artifact dữ liệu lớn vào Git.
-
-## Tiêu Chí Sẵn Sàng Cho Mỗi Nhóm
-
-- OCR: tạo được normalized annotations với schema đúng.
-- Captioning: normalize được về `video_id -> captions[]`.
-- TTS: pass toàn bộ validation checks của voice mặc định hoặc fallback.
-- Depth: giữ config và path contract nhất quán cho integration phase sau.
-
-## Tham Chiếu
-
-- `docs/data_pipeline.md`
-- `configs/datasets/README.md`
+---
+*Tất cả thông tin phía trên đều đáp ứng tiêu chí vô hình (Dry-run by default). Không cam kết đưa trọng số đo khoảng cách vật lý (metric scaling parameters) vào không gian Phase 0.*

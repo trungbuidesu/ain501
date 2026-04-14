@@ -1,96 +1,67 @@
-# Action Recognition Dataset (Bộ dữ liệu nhận diện hành động)
+# Bộ Phân Tích Nhận Diện Hành Động (Action Recognition Dataset)
 
-## Mục Tiêu
+Tác vụ Nhận diện Hành động (Action Recognition) giám sát các chuỗi biến thiên hình chiếu (frame sequences) theo thời gian, nhằm giải quyết nghiệp vụ nhận biết và cảnh báo mẫu hành vi nguy hiểm đối với người khiếm khuyết.
 
-Action recognition là tác vụ video core để nhận diện mẫu hành vi từ chuỗi frame.
+## Sơ Đồ Cấu Trúc Khối Hệ Thống (Structural Flow Diagram)
 
-## Cấu Hình, Nguồn Và Sampling
+```mermaid
+flowchart TD
+    A[Dữ Liệu Nguyên Bản UCF-101 <br/> UCF-101 Data Sources] --> B{Hệ Thống Lấy Mẫu <br/> Frame Sampler}
+    C[Nguồn Cắt Chia Chuẩn <br/> Official Train/Test Split] --> B
+    
+    B -->|Trích xuất Tuyến tính| D(Ma Trận Khung Hình <br/> Sequence Extraction)
+    D --> E[Bảng Khai Báo Hành Động <br/> Action Manifest]
+    E --> F[Dữ Liệu Huấn Luyện Đạt Chuẩn]
+```
 
-- Config: `configs/datasets/action_accessibility.yaml`
-- Nguồn bootstrap: UCF-101 với bộ split chính thức
-- Tham số chuỗi frame được điều khiển từ config
-- Mặc định hiện tại:
-  - `frame_sequence_length: 16`
-  - `frame_stride: 2`
-  - `split_seed: 501`
+## Các Thiết Chế Không Gian Và Tham Số Cốt Lõi (Methodological Parameters)
 
-## Nguồn Tải
+Mô hình hiện thời triển khai các tham số lấy mẫu (Sampling limits) được định cấu hình tại `configs/datasets/action_accessibility.yaml`. Dựa trên bộ dữ liệu Bootstrap UCF-101.
 
-- Trang chính thức: [https://www.crcv.ucf.edu/data/UCF101.php](https://www.crcv.ucf.edu/data/UCF101.php)
-- Theo config, dữ liệu đặt local:
-  - video dưới `data/external/ucf101/UCF-101`
-  - split files dưới `data/external/ucf101/ucfTrainTestlist`
+| Bậc Đo Lường (Metrics) | Cơ Phân Bổ (Parameter) | Chỉ Số Thống Kê (Target Value) | Khảo Cứu Sổ Tay (Ref Notebook) |
+| --- | --- | --- | --- |
+| Điều Hướng (Task) | `task` | `action_recognition` | N/A |
+| Giới Hạn Mẫu (Sequence Length)| `frame_sequence_length`| `16` (Độ dài dải chuỗi hệ thống) | [Notebook 0.4](file:///d:/workspace/GitHub/ain501/notebooks/0.4_action_ucf101_explore.ipynb) |
+| Cắt Bước (Stride Skip) | `frame_stride` | `2` (Giao thức lướt khung) | [Notebook 0.4](file:///d:/workspace/GitHub/ain501/notebooks/0.4_action_ucf101_explore.ipynb) |
+| Lớp Nâng Ngữ Cảnh | `public_bootstrap` | Nhóm 20 Lớp Định hướn Cơ Bản | N/A |
+| Lớp Ngoại Lệ Mở Rộng | `custom_required` | Nhóm 8 Lớp Khuyết Thiếu Đợi Khai Thác | N/A |
 
-## Thông Số Quan Trọng
-
-| Nhóm | Thông số | Giá trị |
-| --- | --- | --- |
-| Metadata | `task` | `action_recognition` |
-| Metadata | `phase` | `0.4` |
-| Sampling | `frame_sequence_length` | `16` |
-| Sampling | `frame_stride` | `2` |
-| Sampling | `split_seed` | `501` |
-| Class | `public_bootstrap` | 20 class |
-| Class | `custom_required` | 8 class |
-| Output | `manifest` | `data/processed/action_accessibility/manifest.csv` |
-| Output | `split_manifest` | `data/processed/action_accessibility/splits.csv` |
-
-## Cấu Trúc Input/Output
-
-- Input root:
-  - `data/external/ucf101/UCF-101` (videos)
-  - `data/external/ucf101/ucfTrainTestlist` (official split lists)
-- Output roots:
+### Cấu Trúc Hệ Chỉ Phân Ngoại Tầng (Input & Output Vectors)
+- Tọa bộ Nguồn Cấp (Input Roots): 
+  - Khối CSDL: `data/external/ucf101/UCF-101`.
+  - Bộ Tách Tiêu Chuẩn: `data/external/ucf101/ucfTrainTestlist`.
+- Tập Đầu Ra Đánh Dấu (Output Manifests): 
   - `data/processed/action_accessibility/manifest.csv`
-  - `data/processed/action_accessibility/splits.csv` (khi tạo split)
-- Artifact chính:
-  - manifest class/video/split dùng cho pipeline train và validation
+  - `data/processed/action_accessibility/splits.csv`
 
-## Workflow Chi Tiết
+## Lộ Trình Phương Pháp Thực Thi (Architectural Implementation)
 
-### Bước 1: Kiểm tra cấu trúc dữ liệu video
+> [!CAUTION] Cảnh Báo Ghi Đè (Overwriting Precaution)
+> Cơ chế mặc định quy ước `--dry-run` nhằm hạn chế ghi đè bảng Phân mảnh (Manifest). Quý chuyên gia chỉ kích hoạt tham số `--execute` sau khi xác thực thành công các tệp UCF nội bộ.
 
+### Giai Đoạn Thẩm Định Mạch Dữ Liệu (Integrity Constraints)
 ```bash
 python -m src.training.scripts.data_utils verify-dataset-paths --tasks action_recognition --skip-downloads
 ```
 
-### Bước 2: Tạo manifest từ class-folder videos
-
+### Giai Đoạn Kiến Tạo Bảng Chỉ Mục Hành Động (Action Manifest Contruction)
+Hệ thống tiến hành rà quyét siêu đối tượng video và ghim khối đánh nhãn vào `.csv`.
 ```bash
-python -m src.training.scripts.data_utils build-action-manifest --dry-run
 python -m src.training.scripts.data_utils build-action-manifest --execute
 ```
 
-### Bước 3: Validate manifest
-
+### Giai Đoạn Thẩm Định Cuối (Validation Mechanism)
 ```bash
 python -m src.training.scripts.data_utils validate-video-manifest --manifest-csv data/processed/action_accessibility/manifest.csv
 ```
 
-Chỉ dùng `--execute` khi đã xác nhận đầy đủ path dataset và split files local.
+## Báo Cáo Ngoại Lệ Kỹ Thuật (Risk Diagnosis & Resolution)
 
-## Lưu Ý Theo Use Case
+> [!WARNING] Lỗi Ngoại Lệ Thường Gặp (Common Defect Origins)
+> - **Ngắt Mạch Do Sai Khớp Danh Pháp (Misaligned Root):** Định danh thư mục sai hoặc thiếu hụt danh mục `ucfTrainTestlist` dẫn đến biểu định tuyến thất bại (split mapping crash).
+> - **Lệch Lạc Thông Cáo Lớp (Class Canonical Divergence):** Cấu trúc tên thư mục nguồn (class sub-folders) không đồng dạng hóa với dữ liệu chỉ dẫn yaml. Cần tinh chỉnh bộ điều chế tĩnh (Manifest configurations). 
 
-- Nhóm class `public_bootstrap` dùng để có pipeline hoạt động ngay.
-- Nhóm `custom_required` là mục tiêu extension khi có dữ liệu thực tế.
-- `approaching` được ghi nhận là derived task ở phase sau, không block Phase 0.
+## Tham Biến Kho Lưu Trữ Khoa Học (Notebook Referencing)
 
-## Tiêu Chí Hoàn Thành
-
-- Manifest được tạo thành công với số dòng hợp lệ.
-- `validate-video-manifest` pass:
-  - file video tồn tại,
-  - label thuộc tập cho phép,
-  - không có split/group leakage (nếu bật check liên quan).
-- Sampling settings được giữ ổn định giữa các run để so sánh công bằng.
-
-## Lỗi Thường Gặp
-
-- Sai root `UCF-101` hoặc thiếu `ucfTrainTestlist` -> không map được split.
-- Video corrupt/không mở được -> cần bật check mở video khi cần điều tra.
-- Class folder lệch tên chuẩn -> label sai giữa manifest và config.
-
-## Tham Chiếu
-
-- `docs/data_pipeline.md`
-- `configs/datasets/README.md`
+> [!NOTE]  
+> Toàn bộ logic định tuyến và phác thảo hình học không gian lấy mẫu khung hình được công bố chi tiết tại Khối mã định dạng **[0.4_action_ucf101_explore.ipynb](file:///d:/workspace/GitHub/ain501/notebooks/0.4_action_ucf101_explore.ipynb)**. Vui lòng quan sát các Histogram Mật Độ để có chiến thuật chia Stride hợp lý.

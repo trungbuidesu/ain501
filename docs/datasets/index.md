@@ -1,74 +1,67 @@
-# Bộ Dữ Liệu
+# Mục Lục Thư Viện Bộ Dữ Liệu (Datasets Index Directory)
 
-Trang này là điểm vào cho tài liệu bộ dữ liệu của AIN501.
+Không gian này thiết lập bản đồ cấu trúc cấp vĩ mô đối với Hệ thống CSDL của AIN501.
 
-## Phạm Vi
+## Động Thái Triển Khai Phương Thức (Deployment Paradigm)
 
-- Ưu tiên workflow dry-run trước khi ghi dữ liệu thực tế.
-- Tách riêng tài liệu core datasets và nhóm mở rộng/dự phòng.
-- Giữ artifact lớn ở local (`data/`, `models/`) và không đưa lên Git.
+> [!WARNING] Quy Tắc Lưu Trữ Ngoại Vi (External Tracking Bounds)
+> - Cam kết quy trình Thử Nghiệm Mô Phỏng (Dry-run mode) luôn đi trước khi tác động lên cấu trúc lưu trữ cục bộ.
+> - Cấu trúc dữ liệu phi kỹ thuật siêu lớn (Large raw artifacts) được cố định tại khối nội tại `data/`, `models/` và từ chối đồng bộ hóa phiên bản (No Git Tracking).
 
-## Bản Đồ Bộ Dữ Liệu
+## Sơ Đồ Cây Bộ Dữ Liệu (Dataset Forest Topology)
 
-| Nhóm | Tác vụ | Config chính | Output chính | Mức ưu tiên |
+| Nhóm Dự Năng (Group) | Điểm Giao Thức (Task) | Tham Số Cấu Hình Nguồn (Core Config) | Điểm Phát Sinh (Primary Output) | Xếp Hạng Ưu Tiên (Priority) |
 | --- | --- | --- | --- | --- |
-| Core | Object Detection (Phát hiện đối tượng) | `configs/datasets/object_detection_accessibility.yaml` | `data/processed/object_detection_accessibility` | Phase 0 bắt buộc |
-| Core | Action Recognition (Nhận diện hành động) | `configs/datasets/action_accessibility.yaml` | `data/processed/action_accessibility/manifest.csv` | Phase 0 bắt buộc |
-| Core | Scene Classification (Phân loại bối cảnh) | `configs/datasets/scene_accessibility.yaml` | `data/processed/scene_accessibility/manifest.csv` | Phase 0 bắt buộc |
-| Mở rộng | OCR Scene Text (Nhận diện chữ trong cảnh) | `configs/datasets/ocr_textocr.yaml` | `data/processed/ocr_textocr/annotations.jsonl` | Phase 0 mở rộng |
-| Mở rộng | Video Captioning (Chú thích video) | `configs/datasets/video_captioning_msvd.yaml` | `data/processed/video_captioning_msvd/captions.json` | Tier 2 |
-| Mở rộng | TTS Validation (Kiểm tra TTS) | `configs/datasets/tts_piper_accessibility.yaml` | `data/tts_validation` | Validation pipeline |
-| Dự phòng | Depth Estimation (Ước lượng độ sâu) | `configs/datasets/depth_midas_reserved.yaml` | `data/processed/depth/predictions` | Reserved |
+| Lõi (Core) | Phát hiện Đối Tượng | `object_detection_accessibility.yaml` | `data/processed/object_detection...` | Nền Tảng (Phases 0) |
+| Lõi (Core) | Nhận diện Hành Động | `action_accessibility.yaml` | `data/processed/action_accessibility/...` | Nền Tảng (Phases 0) |
+| Lõi (Core) | Phân Loại Cảnh Vật | `scene_accessibility.yaml` | `data/processed/scene_accessibility/...` | Nền Tảng (Phases 0) |
+| Đới Mở (Extended) | Tách Chữ Cảnh OCR | `ocr_textocr.yaml` | `data/processed/ocr_textocr/...` | Phase 0 Mở rộng |
+| Đới Mở (Extended) | Chú Phụ Đề Đoạn Băng | `video_captioning_msvd.yaml` | `data/processed/video_captioning...` | Chu Đai Kế Cận (Tier 2)|
+| Đới Mở (Extended) | Đo Đạc Trình Chữ/Tiếng | `tts_piper_accessibility.yaml` | `data/tts_validation` | Xác thực Thuật Toán |
+| Khối Dự Khuyết| Chiều Sâu Không Gian | `depth_midas_reserved.yaml` | `data/processed/depth/predictions` | Chờ Ấn Định (Reserved) |
 
-## Nhóm Tài Liệu Dataset
+## Chuỗi Liên Hệ Chuyên Đề Phân Quyền (Domain-Specific Hyperlinks)
 
-- [Object Detection (Phát hiện đối tượng)](object_detection.md)
-- [Action Recognition (Nhận diện hành động)](action_recognition.md)
-- [Scene Classification (Phân loại bối cảnh)](scene_classification.md)
-- [Mở rộng (OCR, Chú thích video, TTS, Độ sâu)](extended.md)
+- [Quy trình Phát Hiện Đối Tượng (Object Detection Architecture)](object_detection.md)
+- [Quy trình Nhận Diện Hành Vi Học (Action Recognition Schema)](action_recognition.md)
+- [Quy trình Phân Phối Định Hướng Môi Trường (Scene Classification Logic)](scene_classification.md)
+- [Báo Khảo Cứu Dữ Liệu Ngoại Biên (Extended Modules Matrix)](extended.md)
 
-## Quy Trình Chuẩn Nên Theo
+## Chuỗi Hướng Dẫn Tác Trình (Canonical Methodology)
 
-1. Kiểm tra kế hoạch tải và path local bằng dry-run.
-2. Chuẩn hóa dữ liệu về format mà từng task yêu cầu.
-3. Chạy validation cho output trước khi train.
-4. Chỉ dùng `--execute` khi đã kiểm tra dung lượng lưu trữ và điều kiện riêng tư.
+1. Giám định lộ trình tải xuống và đường dẫn không gian tĩnh (Local path bounds) qua `--dry-run`.
+2. Đồng nhất khối thông dịch (Normalization parameter bounds).
+3. Đánh giá thẩm sai phân dạng tĩnh (Validation mechanism) trước khi đưa cấu trúc vào vòng xoay Đào tạo (Training iterations).
+4. Khai thông thẻ cấp cấp truy cập `--execute` sau khi vượt qua đánh giá an ninh quyền bảo mật và giới hạn ghi/đọc phần cứng (IO bottlenecks). 
 
-```bash
-python -m src.training.scripts.data_utils download-plan
-python -m src.training.scripts.data_utils verify-dataset-paths --tasks object_detection action_recognition scene_classification --skip-downloads
-```
+## Tham Trạng Dữ Liệu Quan Chú Ý (Parametric Core References)
 
-## Tham Số Cốt Lõi Theo Từng Nhóm
-
-| Tác vụ | Tham số cần chú ý |
+| Tiêu Điểm Tác Vụ | Hệ Quy Chiếu Cần Đặc Thù Quan Tâm (Core Variables) |
 | --- | --- |
-| Object Detection | `bbox_format`, danh sách `coco_subset/custom_only`, `canonical_names_path`, `export_format` |
-| Action Recognition | `frame_sequence_length`, `frame_stride`, `split_seed`, class bootstrap/custom |
-| Scene Classification | `places_subset`, `custom_or_proxy`, `max_images_per_class`, `split_seed` |
-| OCR | `text_field`, `bbox_format`, `polygon_field`, điều kiện bỏ qua annotation |
-| Captioning | `normalized_mapping`, trường accepted_fields |
-| TTS | voice id mặc định/fallback, `expected_sample_rate_hz`, validation checks |
-| Depth | `input_format`, `output_format`, `metric_distance` |
+| Phát Hiện Đối Tượng | `bbox_format`, mảng cấu trúc `coco_subset/custom_only`, `canonical_names_path`. |
+| Động Thái Nhận Diện | `frame_sequence_length`, `frame_stride`, điểm gieo mầm tổ hợp split `split_seed`. |
+| Cảnh Vật Nhân Diện | `places_subset`, lớp phân giải ngoài quy chỉnh `custom_or_proxy`, `max_images_per_class`. |
+| Khảm Chữ Vật Chất | `text_field`, `bbox_format`, lưới tổ hợp hình ảnh `polygon_field`. |
+| Tạo Phụ Đề Chuyển Động | Khóa cấu trúc phân nhóm `normalized_mapping`. |
+| Phản Biện Giọng Chữ | Chữ ký giọng nói fallback, tần số băng thông phát `expected_sample_rate_hz`. |
+| Tính Thể Chiều Sâu | Giao diện thu phát `input_format / output_format`, tỷ lệ độ sâu `metric_distance`. |
 
-## Quy Ước Thư Mục Dùng Chung
+## Hệ Sinh Thái Sổ Tay Phân Tích Hiện Hành (EDA Notebooks Mapping)
 
-- `data/downloads/`: chứa archive tải từ nguồn chính thức.
-- `data/external/`: dữ liệu bên thứ ba đã giải nén.
-- `data/custom/raw_frames_private/`: frame thô có thể chứa thông tin nhạy cảm.
-- `data/custom/sanitized_frames/`: frame đã qua review riêng tư.
-- `data/custom/annotation_exports/`: export từ CVAT hoặc Roboflow.
-- `data/processed/`: output đã convert/validate để train.
-- `models/voices/piper/`: artifact voice Piper local.
+Hệ thống Sổ tay được chia làm hai mảng lớn: Khảo phân tĩnh thông số động (Dynamic Visuals) và Kiểm chuẩn tĩnh thuật toán (Sanity checks).
 
-## Nguyên Tắc Chất Lượng Dữ Liệu
+| Nhóm Tính Năng Trọng Yếu | Mỏ Neo Cú Pháp Notebook (Script Anchor) |
+| --- | --- |
+| Định Lượng Đối Tượng COCO | [0.3_coco_detection_explore.ipynb](file:///d:/workspace/GitHub/ain501/notebooks/0.3_coco_detection_explore.ipynb) |
+| Tần Suất Xếp Hành Động UCF | [0.4_action_ucf101_explore.ipynb](file:///d:/workspace/GitHub/ain501/notebooks/0.4_action_ucf101_explore.ipynb) |
+| Giới Hạn Mật Độ Môi Trường Places| [0.5_places_scene_subset.ipynb](file:///d:/workspace/GitHub/ain501/notebooks/0.5_places_scene_subset.ipynb) |
+| Ánh Xạ Phụ Đề MSVD | [0.6_msvd_captioning_explore.ipynb](file:///d:/workspace/GitHub/ain501/notebooks/0.6_msvd_captioning_explore.ipynb) |
+| Sàng Lọc Ký Tự Mờ TextOCR | [0.7_textocr_explore.ipynb](file:///d:/workspace/GitHub/ain501/notebooks/0.7_textocr_explore.ipynb) |
+| Gắn Nhãn Phát Thanh Piper TTS | [0.8_tts_piper_validation.ipynb](file:///d:/workspace/GitHub/ain501/notebooks/0.8_tts_piper_validation.ipynb) |
+| Cây Giữ Chỗ MiDaS (Reserved) | [0.9_depth_midas_reserved.ipynb](file:///d:/workspace/GitHub/ain501/notebooks/0.9_depth_midas_reserved.ipynb) |
 
-- Ưu tiên dữ liệu đã normalize thay vì dùng trực tiếp raw export.
-- Với dữ liệu custom, phải có bước review riêng tư trước annotation.
-- Không dùng artifact chưa validate để benchmark hoặc train dài.
-- Mọi thay đổi logic xử lý dữ liệu cần cập nhật lại tài liệu tương ứng trong `docs/datasets/`.
+## Thiết Chế Chất Lượng Tài Nguyên (Data Ethics Principles)
 
-## Tài Liệu Liên Quan
-
-- Vận hành pipeline: `docs/data_pipeline.md`
-- Tham chiếu config dataset: `configs/datasets/README.md`
+1. Tối thượng hóa quyền sử dụng nguồn đã được Đồng bộ/Chuẩn hóa (Normalized arrays) so với nguồn thô mới giải nén (Raw extraction).
+2. Dữ liệu Tự Ghi Hình (Custom capture) buộc phải vượt qua hàng rào Kiểm Duyệt Dữ Liệu Cá nhân (Privacy Sanitization Workflow) trước lúc Đánh Nhãn.
+3. Chặn đứng chu trình đánh giá khi xuất hiện lỗi Biệt lệ Tích Giao (Validation leakage) tại kho tàng đánh giá hiện thời.

@@ -1,174 +1,86 @@
-# Phase 0 Data Pipeline
+# Cấu Trúc Hệ Tuyến Dữ Liệu (Data Pipeline Architecture)
 
-Tài liệu này mô tả pipeline dữ liệu cho accessibility assistant. Mặc định mọi
-lệnh đều ưu tiên dry-run để xem trước thao tác, tránh tải dataset lớn hoặc ghi
-file ngoài ý muốn.
+Tài liệu này định nghĩa cấu trúc quy trình xử lý dữ liệu phục vụ Trợ lý Hỗ trợ Tiếp cận (Accessibility Assistant). Nhằm bảo đảm tính toàn vẹn dư liệu, hệ thống tuân thủ nghiêm ngặt cơ chế Chạy Giả Lập Mặc Định (Default Dry-run Mode) đối với mọi tập lệnh, ngăn chặn hiện tượng tải tràn bộ nhớ hoặc ghi đè phi chủ đích ngoại trừ khi người phân tích quyết định cấu hình quyền thực thi trực tiếp.
 
-## Cấu Trúc Thư Mục
+## Sơ Đồ Khái Quát Điểu Hướng Dữ Liệu (Data Flow Architect)
 
-- `configs/datasets/`: Cấu hình dataset và model data có version.
-- `src/training/data/`: Implementation pipeline dữ liệu theo module miền
-  (COCO/YOLO, UCF-101, Places365, TextOCR, MSVD, Piper TTS, augmentation,
-  split/validation).
-- `src/training/scripts/data_utils.py`: CLI facade ổn định cho các lệnh
-  `python -m src.training.scripts.data_utils ...`.
-- `data/downloads/`: Archive tải thủ công hoặc tải bằng script opt-in.
-- `data/external/`: Dataset bên thứ ba sau khi giải nén.
-- `data/custom/raw_frames_private/`: Frame capture thô có thể chứa thông tin
-  riêng tư; chỉ giữ local.
-- `data/custom/sanitized_frames/`: Frame đã được review và lọc riêng tư.
-- `data/custom/annotation_exports/`: Export từ CVAT hoặc Roboflow.
-- `data/processed/`: Dataset đã convert, split và merge để train.
-- `data/tts_validation/`: File WAV sinh ra khi validate Piper TTS.
-- `models/voices/piper/`: File voice Piper local gồm `.onnx` và `.onnx.json`.
-- `models/depth/midas/`: Slot dự phòng cho artifact depth-estimation model.
+```mermaid
+flowchart TD
+    A[Nguồn Dữ Liệu Thứ Ba <br/> Third-party Datasets] --> C(Giải Nén & Chuẩn Hóa <br/> Extraction & Normalization)
+    B[Dữ Liệu Thô Tùy Biến <br/> Custom Raw Captures] --> D{Sàng Lọc Quyền Riêng Tư <br/> Privacy Sanitization}
+    D --> |Hợp Pháp & Đã che mờ| E(Đánh Nhãn Nhận Diện <br/> Bbox Annotations)
+    D --> |Vi phạm| F[Tiêu Hủy <br/> Discard]
+    
+    C --> G((Hệ Thống Phân Tích <br/> Data Processing Engine))
+    E --> G
+    
+    G --> H[Phân Chia Tập Kiểm Định <br/> Splits Validation]
+    H --> I[Bộ CSDL Đích <br/> Merged Datasets]
+```
 
-`data/` đang được git-ignore. Không commit raw capture, dataset bên thứ ba,
-label đã convert, audio sinh ra, hoặc model weights.
+## Khảo Khảo Kiến Trúc Thư Mục (Directory Hierarchy)
 
-## Mặc Định Dry-Run
+Dưới đây là sơ khai mô tả các phân ban không gian lưu trữ đối với hạng mục Dữ liệu chuyên biệt.
 
-Các thao tác lớn hoặc có side effect đều phải opt-in:
+| Phân Vùng Lưu Trữ (Directory) | Diễn Giải Học Thuật (Academic Description) | Trạng Thái Lưu Trữ Khác (Git Tracking) |
+| --- | --- | --- |
+| `configs/datasets/` | Khối tệp Cấu hình Khai báo chứa thông số mô hình hóa hệ thống. | Được Tracking |
+| `src/training/data/` | Mã nguồn cốt lõi thực thi Quy trình Giải nén và Xử lý. | Được Tracking |
+| `src/training/scripts/` | Giao diện điều khiển Dòng lệnh Lõi (CLI Facades) của tiện ích. | Được Tracking |
+| `data/downloads/` | Tệp lưu trữ nguyên bản hoặc Nén nguyên khối chưa giải nén. | Git-ignore |
+| `data/external/` | Khối dữ liệu bên thứ ba đã qua phân rã thành tệp cục bộ. | Git-ignore |
+| `data/custom/raw_frames/` | Ảnh kết xuất trực quan thô từ Trạm quay tùy biến. | Git-ignore |
+| `data/custom/sanitized/` | Dữ liệu cá thể hóa đã trừ khử thông tin nhận dạng (PII).| Git-ignore |
+| `data/custom/exports/` | Khối tập tin được tải nối tiếp từ hệ quản trị Nhãn Dán (CVAT/Roboflow). | Git-ignore |
+| `data/processed/` | Dữ liệu hình thái cuối cùng đã vượt qua thẩm định để Huấn luyện mô hình. | Git-ignore |
+
+> [!NOTE] Phân Cấp Dữ Liệu Thô (Ignored Boundaries)
+> Toàn bộ phân vùng thư mục `data/` bắt buộc phải được duy trì chế độ cách ly kiểm soát mã nguồn (`.gitignore`). Nghiêm cấm đưa tập dữ liệu của bên thứ ba, khối ảnh thô chưa phân tách, chuỗi băng ghi âm hoặc trọng số mô hình lên kho mã nguồn (repository).
+
+## Cơ Chế Chạy Giả Lập Mặc Định (Dry-run Fallback Mechanism)
+
+Mọi thao tác có tác động lên Cấu trúc tệp đều yêu cầu lệnh khẳng quyết. Các câu lệnh sau đều vận hành ở chế độ xem trước (preview operations):
 
 ```bash
 python -m src.training.scripts.data_utils download-plan
 python -m src.training.scripts.data_utils verify-dataset-paths --tasks object_detection action_recognition scene_classification
 python -m src.training.scripts.data_utils write-classes
 python -m src.training.scripts.data_utils build-action-manifest
-python -m src.training.scripts.data_utils build-scene-subset
-python -m src.training.scripts.data_utils convert --coco-json path/to/instances.json --image-root path/to/images --output-root data/processed/demo --classes classes.txt
-python -m src.training.scripts.data_utils merge-yolo --sources data/custom/export --output-root data/processed/merged --classes classes.txt --dry-run
-python -m src.training.scripts.data_utils normalize-custom-yolo --export-root data/custom/annotation_exports/export_001 --output-root data/custom/annotation_exports/export_001_normalized --classes data/processed/object_detection_accessibility/classes.txt --source-format roboflow_yolo --dry-run
-python -m src.training.scripts.data_utils augment-preview --input-dir path/to/images --output-dir data/processed/augment_preview --task detection
-python -m src.training.scripts.data_utils validate-video-manifest --manifest-csv data/processed/action_accessibility/manifest.csv
-python -m src.training.scripts.data_utils validate-tts --dry-run
-python -m src.training.scripts.capture_frames --duration-seconds 3600 --fps 1
 ```
 
-Fallback PowerShell khi `python` không có trong PATH:
+> [!WARNING] Cấp Quyền Điểu Tiến (Execution Authorization)
+> Chỉ bổ sung tham số `--execute` vào câu lệnh khi nhà nghiên cứu đã chắc chắn về hiệu năng lưu trữ và tính tuân thủ pháp lý cho luồng thông tin mới được khởi phát.
+
+Trong trường hợp máy chủ của người dùng có nền tảng định danh biến môi trường lỗi (missing Python paths), hãy sử dụng lệnh khởi động phụ trợ (Fallback powershell bindings):
 
 ```powershell
 $AIN501_PY="$env:USERPROFILE\miniconda3\envs\trungbd\python.exe"
-& $AIN501_PY -m src.training.scripts.data_utils download-plan
-& $AIN501_PY -m src.training.scripts.data_utils verify-dataset-paths --tasks object_detection action_recognition scene_classification
-& $AIN501_PY -m src.training.scripts.data_utils write-classes
-& $AIN501_PY -m src.training.scripts.data_utils build-action-manifest
-& $AIN501_PY -m src.training.scripts.data_utils build-scene-subset
-& $AIN501_PY -m src.training.scripts.data_utils validate-tts --dry-run
-& $AIN501_PY -m src.training.scripts.capture_frames --duration-seconds 60 --fps 1
+& $AIN501_PY -m src.training.scripts.data_utils verify-dataset-paths ...
 ```
 
-Chỉ dùng `--execute` sau khi đã xác nhận path, dung lượng lưu trữ và xử lý
-riêng tư.
+## Giai Đoạn Dữ Liệu Tùy Biến Bán Tự Động (Semi-Automated Custom Workflow)
 
-## Các Bước Dataset Thủ Công
+Đối với thao tác tích chập CSDL của nhà phát triển thứ ba, nhà cung cấp hệ thống buộc phải tuân theo lộ trình thiết kế. Cụ thể quy trình xử lý tại máy tính cá nhân cho các chú giải tùy biến như sau:
 
-- COCO 2017: tải `train2017.zip`, `val2017.zip` và
-  `annotations_trainval2017.zip` từ trang COCO chính thức vào
-  `data/downloads/coco/`, rồi giải nén vào `data/external/coco2017/`.
-- UCF-101: tải video và split train/test chính thức từ trang dataset vào
-  `data/external/ucf101/`; đặt video dưới `UCF-101/` và split files dưới
-  `ucfTrainTestlist/`.
-- Places365: dùng biến thể Places365 256px và category file dưới
-  `data/external/places365/`. Nếu dùng official devkit/filelist, đặt
-  `categories_places365.txt` và `places365_train_standard.txt` hoặc
-  `places365_val.txt` cạnh root Places365 để `build-scene-subset` đọc được
-  mapping ảnh -> class.
-- MSVD: tải từ dataset mirror `friedrichor/MSVD` theo điều khoản sử dụng của nguồn
-  phân phối và normalize annotation về dạng `video_id -> captions[]`.
-- TextOCR: dataset OCR mục tiêu cho scene text thực tế. Config hiện tại là
-  `configs/datasets/ocr_textocr.yaml`; đặt `TextOCR_0.1_train.json`,
-  `TextOCR_0.1_val.json` và thư mục ảnh `train_val_images/` dưới
-  `data/external/textocr/`.
-- Piper TTS: đặt voice files dưới `models/voices/piper/` theo
-  `configs/datasets/tts_piper_accessibility.yaml`.
+1. Trích xuất Chuỗi khung hình thô (Raw captures) đưa vào `data/custom/raw_frames_private/`.
+2. Kiểm duyệt Đạo đức Dữ liệu (Privacy sanitization): Làm mờ điểm đặc trưng khuôn mặt cá thể và biển kiểm soát giao thông. 
+3. Loại bỏ phân mảnh vật tư nhạy cảm.
+4. Lựa xuất ngẫu nhiên (Sub-sampling) từ 200-500 ảnh đáp ứng Quy chuẩn đối tượng khuyết tật (Accessibility classes) đưa vào Roboflow/CVAT.
+5. Sao xuất (Export) dữ liệu dựa trên tiêu chuẩn Nhãn YOLO gốc.
+6. Đồng bộ hóa phân lớp đối chiếu (Canonical classes normalization) thông qua tiện ích Lệnh điều hướng.
 
-## Code-First Utilities
+## Tiền Đề Cam Kết Bảo Mật Riêng Tư (Privacy Baseline Codec)
 
-- Dataset path check: `verify-dataset-paths --tasks object_detection action_recognition scene_classification`
-  báo các path local còn thiếu cho core datasets trước khi chạy convert/subset.
-- Object detection classes: `write-classes --execute` ghi canonical
-  `classes.txt` từ `classes.coco_subset` trong object detection config.
-- Action recognition: `build-action-manifest` đọc UCF-101 class folders,
-  optional official split files và chỉ ghi manifest khi có `--execute`.
-- Frame sequence: sampler dùng mặc định `frame_sequence_length=16` và
-  `frame_stride=2` theo action config; video thiếu frame được bỏ qua ở sequence
-  manifest.
-- Scene subset: `build-scene-subset` tạo manifest balanced từ Places-style image
-  folders hoặc official Places365 filelist; `--copy-images` mới copy ảnh sang
-  `data/processed`.
-- Image augmentation: `augment-preview` hỗ trợ `--task detection|scene|ocr` và
-  `--size`; dry-run mặc định chỉ đếm ảnh, `--execute` mới ghi preview.
-- Custom YOLO export: `normalize-custom-yolo` đọc export YOLO Roboflow/CVAT/
-  Ultralytics, remap class ids theo canonical `classes.txt`, copy về layout
-  `images/<split>` + `labels/<split>`, và validate output khi có `--execute`.
-- Video manifest validation: `validate-video-manifest` kiểm tra file tồn tại,
-  label membership, split/group leakage, và có thể mở video bằng OpenCV khi thêm
-  `--check-video-open`.
-- Packaging: package editable expose `src*`; các data utility chạy qua
-  `python -m src.training.scripts...` để toàn bộ source code nằm dưới `src/`.
+> [!CAUTION] Cảnh Báo An Toàn Khu Vực Thu Nhận (Data Acquisition Warning)
+> Triển khai khai thác hình ảnh (Image capture) phải bảo tồn tính công cộng. Không xâm phạm không gian tĩnh cá nhân (nhà ở nội khu, đặc khu bảo mật) nếu chưa thụ đắc điều khoản chấp thuận khai triển.
 
-## Env Ghi Nhận
+- **Khử Nhận Tạng Tuyệt Đối**: Cắt bỏ biểu mục thông tin hóa đơn thẻ, chi tiết y khoa cá nhân. Dữ liệu giai đoạn chuẩn Phase 0 tập trung khai thác Nhận Diện Vật Thể Công Cộng (Public Accessibility Object Detections), không phục vụ mục đích định danh Con người (Biometrics).
+- **Hệ thống theo vết (Traceability Manifest)**: Mỗi nhóm phân nhánh tùy biến cần đính kèm siêu dữ liệu về: Ngày ghi chép (Date), Không gian khảo chiếu (Demographic status), và Đội ngũ xử lý (Reviewers).
 
-- Dev env đã dùng: conda env `trungbd`.
-- PyTorch XPU wheel: `torch 2.11.0+xpu`, `torchvision 0.26.0+xpu`,
-  `torchaudio 2.11.0+xpu`.
-- Máy hiện detect `Intel(R) UHD Graphics 730` qua XPU nhưng PyTorch cảnh báo đây
-  không phải Intel Arc-supported GPU; XPU training sanity test sẽ skip nếu không
-  có Intel Arc.
+## Danh Mục Phân Tích Thực Tiễn (EDA Notebooks Reference)
 
-## Workflow CVAT Hoặc Roboflow
-
-1. Capture frame thô vào `data/custom/raw_frames_private/`.
-2. Review và loại bỏ frame nhạy cảm.
-3. Làm mờ mặt người và biển số xe trước khi annotate.
-4. Chỉ copy frame đã sanitize sang `data/custom/sanitized_frames/`.
-5. Annotate 200-500 ảnh bằng canonical class names trong object detection
-   config.
-6. Export theo format Ultralytics YOLO hoặc YOLO Roboflow/CVAT.
-7. Normalize export về layout canonical và preview remap trước khi merge:
-
-```bash
-python -m src.training.scripts.data_utils normalize-custom-yolo --export-root data/custom/annotation_exports/export_001 --output-root data/custom/annotation_exports/export_001_normalized --classes data/processed/object_detection_accessibility/classes.txt --source-format ultralytics_yolo --dry-run
-python -m src.training.scripts.data_utils normalize-custom-yolo --export-root data/custom/annotation_exports/export_001 --output-root data/custom/annotation_exports/export_001_normalized --classes data/processed/object_detection_accessibility/classes.txt --source-format ultralytics_yolo --execute
-python -m src.training.scripts.data_utils merge-yolo --sources data/custom/annotation_exports/export_001_normalized data/processed/object_detection_accessibility --output-root data/processed/object_detection_accessibility_merged --classes data/processed/object_detection_accessibility/classes.txt --dry-run
-```
-
-## Checklist Riêng Tư
-
-- Chỉ capture những scenario cần cho label Phase 0.
-- Tránh nhà riêng và không gian nội bộ của doanh nghiệp nếu chưa có consent
-  liên quan.
-- Với capture ngoài trời hoặc nơi công cộng, làm mờ mặt người và biển số xe
-  trước khi annotate/export. Phase 0 không cần định danh cá nhân.
-- Không ghi âm cho vision datasets.
-- Xóa frame có tài liệu cá nhân đọc được, thẻ thanh toán, thông tin sức khỏe,
-  địa chỉ, số điện thoại, chat riêng tư hoặc credential.
-- Giữ raw capture local trong `data/custom/raw_frames_private/`; chỉ frame đã
-  sanitize mới được đưa sang bước annotation.
-- Manifest cần có các trường: ngày capture, loại địa điểm, trạng thái consent,
-  trạng thái sanitize, người review và ghi chú.
-- Xóa frame bị reject hoặc raw private frame sau khi subset đã sanitize được tạo
-  và backup theo policy local.
-
-## Lệnh Acceptance
-
-```bash
-python -m src.training.scripts.data_utils download-plan
-python -m src.training.scripts.data_utils verify-dataset-paths --tasks object_detection action_recognition scene_classification
-python -m src.training.scripts.data_utils write-classes
-python -m src.training.scripts.data_utils build-action-manifest
-python -m src.training.scripts.data_utils build-scene-subset
-python -m src.training.scripts.data_utils validate-tts --dry-run
-python -m src.training.scripts.capture_frames --duration-seconds 60 --fps 1
-ruff check .
-black --check .
-mypy .
-pytest
-```
-
-Nếu shell không nhận `python`, dùng fallback `$AIN501_PY` ở trên cho các lệnh
-tương đương.
-
-Phase 0 không bị block bởi action modeling cho “approaching”. “Approaching” là
-extension Phase 9, sẽ derive từ object detection và tracking.
+Chuyên viên phân tích dự án được khuyến khích tương tác chéo nhằm khai phá dữ liệu bằng các Thính phòng sổ tay mã thuật (Notebooks):
+- Trực quan Phân bố Lớp & Thông số Cấu trúc YOLO: Xem [0.3_coco_detection_explore.ipynb](file:///d:/workspace/GitHub/ain501/notebooks/0.3_coco_detection_explore.ipynb)
+- Lọc Trích Thông số Phân Nhóm Video Hành động: Xem [0.4_action_ucf101_explore.ipynb](file:///d:/workspace/GitHub/ain501/notebooks/0.4_action_ucf101_explore.ipynb)
+- Phân tách Thông số Ngôn ngữ Tự Nhiên & Đoạn Hội Thoại Đa Dạng: Xem [0.6_msvd_captioning_explore.ipynb](file:///d:/workspace/GitHub/ain501/notebooks/0.6_msvd_captioning_explore.ipynb)
+- Xác thực Tích biên Thông qua Thống Kê Hình Học Khối: Xem [0.7_textocr_explore.ipynb](file:///d:/workspace/GitHub/ain501/notebooks/0.7_textocr_explore.ipynb)

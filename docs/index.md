@@ -1,14 +1,18 @@
-# Tài Liệu AIN501
+# Trung Tâm Lưu Trữ Khảo Cứu AIN501 (AIN501 Documentation Hub)
 
-Đây là trang chủ tài liệu cho dự án AIN501 sử dụng MkDocs Material.
+Chào mừng độc giả đến với Cổng tri thức lõi của dự án AIN501 (được khởi tạo dựa trên kiến trúc MkDocs Material).
 
-## Mục Tiêu
+## Giao Trình Mục Tiêu (Objective Paradigm)
 
-- Cung cấp điểm vào thống nhất cho tài liệu kỹ thuật.
-- Tổ chức tài liệu theo nhóm rõ ràng: tổng quan, bộ dữ liệu, vận hành pipeline.
-- Hỗ trợ cập nhật dần từ nội dung tạm sang nội dung chính thức.
+- Khởi tạo kiến trúc đa điểm quy tụ mọi Tài Liệu Kỹ Thuật (Technical Documentation).
+- Phân rã cấu trúc theo Hệ Sinh Thái Chức Năng (Functional Ecosystem): Tổng quan kiến trúc, Cơ chế xử lý nguồn liệu, và Tuyến tiến trình kỹ thuật.
+- Đảm bảo tính kế thừa liên tục từ Tuyên bố Cấu hình Tạm thời sang Ấn bản Khoa học Chính thức.
 
-## Điều Hướng Nhanh
+## Lược Đồ Truy Cập Nhanh (Navigational Directory)
 
-- Nhóm `Tài liệu` chứa phần tổng quan, thí nghiệm, mô hình và bộ dữ liệu.
-- Nhóm `Tài liệu hiện có` giữ tài liệu vận hành chi tiết hiện tại.
+Trang tài liệu phân cấp dựa trên Khối Kiến Trúc Trọng Điểm:
+- Khu vực `Tài Liệu Cốt Lõi`: Chứa Bảng Khái Quát (Overview), Phương Tố Thí Nghiệm (Experiments), Liên kết Mô Hình (Models), và Trung Tâm Dữ Liệu (Datasets).
+- Khu vực `Tài Liệu Khai Triển`: Hội tụ các phân đoạn tiến trình thực thi (Pipeline configurations) chi tiết hiện hành.
+
+> [!NOTE] Cổng Siêu Dữ Liệu Lõi
+> Vui lòng truy cập **[Trung Tâm Chỉ Mục Bộ Dữ Liệu (Datasets Index)](datasets/index.md)** để nắm rõ toàn cảnh Phương pháp Xử lý Cơ Sở Dữ Liệu Phase 0.

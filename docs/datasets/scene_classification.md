@@ -1,83 +1,59 @@
-# Scene Classification Dataset (Bộ dữ liệu phân loại bối cảnh)
+# Bộ Nhận Diện Phân Loại Bối Cảnh (Scene Classification Dataset)
 
-## Mục Tiêu
+Phân loại Bối cảnh (Scene classification) đảm nhiệm cung cấp hệ quy chiếu môi trường không gian từ đó củng cố độ chính xác cho mô hình nhận diện vật thể lõi của hệ thống.
 
-Scene classification là tác vụ core để suy luận bối cảnh môi trường xung quanh.
+## Sơ Đồ Khối Tuyến Tính Lọc Phân Nhóm (Topology Filter Diagram)
 
-## Cấu Hình, Nguồn Và Class Subset
+```mermaid
+flowchart LR
+    A[Nguồn Thô Places365 <br/> Places365 Raw Sources] -->|File Danh Mục <br/> categories_places365.txt| C{Bộ Điều Chế Tập Con <br/> Subset Generator}
+    B[Tham Số Giảm Bất Đối Xứng <br/> max_images_per_class] --> C
+    
+    C --> D[Bộ Thông Tin Chỉ Mục <br/> Balanced manifest.csv]
+    D --> E[Dữ Liệu Đào Tạo Hoàn Chỉnh]
+```
 
-- Config: `configs/datasets/scene_accessibility.yaml`
-- Nguồn bootstrap: Places365
-- Cơ chế lọc class và cân bằng dữ liệu được điều khiển từ config
-- `max_images_per_class` dùng để tránh lệch phân phối và tránh bùng nổ dung lượng.
+## Thiết Lập Cấu Hình Và Thông Số Cân Bằng (Balanced Matrix Configurations)
 
-## Nguồn Tải
+Quá trình điều tiết tài nguyên cho cấu hình bối cảnh tuân thủ biểu mẫu `configs/datasets/scene_accessibility.yaml`. Nhằm kiểm soát hiện tượng bùng nổ không gian lưu trữ (Storage explosion) và Lệch phân phối lớp (Class imbalance), thuật toán sử dụng bộ lọc giới hạn hàm lượng. 
 
-- Trang dự án: [https://github.com/CSAILVision/places365](https://github.com/CSAILVision/places365)
-- Variant theo config: `places365_standard_256`
-- Metadata bắt buộc:
-  - `data/external/places365/categories_places365.txt`
-  - file list như `places365_val.txt`
+| Không Gian Đo (Category) | Thông Số Kỹ Thuật (Parameter) | Giá Trị Hoạt Động (Target Values) | Liên Kết Sổ Tay (Ref Notebook) |
+| --- | --- | --- | --- |
+| Lớp Căn Bản (Metadata) | `task` | `scene_classification` | N/A |
+| Hệ Thống Lọc (Balancing) | `max_images_per_class` | Khống chế ở mức `1000` | N/A |
+| Giới Hạn Hạt Giống (Balancing) | `split_seed` | `501` | N/A |
+| Tổ Hợp Phân Lớp (Class Bounds)| `places_subset` | 16 lớp nội tại Places365 | [Notebook 0.5](file:///d:/workspace/GitHub/ain501/notebooks/0.5_places_scene_subset.ipynb) |
+| Lớp Proxy Ngoại Lệ (Class Bounds)| `custom_or_proxy` | `sidewalk`, `bus_stop` (Cần nạp ngoài) | [Notebook 0.5](file:///d:/workspace/GitHub/ain501/notebooks/0.5_places_scene_subset.ipynb) |
 
-## Thông Số Quan Trọng
+### Lược Đồ Đầu Vào và Đích Đến (Input/Output Paradigms)
+- Cửa Cấp Liệu (Input Roots): 
+  - Khối Hình Ảnh Bối Cảnh: `data/external/places365`.
+  - Từ Điển Chỉ Mục Lớp: `data/external/places365/categories_places365.txt`.
+- Đích Kết Xuất (Output Roots): `data/processed/scene_accessibility` đính kèm Tệp Khai Báo tĩnh `manifest.csv`.
 
-| Nhóm | Thông số | Giá trị |
-| --- | --- | --- |
-| Metadata | `task` | `scene_classification` |
-| Metadata | `phase` | `0.5` |
-| Balancing | `max_images_per_class` | `1000` |
-| Balancing | `split_seed` | `501` |
-| Class | `places_subset` | 16 class |
-| Class | `custom_or_proxy` | `sidewalk`, `bus_stop` |
-| Output | `subset_root` | `data/processed/scene_accessibility` |
-| Output | `manifest` | `data/processed/scene_accessibility/manifest.csv` |
+## Các Tuyến Trình Vận Hành Cốt Lõi (Core Methodologies)
 
-## Cấu Trúc Input/Output
+> [!WARNING] Cảnh Báo Ghi Đè (Overwriting Incident)
+> Luôn giữ tham số `--dry-run` trong những vòng đánh giá ban đầu. Vui lòng quan sát cẩn thận tệp danh mục Categories đầu vào trước khi tiến hành chuyển hóa thành dữ liệu có cấu trúc.
 
-- Input roots:
-  - `data/external/places365`
-  - `data/external/places365/categories_places365.txt`
-  - file list như `places365_val.txt` (khi tạo subset từ file list)
-- Output root:
-  - `data/processed/scene_accessibility`
-- Artifact chính:
-  - `manifest.csv` cho subset đã lọc và cân bằng
-
-## Workflow Chi Tiết
-
-### Bước 1: Kiểm tra path và metadata nguồn
-
+### Giai Đoạn Tính Vẹn Toàn Của Biến Thể (Variant Integrity Assessment)
 ```bash
 python -m src.training.scripts.data_utils verify-dataset-paths --tasks scene_classification --skip-downloads
 ```
 
-### Bước 2: Tạo subset cân bằng
-
+### Giai Đoạn Vận Chuyển Tập Con Có Kiểm Soát (Balanced Subset Generation)
 ```bash
-python -m src.training.scripts.data_utils build-scene-subset --file-list data/external/places365/places365_val.txt --dry-run
 python -m src.training.scripts.data_utils build-scene-subset --file-list data/external/places365/places365_val.txt --execute
 ```
 
-Chỉ thêm `--execute` sau khi xác nhận file dataset đầu vào và output location.
+## Chỉ Nam Khắc Phục Lỗi Hệ Thống (Diagnostics & Troubleshooting)
 
-## Lưu Ý Class Và Mapping
+> [!CAUTION] Các Lỗi Có Thể Phát Sinh Trong Pipeline (Pipeline Breakdown Factors)
+> - **Ngắt Kết Nối Tên Loại (Class ID Disconnection):** Mất tệp `categories_places365.txt` sẽ làm hệ thống không thể dịch định danh chuỗi sang tên lớp văn bản học thuật.
+> - **Rỗng Danh Sách Do Thất Lạc Liên Kết (Orphaned File Lists):** Mã lệnh đọc ảnh nguồn khác với gốc thực tế, làm cho tệp `manifest.csv` thiếu vắng giá trị mảng.
+> - **Lệch Phân Phối Nhân Sinh (Cost Exploision):** Gỡ bỏ thiết lập giới hạn `max_images_per_class` gây tốn kém thời lượng và không gian phần cứng (I/O Cost).
 
-- `places_subset` là danh sách class dùng trực tiếp từ Places365.
-- `custom_or_proxy` ghi rõ class chưa có trực tiếp (ví dụ `sidewalk`, `bus_stop`) cần custom capture hoặc proxy mapping có kiểm soát.
+## Diễn Giải Tham Chiếu Khoa Học (Notebook Referencing)
 
-## Tiêu Chí Hoàn Thành
-
-- Manifest sinh ra với phân phối class cân bằng theo config.
-- Không có class ngoài danh sách cấu hình.
-- Output có thể dùng ngay cho pipeline train/eval scene model.
-
-## Lỗi Thường Gặp
-
-- Thiếu `categories_places365.txt` -> không resolve được class id -> name.
-- File list không khớp root ảnh -> manifest rỗng hoặc thiếu nặng.
-- Cấu hình `max_images_per_class` quá cao -> tăng chi phí IO không cần thiết.
-
-## Tham Chiếu
-
-- `docs/data_pipeline.md`
-- `configs/datasets/README.md`
+> [!NOTE]  
+> Các quy chuẩn lọc thuật toán Tập Con (Subset Filtering) và phân phối tĩnh theo Tên loại Cảnh Vật (Scene class configurations) được phác họa trong **[0.5_places_scene_subset.ipynb](file:///d:/workspace/GitHub/ain501/notebooks/0.5_places_scene_subset.ipynb)**. Đây là tài liệu kiểm thử không chứa lượng lớn dữ liệu khai báo và an toàn để triển khai cô lập.

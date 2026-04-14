@@ -89,6 +89,7 @@ def test_train_evaluate_predict_and_ablate_are_dry_run_safe(
     train_report = json.loads(capsys.readouterr().out)
     assert train_report["dry_run"] is True
     assert train_report["train"]["epochs"] == 1
+    assert train_report["train"]["fraction"] == 1.0
 
     assert yolov8n.main(["--config", str(config), "evaluate"]) == 0
     evaluate_report = json.loads(capsys.readouterr().out)
@@ -129,6 +130,34 @@ def test_train_evaluate_predict_and_ablate_are_dry_run_safe(
     assert ablation_report["dry_run"] is True
     assert len(ablation_report["ablation"]) == 4
     assert matrix_output.exists()
+
+
+def test_pilot_preset_and_summary_writer(
+    tmp_path: Path, capsys: CaptureFixture[str]
+) -> None:
+    """Pilot preset applies short-run defaults and summary JSON writes."""
+
+    dataset_root = _write_tiny_yolo_dataset(tmp_path)
+    data_yaml = tmp_path / "data.yaml"
+    config = _write_config(tmp_path, dataset_root, data_yaml)
+    assert yolov8n.main(["--config", str(config), "write-data-yaml", "--execute"]) == 0
+    capsys.readouterr()
+
+    assert yolov8n.main(["--config", str(config), "train", "--preset", "pilot"]) == 0
+    report = json.loads(capsys.readouterr().out)
+    assert report["dry_run"] is True
+    assert report["train"]["epochs"] == 5
+    assert report["train"]["name"] == "pilot_5e"
+    assert report["train"]["fraction"] == 0.005
+    assert report["train"]["multi_scale"] is False
+    assert report["train"]["workers"] == 0
+    assert report["train"]["patience"] == 2
+    assert report["train"]["exist_ok"] is True
+
+    output = tmp_path / "summary.json"
+    summary = {"status": "ok", "mAP50": 0.5}
+    yolov8n.write_summary_json(str(output), summary)
+    assert json.loads(output.read_text(encoding="utf-8")) == summary
 
 
 def test_qat_guard_reports_unsupported(capsys: CaptureFixture[str]) -> None:
@@ -182,6 +211,26 @@ def _write_config(tmp_path: Path, dataset_root: Path, data_yaml: Path) -> Path:
                     "mosaic": 1.0,
                     "mixup": 0.1,
                     "multi_scale": True,
+                    "workers": 0,
+                    "patience": 20,
+                    "fraction": 1.0,
+                    "exist_ok": False,
+                },
+                "pilot": {
+                    "epochs": 5,
+                    "batch": 1,
+                    "device": "cpu",
+                    "name": "pilot_5e",
+                    "fraction": 0.005,
+                    "workers": 0,
+                    "patience": 2,
+                    "multi_scale": False,
+                    "exist_ok": True,
+                    "summary_json": str(tmp_path / "reports" / "train_summary.json"),
+                    "eval_summary_json": str(
+                        tmp_path / "reports" / "eval_summary.json"
+                    ),
+                    "errors_csv": str(tmp_path / "reports" / "errors.csv"),
                 },
                 "output": {
                     "run_dir": str(tmp_path / "runs"),

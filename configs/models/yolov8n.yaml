@@ -15,6 +15,23 @@ training:
   mosaic: 1.0
   mixup: 0.1
   multi_scale: true
+  workers: 0
+  patience: 20
+  fraction: 1.0
+  exist_ok: false
+pilot:
+  epochs: 5
+  batch: 16
+  device: cpu
+  name: pilot_5e
+  fraction: 0.005
+  workers: 0
+  patience: 2
+  multi_scale: false
+  exist_ok: true
+  summary_json: reports/yolov8n/pilot_5e/train_summary.json
+  eval_summary_json: reports/yolov8n/pilot_5e/eval_summary.json
+  errors_csv: reports/yolov8n/pilot_5e/errors.csv
 output:
   run_dir: runs/yolov8n
   report_dir: reports/yolov8n

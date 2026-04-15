@@ -12,6 +12,7 @@ from src.caption.orchestrator import CaptionOrchestrator, build_rag_query_string
 from src.caption.template_engine import SpatialTemplateEngine
 from src.rag.knowledge_base import KnowledgeBase, load_json_entries
 from src.rag.minilm_embedder import MiniLMEmbedder
+from src.rag.types import KnowledgeEntry, ScoredEntry
 
 
 class _DeterministicEmbedder:
@@ -24,6 +25,14 @@ class _DeterministicEmbedder:
         v = rng.standard_normal(self.dim).astype(np.float32)
         v = v / (np.linalg.norm(v) + 1e-12)
         return v
+
+
+class _StubKnowledgeBase:
+    def __init__(self, hits: list[ScoredEntry] | None) -> None:
+        self._hits = hits
+
+    def search(self, text: str) -> list[ScoredEntry] | None:
+        return self._hits
 
 
 def test_build_rag_query_string_includes_scene() -> None:
@@ -117,6 +126,114 @@ def test_orchestrator_rag_disabled_uses_template() -> None:
     )
     assert len(events) >= 1
     assert orch.describe_sources(events) == ["template"]
+
+
+def test_orchestrator_person_only_never_mentions_vehicle() -> None:
+    eng = SpatialTemplateEngine(empty_policy="silent")
+    kb = _StubKnowledgeBase(
+        [
+            ScoredEntry(
+                entry=KnowledgeEntry(
+                    query="person front close",
+                    caption_vi="Phía trước có xe ô tô rất gần",
+                    priority=0,
+                    source_file="stub.json",
+                ),
+                score=0.9,
+            )
+        ]
+    )
+    orch = CaptionOrchestrator(
+        template_engine=eng,
+        knowledge_base=kb,  # type: ignore[arg-type]
+        rag_enabled=True,
+    )
+    dets = [
+        {
+            "label": "person",
+            "confidence": 0.9,
+            "bbox": {"x1": 40.0, "y1": 30.0, "x2": 140.0, "y2": 220.0},
+        }
+    ]
+    events = orch.generate(dets, frame_width=320, frame_height=240, merge_tier1=False)
+    text = " ".join(e.text.casefold() for e in events)
+    assert "xe ô tô" not in text
+    assert "car" not in text
+    assert "xe tải" not in text
+    assert "xe buýt" not in text
+
+
+def test_orchestrator_person_and_car_allows_vehicle_context() -> None:
+    eng = SpatialTemplateEngine(empty_policy="silent")
+    kb = _StubKnowledgeBase(
+        [
+            ScoredEntry(
+                entry=KnowledgeEntry(
+                    query="car front close",
+                    caption_vi="Cảnh báo: xe ô tô phía trước",
+                    priority=0,
+                    source_file="stub.json",
+                ),
+                score=0.9,
+            )
+        ]
+    )
+    orch = CaptionOrchestrator(
+        template_engine=eng,
+        knowledge_base=kb,  # type: ignore[arg-type]
+        rag_enabled=True,
+    )
+    dets = [
+        {
+            "label": "person",
+            "confidence": 0.9,
+            "bbox": {"x1": 20.0, "y1": 40.0, "x2": 100.0, "y2": 220.0},
+        },
+        {
+            "label": "car",
+            "confidence": 0.92,
+            "bbox": {"x1": 120.0, "y1": 60.0, "x2": 300.0, "y2": 220.0},
+        },
+    ]
+    events = orch.generate(dets, frame_width=320, frame_height=240, merge_tier1=False)
+    assert events
+    assert any(e.signature.startswith("rag:") for e in events)
+    assert any("xe ô tô" in e.text.casefold() for e in events)
+
+
+def test_orchestrator_dog_only_never_mentions_person_or_vehicle() -> None:
+    eng = SpatialTemplateEngine(empty_policy="silent")
+    kb = _StubKnowledgeBase(
+        [
+            ScoredEntry(
+                entry=KnowledgeEntry(
+                    query="dog front close",
+                    caption_vi="Phía trước có người và xe ô tô",
+                    priority=1,
+                    source_file="stub.json",
+                ),
+                score=0.9,
+            )
+        ]
+    )
+    orch = CaptionOrchestrator(
+        template_engine=eng,
+        knowledge_base=kb,  # type: ignore[arg-type]
+        rag_enabled=True,
+    )
+    dets = [
+        {
+            "label": "dog",
+            "confidence": 0.95,
+            "bbox": {"x1": 120.0, "y1": 80.0, "x2": 220.0, "y2": 220.0},
+        }
+    ]
+    events = orch.generate(dets, frame_width=320, frame_height=240, merge_tier1=False)
+    text = " ".join(e.text.casefold() for e in events)
+    assert "người" not in text
+    assert "person" not in text
+    assert "xe ô tô" not in text
+    assert "car" not in text
 
 
 @pytest.mark.skipif(

@@ -40,6 +40,19 @@ LABEL_VI = {
     "bench": "ghế dài",
     "chair": "ghế",
 }
+_CAPTION_LABEL_KEYWORDS = {
+    "person": ("người", "person"),
+    "dog": ("chó", "dog"),
+    "car": ("xe ô tô", "ô tô", "xe oto", "car"),
+    "truck": ("xe tải", "truck"),
+    "bus": ("xe buýt", "xebuyt", "bus"),
+    "motorcycle": ("xe máy", "motorcycle"),
+    "bicycle": ("xe đạp", "bicycle"),
+    "traffic light": ("đèn giao thông", "traffic light"),
+    "stop sign": ("biển dừng", "stop sign"),
+    "bench": ("ghế dài", "bench"),
+    "chair": ("ghế", "chair"),
+}
 
 
 def _normalize_label_token(text: str) -> str:
@@ -77,6 +90,24 @@ def _filter_hits_by_detected_labels(
             kept.append(h)
             continue
     return kept
+
+
+def _find_missing_labels_in_events(
+    events: list[CaptionEvent],
+    detected_labels: set[str],
+) -> set[str]:
+    if not events or not detected_labels:
+        return set()
+    missing: set[str] = set()
+    for ev in events:
+        text = ev.text.casefold()
+        for label, keywords in _CAPTION_LABEL_KEYWORDS.items():
+            norm_label = _normalize_label_token(label)
+            if norm_label in detected_labels:
+                continue
+            if any(keyword in text for keyword in keywords):
+                missing.add(norm_label)
+    return missing
 
 
 def _priority_int_to_str(p: int) -> str:
@@ -253,7 +284,25 @@ class CaptionOrchestrator:
                         flush=True,
                     )
                 if hits:
-                    base_events = _scored_to_events(hits)
+                    rag_events = _scored_to_events(hits)
+                    missing = _find_missing_labels_in_events(
+                        rag_events,
+                        detected_labels,
+                    )
+                    if missing:
+                        if os.environ.get("RAG_DEBUG") == "1":
+                            print(
+                                "[rag] inconsistent labels in caption -> "
+                                f"fallback template missing={sorted(missing)}",
+                                flush=True,
+                            )
+                        base_events = self._engine.render(
+                            detections,
+                            frame_width=frame_width,
+                            frame_height=frame_height,
+                        )
+                    else:
+                        base_events = rag_events
                 else:
                     base_events = self._engine.render(
                         detections,

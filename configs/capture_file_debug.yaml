@@ -1,0 +1,21 @@
+source:
+  type: file
+  webcam_index: 0
+  file_path: reports/debug/car_dog_sequence.mp4
+  file_loop: false
+
+screen:
+  backend: auto
+  region: null
+  select_region_on_start: false
+
+timing:
+  target_fps: 5.0
+  buffer_size: 30
+
+change_detection:
+  method: pixel_diff
+  ssim_trigger_below: 0.92
+  changed_fraction_trigger_above: 0.001
+  pixel_diff_threshold: 8
+  max_metric_side: 640

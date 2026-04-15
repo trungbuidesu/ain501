@@ -5,6 +5,25 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
+LABEL_VI = {
+    "person": "người",
+    "dog": "chó",
+    "car": "xe ô tô",
+    "truck": "xe tải",
+    "bus": "xe buýt",
+    "motorcycle": "xe máy",
+    "bicycle": "xe đạp",
+    "traffic_light": "đèn giao thông",
+    "stop_sign": "biển dừng",
+    "bench": "ghế dài",
+    "chair": "ghế",
+}
+
+
+def _label_to_vi(label: str) -> str:
+    key = label.strip().lower().replace(" ", "_")
+    return LABEL_VI.get(key, label)
+
 
 @dataclass(frozen=True, slots=True)
 class CaptionEvent:
@@ -108,7 +127,7 @@ class SpatialTemplateEngine:
                 float(frame_height),
             )
             priority = self._priority_for_label(label)
-            text = f"{direction} {distance} có {label}"
+            text = f"{direction} {distance} có {_label_to_vi(label)}"
             sig = f"{priority}:{label}:{direction}:{distance}"
             event = CaptionEvent(
                 text=text,

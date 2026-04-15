@@ -2,9 +2,7 @@
 
 from __future__ import annotations
 
-import json
 import os
-import time
 from difflib import SequenceMatcher
 from typing import Any
 
@@ -29,10 +27,28 @@ _VI_TO_EN_DIST = {
     "trung bình": "medium",
     "xa": "far",
 }
+LABEL_VI = {
+    "person": "người",
+    "dog": "chó",
+    "car": "xe ô tô",
+    "truck": "xe tải",
+    "bus": "xe buýt",
+    "motorcycle": "xe máy",
+    "bicycle": "xe đạp",
+    "traffic_light": "đèn giao thông",
+    "stop_sign": "biển dừng",
+    "bench": "ghế dài",
+    "chair": "ghế",
+}
 
 
 def _normalize_label_token(text: str) -> str:
     return text.strip().lower().replace("_", " ")
+
+
+def _label_to_vi(label: str) -> str:
+    key = label.strip().lower().replace(" ", "_")
+    return LABEL_VI.get(key, label)
 
 
 def _extract_detected_labels(detections: list[dict[str, Any]]) -> set[str]:
@@ -61,30 +77,6 @@ def _filter_hits_by_detected_labels(
             kept.append(h)
             continue
     return kept
-
-
-def _debug_log_event(
-    *,
-    hypothesis_id: str,
-    location: str,
-    message: str,
-    data: dict[str, Any],
-) -> None:
-    # #region agent log
-    payload = {
-        "sessionId": "40086b",
-        "runId": os.environ.get("YOLO_DEBUG_RUN_ID", "runtime"),
-        "hypothesisId": hypothesis_id,
-        "location": location,
-        "message": message,
-        "data": data,
-        "timestamp": int(time.time() * 1000),
-    }
-    root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-    log_path = os.path.join(root, "debug-40086b.log")
-    with open(log_path, "a", encoding="utf-8") as fp:
-        fp.write(json.dumps(payload, ensure_ascii=True) + "\n")
-    # #endregion
 
 
 def _priority_int_to_str(p: int) -> str:
@@ -169,7 +161,7 @@ def _scored_to_events(hits: list[ScoredEntry]) -> list[CaptionEvent]:
             CaptionEvent(
                 text=e.caption_vi,
                 priority=pr,
-                label=e.query[:48],
+                label=_label_to_vi(e.query[:48]),
                 direction="",
                 distance="",
                 confidence=float(h.score),
@@ -240,35 +232,12 @@ class CaptionOrchestrator:
             agent_results=agent_results,
         )
         detected_labels = _extract_detected_labels(detections)
-        if os.environ.get("YOLO_DEBUG") == "1":
-            _debug_log_event(
-                hypothesis_id="H4",
-                location="src/caption/orchestrator.py:generate",
-                message="caption_input_state",
-                data={
-                    "detections": [
-                        str(d.get("label", "")) for d in detections[:8]
-                    ],
-                    "detected_labels_norm": sorted(detected_labels),
-                    "query": query,
-                    "rag_enabled": self._rag_enabled,
-                    "kb_available": self._kb is not None,
-                    "last_text_before": self._last_text,
-                },
-            )
         if os.environ.get("RAG_DEBUG") == "1":
             print(f"[rag] query='{query}'", flush=True)
         base_events: list[CaptionEvent]
         use_template_only = bool(detected_labels) and len(detected_labels) <= 1
 
         if use_template_only:
-            if os.environ.get("YOLO_DEBUG") == "1":
-                _debug_log_event(
-                    hypothesis_id="H6",
-                    location="src/caption/orchestrator.py:generate",
-                    message="template_only_single_label_detection",
-                    data={"detected_labels_norm": sorted(detected_labels)},
-                )
             base_events = self._engine.render(
                 detections,
                 frame_width=frame_width,
@@ -286,16 +255,6 @@ class CaptionOrchestrator:
                 if hits:
                     base_events = _scored_to_events(hits)
                 else:
-                    if os.environ.get("YOLO_DEBUG") == "1":
-                        _debug_log_event(
-                            hypothesis_id="H6",
-                            location="src/caption/orchestrator.py:generate",
-                            message="rag_hits_filtered_out",
-                            data={
-                                "detected_labels_norm": sorted(detected_labels),
-                                "fallback": "template",
-                            },
-                        )
                     base_events = self._engine.render(
                         detections,
                         frame_width=frame_width,
@@ -324,17 +283,6 @@ class CaptionOrchestrator:
             events = list(base_events)
 
         events = self._dedup_against_previous_frame(events)
-        if os.environ.get("YOLO_DEBUG") == "1":
-            _debug_log_event(
-                hypothesis_id="H5",
-                location="src/caption/orchestrator.py:generate",
-                message="caption_output_state",
-                data={
-                    "events": [e.text for e in events[:4]],
-                    "sources": self.describe_sources(events)[:4],
-                    "last_text_after": self._last_text,
-                },
-            )
         return events
 
     def _dedup_against_previous_frame(

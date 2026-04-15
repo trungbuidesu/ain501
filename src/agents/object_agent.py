@@ -16,6 +16,89 @@ from src.agents.yolo_postprocess import decode_yolo_predictions, nms_class_aware
 from src.utils.artifact_paths import require_file
 from src.utils.onnx_benchmark import create_session
 
+_COCO80_LABELS = [
+    "person",
+    "bicycle",
+    "car",
+    "motorcycle",
+    "airplane",
+    "bus",
+    "train",
+    "truck",
+    "boat",
+    "traffic light",
+    "fire hydrant",
+    "stop sign",
+    "parking meter",
+    "bench",
+    "bird",
+    "cat",
+    "dog",
+    "horse",
+    "sheep",
+    "cow",
+    "elephant",
+    "bear",
+    "zebra",
+    "giraffe",
+    "backpack",
+    "umbrella",
+    "handbag",
+    "tie",
+    "suitcase",
+    "frisbee",
+    "skis",
+    "snowboard",
+    "sports ball",
+    "kite",
+    "baseball bat",
+    "baseball glove",
+    "skateboard",
+    "surfboard",
+    "tennis racket",
+    "bottle",
+    "wine glass",
+    "cup",
+    "fork",
+    "knife",
+    "spoon",
+    "bowl",
+    "banana",
+    "apple",
+    "sandwich",
+    "orange",
+    "broccoli",
+    "carrot",
+    "hot dog",
+    "pizza",
+    "donut",
+    "cake",
+    "chair",
+    "couch",
+    "potted plant",
+    "bed",
+    "dining table",
+    "toilet",
+    "tv",
+    "laptop",
+    "mouse",
+    "remote",
+    "keyboard",
+    "cell phone",
+    "microwave",
+    "oven",
+    "toaster",
+    "sink",
+    "refrigerator",
+    "book",
+    "clock",
+    "vase",
+    "scissors",
+    "teddy bear",
+    "hair drier",
+    "toothbrush",
+]
+
 
 def _repo_root() -> Path:
     return Path(__file__).resolve().parents[2]
@@ -80,7 +163,7 @@ class ObjectAgent:
         self.model_path = (
             Path(model_path) if model_path is not None else _resolve_yolo_model_path()
         )
-        self.labels = labels or _load_accessibility_labels()
+        labels_input = list(labels) if labels is not None else None
         self.input_size = int(input_size)
         self.conf_threshold = float(conf_threshold)
         self.iou_threshold = float(iou_threshold)
@@ -104,6 +187,21 @@ class ObjectAgent:
         self._input_name = input_meta.name
         shape = getattr(input_meta, "shape", None) or []
         self._input_shape = list(shape)
+        output_shape = getattr(self._session.get_outputs()[0], "shape", None) or []
+        self._output_shape = list(output_shape)
+        num_classes: int | None = None
+        if len(self._output_shape) >= 3:
+            dim1, dim2 = self._output_shape[1], self._output_shape[2]
+            if isinstance(dim1, int) and dim1 > 4:
+                num_classes = int(dim1) - 4
+            elif isinstance(dim2, int) and dim2 > 4:
+                num_classes = int(dim2) - 4
+        if labels_input is not None:
+            self.labels = labels_input
+        elif num_classes == len(_COCO80_LABELS):
+            self.labels = list(_COCO80_LABELS)
+        else:
+            self.labels = _load_accessibility_labels()
         batch_dim = shape[0] if len(shape) > 0 else None
         self._static_batch = int(batch_dim) if isinstance(batch_dim, int) else 1
         if self._debug:
@@ -114,6 +212,7 @@ class ObjectAgent:
                     f"path={self.model_path} size_mb={size_mb:.2f} "
                     f"providers={self._providers} input_name={self._input_name} "
                     f"input_shape={self._input_shape} "
+                    f"output_shape={self._output_shape} "
                     f"conf_threshold={self.conf_threshold} "
                     f"allowed_labels={self.allowed_labels}"
                 ),

@@ -20,3 +20,35 @@ output:
   reports_dir: reports/phase2
   dedup_window_s: 2.5
   debug_overlay: false
+
+# Tier 1: router + parallel experts (disabled by default; enable when ONNX artifacts exist).
+tier1:
+  enabled: false
+  strict_artifacts: true
+  object_only: false
+  ring_buffer_maxlen: 48
+  action_clip_frames: 6
+  movinet_int8: models/movinet_a0_int8.onnx
+  ocr_confidence: 0.5
+  ocr_grid: 2
+  mediapipe_model_dir: reports/prebuilt_week5/_mediapipe_models
+  router:
+    model_path: models/scene_classifier_int8.onnx
+    confidence_threshold: 0.45
+    image_size: 160
+    scene_to_agents:
+      static: [object]
+      motion: [object, action]
+      text_present: [object, ocr]
+      face_detected: [object, face_pose]
+      scene_change: [object, action]
+    fallback:
+      motion_diff_threshold: 8.0
+      edge_density_threshold: 0.08
+      skin_ratio_threshold: 0.12
+      motion_diff_scene_change: 18.0
+  timeouts:
+    object_s: 2.0
+    action_s: 2.0
+    ocr_s: 5.0
+    face_pose_s: 3.0

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import replace
 from pathlib import Path
 
 from src.app.phase2_mvp import load_phase2_config, run_phase2
@@ -15,18 +16,14 @@ def test_load_phase2_config_defaults() -> None:
 
 def test_run_phase2_with_fake_source(monkeypatch, tmp_path) -> None:
     cfg = load_phase2_config(Path("configs/phase2_mvp.yaml"))
-    cfg = type(cfg)(
-        capture_config=cfg.capture_config,
+    cfg = replace(
+        cfg,
         yolo_model_path=tmp_path / "yolov8n_int8.onnx",
         mobilenet_model_path=tmp_path / "mobilenetv3_small_fp32.onnx",
         piper_model_path=tmp_path / "voice.onnx",
-        conf_threshold=cfg.conf_threshold,
-        iou_threshold=cfg.iou_threshold,
-        max_detections=cfg.max_detections,
         use_encoder=False,
         debug_overlay=False,
         reports_dir=tmp_path / "reports",
-        empty_policy="silent",
         dedup_window_s=0.1,
     )
 

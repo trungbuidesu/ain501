@@ -1,16 +1,28 @@
 """Unit tests cho pipeline MoViNet-A0."""
 
+from __future__ import annotations
+
+import csv
 from pathlib import Path
 
 import pytest
 import torch
 
 from src.training.data.action_recognition.clip_dataset import VideoClipDataset
-from src.training.models.video.movinet import MoViNetA0Backbone
+
+try:
+    from src.training.models.video.movinet import MoViNetA0Backbone
+except ImportError:
+    MoViNetA0Backbone = None  # type: ignore[misc, assignment]
+
+SKIP_MOVINET = MoViNetA0Backbone is None
+SKIP_MOVINET_REASON = "movinets backend not installed (pip install from MoViNet upstream if needed)"
 
 
+@pytest.mark.skipif(SKIP_MOVINET, reason=SKIP_MOVINET_REASON)
 def test_movinet_backbone_structure():
     """Kiểm tra cấu trúc và output shape của MoViNetA0Backbone."""
+    assert MoViNetA0Backbone is not None
     num_classes = 10
     model = MoViNetA0Backbone(num_classes=num_classes, causal=True)
     model.eval()
@@ -26,8 +38,10 @@ def test_movinet_backbone_structure():
     ), f"Expected shape (1, {num_classes}), got {output.shape}"
 
 
+@pytest.mark.skipif(SKIP_MOVINET, reason=SKIP_MOVINET_REASON)
 def test_movinet_causal_streaming():
     """Kiểm tra tính năng streaming (causal) và clean_activation_buffers."""
+    assert MoViNetA0Backbone is not None
     model = MoViNetA0Backbone(num_classes=5, causal=True)
     model.eval()
 
@@ -61,7 +75,11 @@ def test_movinet_causal_streaming():
 def test_clip_dataset():
     """Kiểm tra VideoClipDataset với dữ liệu thực tế."""
     manifest_path = Path("data/processed/action_accessibility/manifest.csv")
-    class_names = ["BabyCrawling", "Basketball"]  # Giả sử có 2 class này
+    with manifest_path.open(newline="", encoding="utf-8") as f:
+        rows = list(csv.DictReader(f))
+    if not rows:
+        pytest.skip("Manifest is empty")
+    class_names = sorted({str(r["label"]) for r in rows})
 
     dataset = VideoClipDataset(
         manifest_path=manifest_path,
@@ -82,9 +100,11 @@ def test_clip_dataset():
         pytest.fail(f"Dataset access failed: {e}")
 
 
+@pytest.mark.skipif(SKIP_MOVINET, reason=SKIP_MOVINET_REASON)
 def test_movinet_xpu_compatibility():
     """Kiểm tra khả năng tương thích với XPU nếu có."""
-    if not torch.xpu.is_available():
+    assert MoViNetA0Backbone is not None
+    if not hasattr(torch, "xpu") or not torch.xpu.is_available():
         pytest.skip("XPU not available")
 
     device = torch.device("xpu")

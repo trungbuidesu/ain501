@@ -28,6 +28,7 @@ nav:
       - Data Pipeline: data_pipeline.md
       - Week 6 — benchmark & registry: training/week6_training_log.md
       - Phase 2 MVP object-to-speech: training/phase2_mvp.md
+      - Phase 3 Tier 1 (router + agents): training/phase3_tier1.md
       - Active learning (MVP): active_learning.md
 
 plugins:

@@ -8,6 +8,9 @@ import numpy as np
 
 from src.capture.types import ScreenRegion
 
+# dxcam often returns None sporadically; retry before treating as failure.
+_DXCAM_GRAB_MAX_ATTEMPTS = 256
+
 
 def create_dxcam_if_available() -> Any | None:
     try:
@@ -30,7 +33,11 @@ def grab_rgb_dxcam(camera: Any, region: ScreenRegion | None) -> np.ndarray | Non
 
     import cv2
 
-    frame = camera.grab()
+    frame = None
+    for _ in range(_DXCAM_GRAB_MAX_ATTEMPTS):
+        frame = camera.grab()
+        if frame is not None:
+            break
     if frame is None:
         return None
     rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)

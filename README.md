@@ -117,6 +117,13 @@ $AIN501_PY=Join-Path $env:CONDA_PREFIX "python.exe"
 # Tùy chọn: & $AIN501_PY -m pip install -e ".[tts]"
 ```
 
+### Phase 2 / Tier 1 runtime (object-to-speech + router)
+
+- **Phase 2 (mặc định):** `python -m src.app.phase2_mvp --config configs/phase2_mvp.yaml`
+- **Tier 1:** bật `tier1.enabled: true` trong `configs/phase2_mvp.yaml` (cần ONNX scene + MoViNet; xem `models/registry.json`). Tài liệu: [docs/training/phase3_tier1.md](docs/training/phase3_tier1.md).
+- **Chỉ YOLO (debug):** `python -m src.app.phase2_mvp --config configs/phase2_mvp.yaml --object-only`
+- **Benchmark CPU từng agent Tier 1:** `python -m src.training.scripts.benchmark_tier1_agents` → `reports/phase3/tier1_benchmark.md`
+
 ## Pipeline Dữ Liệu
 
 Các cấu hình dataset nằm trong [configs/datasets](configs/datasets) và được mô
@@ -176,6 +183,11 @@ Các bộ dữ liệu (dataset) đang được khai báo cấu hình:
 - **Giọng nói ảo (TTS Validation):** Khai phá các model ONNX của Piper để kiểm chứng tín hiệu phát âm thanh đầu ra.
 - **Ước lượng chiều sâu (Depth Estimation):** Slot model dự phòng cho thuật toán MiDaS.
 - **Kho Tri Thức Vector (Vector Database):** Tích hợp ChromaDB để lưu trữ không gian nhúng (Embeddings) phục vụ truy xuất ngữ nghĩa (RAG) và tra cứu siêu dữ liệu dự án.
+
+## Phase 2 MVP (Object-to-Speech)
+
+MVP Phase 2 chạy pipeline capture → YOLO → mô tả không gian → Piper TTS. Hướng dẫn đầy đủ (cài Piper/giọng, chỉnh `configs/phase2_mvp.yaml` và `capture_pipeline.yaml`, lệnh chạy, đầu ra `reports/phase2/`, xử lý sự cố) nằm trong
+[docs/training/phase2_mvp.md](docs/training/phase2_mvp.md).
 
 ## Notebook khám phá
 

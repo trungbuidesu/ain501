@@ -27,5 +27,10 @@ class RingBuffer:
     def latest(self) -> FramePacket | None:
         return self._dq[-1] if self._dq else None
 
+    def as_list(self) -> list[FramePacket]:
+        """Return a snapshot of buffered packets in chronological order."""
+
+        return list(self._dq)
+
     def clear(self) -> None:
         self._dq.clear()

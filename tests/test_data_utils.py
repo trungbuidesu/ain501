@@ -415,7 +415,7 @@ def test_config_contains_accessibility_requirements() -> None:
     detection = load_yaml(Path("configs/datasets/object_detection_accessibility.yaml"))
     action = load_yaml(Path("configs/datasets/action_accessibility.yaml"))
     assert "dog" in detection["classes"]["coco_subset"]
-    assert "Phase 9" in action["phase_notes"]["approaching"]
+    assert "walk" in action["classes"]["hmdb51_accessibility"]
 
 
 def test_ucf101_action_manifest_uses_official_split_lists(tmp_path: Path) -> None:

@@ -4,7 +4,7 @@
 capture_config: configs/capture_pipeline.yaml
 
 models:
-  yolo_int8: models/yolov8n.onnx
+  yolo_int8: models/yolov8n_int8.onnx
   mobilenet_fp32: models/mobilenetv3_small_fp32.onnx
   piper_model_path: models/tts/piper/vi/vi_VN/vais1000/medium/vi_VN-vais1000-medium.onnx
 
@@ -12,9 +12,21 @@ encoder:
   enabled: true
 
 detector:
-  conf_threshold: 0.5
+  conf_threshold: 0.6
   iou_threshold: 0.45
   max_detections: 100
+  allowed_labels:
+    - person
+    - dog
+    - car
+    - truck
+    - bus
+    - motorcycle
+    - bicycle
+    - traffic_light
+    - stop_sign
+    - bench
+    - chair
 
 caption:
   empty_policy: silent

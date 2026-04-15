@@ -77,6 +77,7 @@ class AppConfig:
     rag_top_k: int
     rag_min_similarity: float
     rag_dedup_similarity: float
+    allowed_detection_labels: list[str] = field(default_factory=list)
     hotkeys: dict[str, str] = field(default_factory=dict)
     default_verbosity: str = "medium"
     screenshot_dir: Path = field(default_factory=lambda: Path("screenshots"))
@@ -161,6 +162,12 @@ def load_app_config(path: Path | str) -> AppConfig:
     ui = _as_mapping(raw.get("ui"))
     _sd = str(ui.get("screenshot_dir", "screenshots")).strip().rstrip("/\\")
     screenshot_dir = (root / _sd).resolve()
+    allowed_labels_raw = d.get("allowed_labels", [])
+    allowed_detection_labels = (
+        [str(x) for x in allowed_labels_raw]
+        if isinstance(allowed_labels_raw, list)
+        else []
+    )
 
     capture_config = root / str(
         raw.get("capture_config", "configs/capture_pipeline.yaml")
@@ -221,6 +228,7 @@ def load_app_config(path: Path | str) -> AppConfig:
         conf_threshold=float(d.get("conf_threshold", 0.25)),
         iou_threshold=float(d.get("iou_threshold", 0.45)),
         max_detections=int(d.get("max_detections", 100)),
+        allowed_detection_labels=allowed_detection_labels,
         use_encoder=bool(_as_mapping(raw.get("encoder")).get("enabled", False)),
         debug_overlay=bool(o.get("debug_overlay", False)),
         reports_dir=(root / str(o.get("reports_dir", "reports/app"))).resolve(),

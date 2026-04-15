@@ -58,6 +58,7 @@ class AppRuntime:
             conf_threshold=cfg.conf_threshold,
             iou_threshold=cfg.iou_threshold,
             max_detections=cfg.max_detections,
+            allowed_labels=cfg.allowed_detection_labels,
         )
         self._engine = SpatialTemplateEngine(empty_policy=cfg.empty_policy)
         kb: KnowledgeBase | None = None

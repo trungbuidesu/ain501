@@ -57,6 +57,10 @@ def _clip_boxes(boxes: np.ndarray, width: int, height: int) -> np.ndarray:
     return out
 
 
+def _normalize_label(name: str) -> str:
+    return name.strip().lower().replace(" ", "_")
+
+
 class ObjectAgent:
     """Object detector with ONNXRuntime preprocessing and postprocessing."""
 
@@ -69,6 +73,7 @@ class ObjectAgent:
         conf_threshold: float = 0.25,
         iou_threshold: float = 0.45,
         max_detections: int = 100,
+        allowed_labels: list[str] | None = None,
         providers: list[str] | None = None,
         session: Any | None = None,
     ) -> None:
@@ -80,6 +85,10 @@ class ObjectAgent:
         self.conf_threshold = float(conf_threshold)
         self.iou_threshold = float(iou_threshold)
         self.max_detections = int(max_detections)
+        self.allowed_labels = list(allowed_labels or [])
+        self._allowed_labels_norm = {
+            _normalize_label(x) for x in self.allowed_labels if str(x).strip()
+        }
         self._debug = os.environ.get("YOLO_DEBUG", "0") == "1"
         if session is not None:
             self._session = session
@@ -105,7 +114,8 @@ class ObjectAgent:
                     f"path={self.model_path} size_mb={size_mb:.2f} "
                     f"providers={self._providers} input_name={self._input_name} "
                     f"input_shape={self._input_shape} "
-                    f"conf_threshold={self.conf_threshold}"
+                    f"conf_threshold={self.conf_threshold} "
+                    f"allowed_labels={self.allowed_labels}"
                 ),
                 flush=True,
             )
@@ -202,6 +212,10 @@ class ObjectAgent:
 
         rows: list[dict[str, Any]] = []
         for i, name in enumerate(labels):
+            if self._allowed_labels_norm and (
+                _normalize_label(name) not in self._allowed_labels_norm
+            ):
+                continue
             x1, y1, x2, y2 = boxes[i].tolist()
             rows.append(
                 {

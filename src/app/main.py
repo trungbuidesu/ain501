@@ -6,6 +6,7 @@ import argparse
 import json
 import queue
 import statistics
+import sys
 import threading
 import time
 from dataclasses import dataclass, field, replace
@@ -25,6 +26,20 @@ from src.core.hotkeys import start_hotkey_listener, stop_hotkey_listener
 from src.detection.change_detector import ChangeDetector
 from src.output.audio_output import play_hazard_beep
 from src.ui.state import DemoControlState
+
+
+def _as_mapping(x: Any) -> dict[str, Any]:
+    return x if isinstance(x, dict) else {}
+
+
+def _safe_print(line: str) -> None:
+    """Avoid UnicodeEncodeError on Windows consoles using legacy code pages."""
+
+    try:
+        print(line, flush=True)
+    except UnicodeEncodeError:
+        sys.stdout.buffer.write((line + "\n").encode("utf-8", errors="replace"))
+        sys.stdout.buffer.flush()
 
 
 @dataclass(frozen=True, slots=True)
@@ -109,7 +124,7 @@ def filter_caption_events_for_verbosity(
         return list(events), list(sources)
     out_e: list[CaptionEvent] = []
     out_s: list[str] = []
-    for ev, src in zip(events, sources):
+    for ev, src in zip(events, sources, strict=True):
         pr = ev.priority
         if verbosity == "low":
             if pr == "hazard":
@@ -135,15 +150,15 @@ def load_app_config(path: Path | str) -> AppConfig:
     if not isinstance(raw, dict):
         raise ValueError("app config root must be mapping")
     root = Path(__file__).resolve().parents[2]
-    m = raw.get("models", {})
-    d = raw.get("detector", {})
-    c = raw.get("caption", {})
-    o = raw.get("output", {})
-    t1 = raw.get("tier1", {}) if isinstance(raw.get("tier1"), dict) else {}
-    rag_block = raw.get("rag") if isinstance(raw.get("rag"), dict) else {}
-    hk = raw.get("hotkeys") if isinstance(raw.get("hotkeys"), dict) else {}
+    m = _as_mapping(raw.get("models"))
+    d = _as_mapping(raw.get("detector"))
+    c = _as_mapping(raw.get("caption"))
+    o = _as_mapping(raw.get("output"))
+    t1 = _as_mapping(raw.get("tier1"))
+    rag_block = _as_mapping(raw.get("rag"))
+    hk = _as_mapping(raw.get("hotkeys"))
     hotkeys = {str(k): str(v) for k, v in hk.items()}
-    ui = raw.get("ui") if isinstance(raw.get("ui"), dict) else {}
+    ui = _as_mapping(raw.get("ui"))
     _sd = str(ui.get("screenshot_dir", "screenshots")).strip().rstrip("/\\")
     screenshot_dir = (root / _sd).resolve()
 
@@ -206,7 +221,7 @@ def load_app_config(path: Path | str) -> AppConfig:
         conf_threshold=float(d.get("conf_threshold", 0.25)),
         iou_threshold=float(d.get("iou_threshold", 0.45)),
         max_detections=int(d.get("max_detections", 100)),
-        use_encoder=bool(raw.get("encoder", {}).get("enabled", False)),
+        use_encoder=bool(_as_mapping(raw.get("encoder")).get("enabled", False)),
         debug_overlay=bool(o.get("debug_overlay", False)),
         reports_dir=(root / str(o.get("reports_dir", "reports/app"))).resolve(),
         empty_policy=str(c.get("empty_policy", "silent")),
@@ -413,7 +428,7 @@ def _run_app_loop(
                         f"[caption] {event.text} source={_src} "
                         f"priority={event.priority}"
                     )
-                    print(cap, flush=True)
+                    _safe_print(cap)
                 elif not is_muted and enable_tts:
                     if event.priority == "hazard" and hazard_beep:
                         play_hazard_beep()

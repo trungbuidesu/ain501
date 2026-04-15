@@ -125,6 +125,10 @@ $AIN501_PY=Join-Path $env:CONDA_PREFIX "python.exe"
 - **Benchmark CPU từng agent Tier 1:** `python -m src.training.scripts.benchmark_tier1_agents` → `reports/phase3/tier1_benchmark.md`
 - **RAG Lite:** bật `rag.enabled: true` trong [`configs/app.yaml`](configs/app.yaml) (cần `models/minilm_l6.onnx` + `data/knowledge/*.json`). Tài liệu: [docs/training/phase3_rag.md](docs/training/phase3_rag.md).
 
+**Môi trường:** khuyến nghị conda env `ain501` (Python 3.10+), cài dev: `pip install -e ".[dev]"`.
+
+**Kiểm tra đầy đủ trước khi PR (từ thư mục gốc repo):** `black .` → `ruff check .` → `mypy .` → `pytest -q` → `python -m src.app --dry-run` → `python -m src.app --visual --dry-run`. Không cần `--config` trừ khi muốn file YAML khác; mặc định là [`configs/app.yaml`](configs/app.yaml).
+
 ## Pipeline Dữ Liệu
 
 Các cấu hình dataset nằm trong [configs/datasets](configs/datasets) và được mô

@@ -31,7 +31,7 @@ class AudioOutputManager:
         self,
         model_path: Path | str,
         *,
-        output_dir: Path | str = Path("reports/phase2/audio"),
+        output_dir: Path | str = Path("reports/app/audio"),
         dedup_window_s: float = 2.5,
         synth_fn: Callable[[str], Any] | None = None,
         piper_executable: str = "piper",

@@ -4,13 +4,21 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, Protocol, cast
 
 import faiss  # type: ignore[import-untyped]
 import numpy as np
 
 from src.rag.minilm_embedder import MiniLMEmbedder
 from src.rag.types import KnowledgeEntry, ScoredEntry
+
+
+class _EmbedderLike(Protocol):
+    """Anything that can produce normalized vectors (MiniLM or test double)."""
+
+    dim: int
+
+    def encode(self, text: str) -> np.ndarray: ...
 
 
 def _repo_root() -> Path:
@@ -59,7 +67,7 @@ class KnowledgeBase:
         *,
         top_k: int = 3,
         min_similarity: float = 0.3,
-        embedder: MiniLMEmbedder | None = None,
+        embedder: _EmbedderLike | None = None,
     ) -> None:
         self._root = _repo_root()
         self.model_path = Path(model_path)
@@ -70,7 +78,10 @@ class KnowledgeBase:
         )
         self.top_k = int(top_k)
         self.min_similarity = float(min_similarity)
-        self._embedder = embedder or MiniLMEmbedder(self.model_path)
+        self._embedder = cast(
+            _EmbedderLike,
+            embedder if embedder is not None else MiniLMEmbedder(self.model_path),
+        )
         self._entries: list[KnowledgeEntry] = []
         self._index: Any = None
         self._dim: int = 0

@@ -34,7 +34,10 @@ class MiniLMEmbedder:
             require_file(
                 self.model_path,
                 model_id="minilm_l6",
-                hint="Export or copy MiniLM-L6 ONNX; see configs/models/minilm_l6.yaml.",
+                hint=(
+                    "Export or copy MiniLM-L6 ONNX; "
+                    "see configs/models/minilm_l6.yaml."
+                ),
             )
             self._session = create_session(
                 self.model_path,

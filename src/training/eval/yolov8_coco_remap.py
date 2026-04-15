@@ -129,7 +129,7 @@ def load_subset_names_from_data_yaml(path: Path) -> list[str]:
 def resolve_dataset_root(
     data_yaml: Path, raw: dict[str, Any], *, cwd: Path | None = None
 ) -> Path:
-    """Resolve `path` like Ultralytics: relative to current working directory (repo root)."""
+    """Resolve ``path`` like Ultralytics (relative to cwd / repo root)."""
 
     root = raw.get("path")
     if not isinstance(root, str) or not root.strip():
@@ -169,7 +169,7 @@ def yolo_labels_path(image_path: Path, dataset_root: Path, val_rel: str) -> Path
 def parse_yolo_gt_label(
     path: Path, img_w: int, img_h: int
 ) -> tuple[np.ndarray, np.ndarray]:
-    """Return (cls_ids int (n,), boxes_xyxy (n,4)) in pixel coords; skip invalid lines."""
+    """Return class ids and xyxy boxes in pixels; skip invalid lines."""
 
     if not path.is_file():
         return np.zeros((0,), dtype=np.int64), np.zeros((0, 4), dtype=np.float64)
@@ -345,7 +345,10 @@ def write_eval_json(
         "device": device,
         "num_val_images": num_images,
         "iou_threshold": 0.5,
-        "note": "mAP50 computed after mapping COCO pred class ids to subset ids by name (no label files changed).",
+        "note": (
+            "mAP50 after mapping COCO pred class ids to subset ids by name "
+            "(label files unchanged)."
+        ),
     }
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")

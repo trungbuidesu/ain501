@@ -67,7 +67,7 @@ class ONNXAdaptiveAvgPoolPatch:
 
     def __enter__(self) -> None:
         def patched_fn(input: torch.Tensor, output_size: Any) -> torch.Tensor:
-            # Nếu output_size là [T, 1, 1], ta dùng AvgPool3d với kernel bằng size hiện tại
+            # Nếu output_size là [T, 1, 1]: dùng AvgPool3d, kernel = spatial size.
             if isinstance(output_size, (list, tuple)) and output_size[1:] == (1, 1):
                 h, w = input.shape[-2:]
                 return torch.nn.functional.avg_pool3d(
@@ -100,12 +100,12 @@ class MoViNetCalibrationDataReader:
         dataset: FrameClipDataset,
         batch_size: int = 1,
         max_samples: int = 100,
-        device: torch.device = torch.device("cpu"),
+        device: torch.device | None = None,
     ) -> None:
         self.dataset = dataset
         self.batch_size = batch_size
         self.max_samples = min(max_samples, len(dataset))
-        self.device = device
+        self.device = device if device is not None else torch.device("cpu")
         self.current_idx = 0
         self.input_name = "input"
 
@@ -565,8 +565,9 @@ def main_ptq(args: argparse.Namespace) -> int:
     print("\n--- Model Stats ---")
     print(f"  FP32 ONNX Size: {fp32_size:.2f} MB")
     print(f"  INT8 ONNX Size: {int8_size:.2f} MB")
+    ratio = int8_size / fp32_size
     print(
-        f"  Size Ratio: {int8_size / fp32_size:.2x} (Note: FP32 export in PT2.5 is highly optimized)"
+        f"  Size Ratio: {ratio:.2x} " "(Note: FP32 export in PT2.5 is highly optimized)"
     )
 
     return 0

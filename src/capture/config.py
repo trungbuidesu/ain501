@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal
 
-import yaml
+import yaml  # type: ignore[import-untyped]
 
 from src.capture.types import ScreenRegion
 

@@ -32,8 +32,21 @@ class DemoWindow:
         self._control = control or DemoControlState()
         self._control.screenshot_dir = Path(screenshot_dir)
         self._cv2 = cv2
-        self._cv2.namedWindow(self.window_name, self._cv2.WINDOW_NORMAL)
-        self._cv2.resizeWindow(self.window_name, 960, 720)
+        self._gui_ok = False
+        try:
+            self._cv2.namedWindow(self.window_name, self._cv2.WINDOW_NORMAL)
+            self._cv2.resizeWindow(self.window_name, 960, 720)
+            self._gui_ok = True
+        except cv2.error:
+            print(
+                "[demo] OpenCV GUI unavailable (e.g. headless build); "
+                "continuing without a display window.",
+                flush=True,
+            )
+
+    @property
+    def gui_available(self) -> bool:
+        return self._gui_ok
 
     def show_frame(
         self,
@@ -57,6 +70,8 @@ class DemoWindow:
             caption_vi=caption_vi,
             caption_subline=sub,
         )
+        if not self._gui_ok:
+            return
         self._cv2.imshow(self.window_name, display)
         key = self._cv2.waitKey(1) & 0xFF
         if key == ord("q"):
@@ -82,7 +97,8 @@ class DemoWindow:
             self._control.rag_enabled = not self._control.rag_enabled
 
     def close(self) -> None:
-        self._cv2.destroyAllWindows()
+        if self._gui_ok:
+            self._cv2.destroyAllWindows()
 
 
 def save_screenshot(

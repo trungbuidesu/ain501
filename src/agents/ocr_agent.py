@@ -130,22 +130,27 @@ class OcrAgent:
                 from paddleocr import PaddleOCR
             except ImportError as exc:
                 raise RuntimeError(
-                    "paddleocr is required for OcrAgent. Install paddlepaddle + paddleocr."
+                    "paddleocr is required for OcrAgent. "
+                    "Install paddlepaddle + paddleocr.",
                 ) from exc
             try:
                 self._ocr = PaddleOCR(
                     use_angle_cls=self._use_angle_cls,
                     lang=self._lang,
-                    show_log=False,
                 )
             except TypeError:
                 self._ocr = PaddleOCR(lang=self._lang)
         return self._ocr
 
     def _run_ocr(self, ocr: Any, crop: np.ndarray) -> Any:
+        if hasattr(ocr, "predict"):
+            return ocr.predict(crop)
         if hasattr(ocr, "ocr"):
-            return ocr.ocr(crop, cls=self._use_angle_cls)
-        return ocr.predict(crop)
+            try:
+                return ocr.ocr(crop, cls=self._use_angle_cls)
+            except TypeError:
+                return ocr.ocr(crop)
+        raise RuntimeError("OCR backend has no predict/ocr")
 
     def read_text(self, frame_rgb: np.ndarray) -> list[dict[str, Any]]:
         """Return filtered line dicts: text, position{x,y,w,h}, confidence."""

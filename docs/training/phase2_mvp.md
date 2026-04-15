@@ -147,7 +147,7 @@ Trong terminal đang chạy: `Ctrl + C`.
 ## 9. Kiểm thử tự động (dev)
 
 ```bash
-pytest tests/test_phase2_encoder.py tests/test_phase2_object_agent.py tests/test_phase2_template_engine.py tests/test_phase2_audio_output.py tests/test_main.py
+pytest tests/test_visual_encoder.py tests/test_object_agent.py tests/test_spatial_template_engine.py tests/test_audio_output_manager.py tests/test_main.py
 ```
 
 ## 10. Tài liệu liên quan

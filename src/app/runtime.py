@@ -227,8 +227,10 @@ class AppRuntime:
         tier1_mgr = cfg.tier1_enabled and not cfg.tier1_object_only
         tier1_mgr = tier1_mgr and self._manager is not None
         if tier1_mgr:
+            mgr = self._manager
+            assert mgr is not None
             t_mgr0 = time.perf_counter()
-            agent_results = self._manager.run_parallel(
+            agent_results = mgr.run_parallel(
                 frame_rgb=packet.data,
                 active=active,
                 action_packets=action_packets,

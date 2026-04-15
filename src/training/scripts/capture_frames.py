@@ -74,7 +74,7 @@ def _capture_screen_loop(
     dxcam_camera: object | None,
     mss_instance: object,
 ) -> int:
-    """Ghi frame màn hình (dxcam hoặc mss) và lưu JPEG; dùng chung ``screen_backend``."""
+    """Ghi frame màn hình (dxcam hoặc mss), lưu JPEG; dùng ``screen_backend``."""
     from PIL import Image
 
     captured = 0

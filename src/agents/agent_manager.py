@@ -8,9 +8,6 @@ from concurrent.futures import TimeoutError as FutureTimeout
 from dataclasses import dataclass, field
 from typing import Any
 
-from src.agents.face_pose_agent import FacePoseAgent
-from src.agents.object_agent import ObjectAgent
-from src.agents.ocr_agent import OcrAgent
 from src.capture.types import FramePacket
 
 
@@ -36,10 +33,10 @@ class AgentManagerStats:
 class AgentManager:
     """Runs selected experts in parallel with timeouts."""
 
-    object_agent: ObjectAgent
+    object_agent: Any
     action_agent: Any | None
-    ocr_agent: OcrAgent | None
-    face_pose_agent: FacePoseAgent | None
+    ocr_agent: Any
+    face_pose_agent: Any
     timeout_object_s: float = 2.0
     timeout_action_s: float = 2.0
     timeout_ocr_s: float = 5.0
@@ -75,22 +72,25 @@ class AgentManager:
                 lambda: self.object_agent.detect_instances(frame_rgb),
                 self.timeout_object_s,
             )
-        if "action" in active and self.action_agent is not None and action_packets:
+        action_agent = self.action_agent
+        if "action" in active and action_agent is not None and action_packets:
             wrap(
                 "action",
-                lambda: self.action_agent.predict(action_packets),
+                lambda: action_agent.predict(action_packets),
                 self.timeout_action_s,
             )
-        if "ocr" in active and self.ocr_agent is not None:
+        ocr_agent = self.ocr_agent
+        if "ocr" in active and ocr_agent is not None:
             wrap(
                 "ocr",
-                lambda: self.ocr_agent.read_text(frame_rgb),
+                lambda: ocr_agent.read_text(frame_rgb),
                 self.timeout_ocr_s,
             )
-        if "face_pose" in active and self.face_pose_agent is not None:
+        face_pose_agent = self.face_pose_agent
+        if "face_pose" in active and face_pose_agent is not None:
             wrap(
                 "face_pose",
-                lambda: self.face_pose_agent.analyze(frame_rgb),
+                lambda: face_pose_agent.analyze(frame_rgb),
                 self.timeout_face_pose_s,
             )
 

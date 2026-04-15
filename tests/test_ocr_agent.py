@@ -2,6 +2,11 @@
 
 from __future__ import annotations
 
+import os
+
+# Avoid Paddle oneDNN / MKLDNN edge cases on Windows CI.
+os.environ.setdefault("PADDLE_PDX_ENABLE_MKLDNN_BYDEFAULT", "false")
+
 import numpy as np
 import pytest
 

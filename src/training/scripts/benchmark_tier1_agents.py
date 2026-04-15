@@ -36,19 +36,18 @@ def main() -> int:
         from src.agents.action_agent import ActionAgent, benchmark_action_agent_latency
 
         try:
-            agent = ActionAgent(strict_artifacts=True)
+            action_agent = ActionAgent(strict_artifacts=True)
         except FileNotFoundError:
-            agent = None
-        if agent is not None:
-            bench = benchmark_action_agent_latency(agent, samples=30)
+            action_agent = None
+        if action_agent is not None:
+            bench = benchmark_action_agent_latency(action_agent, samples=30)
             lines.append("## MoViNet-A0 INT8")
             lines.append("")
             lines.append("| Metric | Value | Meets <15ms? |")
             lines.append("| --- | --- | --- |")
-            lines.append(
-                f"| p50 / p95 (ms) | {bench['latency_ms_p50']:.2f} / {bench['latency_ms_p95']:.2f} | "
-                f"{'yes' if bench['meets_target'] else 'no'} |"
-            )
+            lat = f"{bench['latency_ms_p50']:.2f} / {bench['latency_ms_p95']:.2f}"
+            ok = "yes" if bench["meets_target"] else "no"
+            lines.append(f"| p50 / p95 (ms) | {lat} | {ok} |")
             lines.append("")
             payload["movinet_a0_int8"] = bench
         else:
@@ -72,16 +71,15 @@ def main() -> int:
             from src.agents.ocr_agent import OcrAgent, benchmark_ocr_agent_latency
 
             rgb = np.asarray(Image.open(test_img).convert("RGB"))
-            agent = OcrAgent(confidence_threshold=0.2, grid=1)
-            ob = benchmark_ocr_agent_latency(agent, rgb, samples=10)
+            ocr_agent = OcrAgent(confidence_threshold=0.2, grid=1)
+            ob = benchmark_ocr_agent_latency(ocr_agent, rgb, samples=10)
             lines.append("## PaddleOCR (sample image)")
             lines.append("")
             lines.append("| Metric | Value | Meets <30ms? |")
             lines.append("| --- | --- | --- |")
-            lines.append(
-                f"| p50 / p95 (ms) | {ob['latency_ms_p50']:.2f} / {ob['latency_ms_p95']:.2f} | "
-                f"{'yes' if ob['meets_target'] else 'no'} |"
-            )
+            lat = f"{ob['latency_ms_p50']:.2f} / {ob['latency_ms_p95']:.2f}"
+            ok = "yes" if ob["meets_target"] else "no"
+            lines.append(f"| p50 / p95 (ms) | {lat} | {ok} |")
             lines.append("")
             payload["paddleocr"] = ob
         except Exception as exc:
@@ -105,17 +103,16 @@ def main() -> int:
             benchmark_face_pose_latency,
         )
 
-        agent = FacePoseAgent(strict_artifacts=False)
+        face_pose_agent = FacePoseAgent(strict_artifacts=False)
         rgb = np.zeros((128, 128, 3), dtype=np.uint8)
-        fb = benchmark_face_pose_latency(agent, rgb, samples=15)
+        fb = benchmark_face_pose_latency(face_pose_agent, rgb, samples=15)
         lines.append("## MediaPipe face + pose")
         lines.append("")
         lines.append("| Metric | Value | Meets <15ms? |")
         lines.append("| --- | --- | --- |")
-        lines.append(
-            f"| p50 / p95 (ms) | {fb['latency_ms_p50']:.2f} / {fb['latency_ms_p95']:.2f} | "
-            f"{'yes' if fb['meets_target'] else 'no'} |"
-        )
+        lat = f"{fb['latency_ms_p50']:.2f} / {fb['latency_ms_p95']:.2f}"
+        ok = "yes" if fb["meets_target"] else "no"
+        lines.append(f"| p50 / p95 (ms) | {lat} | {ok} |")
         lines.append("")
         payload["mediapipe_face_pose"] = fb
     except Exception as exc:

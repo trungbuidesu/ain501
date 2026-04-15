@@ -60,13 +60,14 @@ def test_ring_buffer_maxlen() -> None:
             FramePacket(data=d, t_mono=0.0, source="webcam", frame_id=i),
         )
     assert len(rb) == 3
-    assert rb.latest() is not None
-    assert int(rb.latest().data[0, 0, 0]) == 4
+    latest = rb.latest()
+    assert latest is not None
+    assert int(latest.data[0, 0, 0]) == 4
 
 
 def test_file_source_100_frames(tmp_path: Path) -> None:
     path = tmp_path / "clip.avi"
-    fourcc = cv2.VideoWriter_fourcc(*"MJPG")
+    fourcc = cv2.VideoWriter_fourcc(*"MJPG")  # type: ignore[attr-defined]
     w = cv2.VideoWriter(str(path), fourcc, 10.0, (32, 32))
     assert w.isOpened()
     for _ in range(100):
@@ -236,7 +237,7 @@ def test_memory_loop_short_fake() -> None:
 
 def test_run_capture_app_file_source(tmp_path: Path) -> None:
     path = tmp_path / "short.avi"
-    fourcc = cv2.VideoWriter_fourcc(*"MJPG")
+    fourcc = cv2.VideoWriter_fourcc(*"MJPG")  # type: ignore[attr-defined]
     w = cv2.VideoWriter(str(path), fourcc, 10.0, (16, 16))
     for _ in range(30):
         w.write(np.zeros((16, 16, 3), dtype=np.uint8))

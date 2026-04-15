@@ -258,10 +258,11 @@ def render_markdown(
         "",
         "## Comparison table",
         "",
-        "| Model | Metric | FP32 value | INT8 value | Drop | FP32 latency (ms) | INT8 latency (ms) | Speedup | RAM Δ (MB) |",
+        "| Model | Metric | FP32 value | INT8 value | Drop | "
+        "FP32 latency (ms) | INT8 latency (ms) | Speedup | RAM Δ (MB) |",
         "| --- | --- | --- | --- | --- | --- | --- | --- | --- |",
     ]
-    for row, decision in zip(rows, rubric_summary, strict=True):
+    for row, _decision in zip(rows, rubric_summary, strict=True):
 
         def fmt_float(v: Any) -> str:
             if v is None:
@@ -270,8 +271,12 @@ def render_markdown(
                 return f"{v:.4f}"
             return str(v)
 
+        row_fmt = (
+            "| {mid} | {mname} | {fpv} | {ipv} | {drop} | "
+            "{flt} | {ilt} | {su} | {ram} |"
+        )
         lines.append(
-            "| {mid} | {mname} | {fpv} | {ipv} | {drop} | {flt} | {ilt} | {su} | {ram} |".format(
+            row_fmt.format(
                 mid=row["model_id"],
                 mname=row["metric_name"],
                 fpv=fmt_float(row["fp32_metric"]),
@@ -306,8 +311,10 @@ def render_markdown(
     lines.extend(
         [
             "",
-            "Drop convention: `FP32_metric - INT8_metric` when higher is better; inverted when lower is better.",
-            "Latency columns use normalized units from `latency_unit` (YOLO divides by static batch when configured).",
+            "Drop convention: `FP32_metric - INT8_metric` when higher is better; "
+            "inverted when lower is better.",
+            "Latency columns use normalized units from `latency_unit` "
+            "(YOLO divides by static batch when configured).",
             "",
         ]
     )

@@ -144,7 +144,7 @@ class CaptionOrchestrator:
         self._last_text: str | None = None
 
     def set_rag_enabled(self, enabled: bool) -> None:
-        """Toggle RAG at runtime (e.g. demo hotkey); no-op if knowledge base is missing."""
+        """Toggle RAG at runtime; no-op if knowledge base is missing."""
 
         self._rag_enabled = bool(enabled and self._kb is not None)
 

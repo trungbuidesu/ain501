@@ -112,7 +112,7 @@ def _synthetic_text_images(out_dir: Path, n: int) -> list[Path]:
         img = Image.new("RGB", (w, h), color=(255, 255, 255))
         draw = ImageDraw.Draw(img)
         try:
-            font = ImageFont.truetype("arial.ttf", 36)
+            font: Any = ImageFont.truetype("arial.ttf", 36)
         except OSError:
             font = ImageFont.load_default()
         draw.text((12, 28), f"{text} {i}", fill=(0, 0, 0), font=font)
@@ -146,13 +146,13 @@ def _paddleocr_lines_from_predict_output(result: Any) -> list[dict[str, Any]]:
         if page and isinstance(page[0], (list, tuple)) and len(page[0]) == 2:
             lines_out: list[dict[str, Any]] = []
             for entry in page:
-                box, rec = entry
+                bbox, rec = entry
                 if isinstance(rec, (list, tuple)) and len(rec) == 2:
                     text, score = rec[0], rec[1]
                 else:
                     continue
                 lines_out.append(
-                    {"box": box, "text": str(text), "score": float(score)},
+                    {"box": bbox, "text": str(text), "score": float(score)},
                 )
             return lines_out
     # PaddleOCR 3.x / PaddleX: list of OCRResult (mapping-like) per input
@@ -202,7 +202,7 @@ def cmd_paddleocr(args: argparse.Namespace) -> int:
             {
                 "status": "failed",
                 "error": str(exc),
-                "hint": "Install PaddlePaddle CPU wheel for your OS/Python, then paddleocr.",
+                "hint": "Install PaddlePaddle CPU wheel, then paddleocr.",
             },
         )
         print("PaddleOCR import failed:", exc, file=sys.stderr)
@@ -224,7 +224,8 @@ def cmd_paddleocr(args: argparse.Namespace) -> int:
                 "error": str(exc),
                 "hint": (
                     "Install paddlepaddle for your OS/Python. On Windows CPU, "
-                    "set PADDLE_PDX_ENABLE_MKLDNN_BYDEFAULT=false if you hit oneDNN errors."
+                    "set PADDLE_PDX_ENABLE_MKLDNN_BYDEFAULT=false "
+                    "if you hit oneDNN errors."
                 ),
             },
         )
@@ -282,8 +283,11 @@ def cmd_paddleocr(args: argparse.Namespace) -> int:
         "hardware_note": os.environ.get("COMPUTERNAME", "unknown"),
         "image_count": len(images),
         "lang": args.lang,
-        "ocr_model_note": "PaddleOCR 3.x / PaddleX pipeline (lang-driven det+rec). "
-        "MKLDNN default off via PADDLE_PDX_ENABLE_MKLDNN_BYDEFAULT on Windows when needed.",
+        "ocr_model_note": (
+            "PaddleOCR 3.x / PaddleX pipeline (lang-driven det+rec). "
+            "MKLDNN default off via PADDLE_PDX_ENABLE_MKLDNN_BYDEFAULT "
+            "on Windows when needed."
+        ),
         "per_image_latency_ms": {
             "p50": round(_percentile(lat_sorted, 50), 3),
             "p95": round(_percentile(lat_sorted, 95), 3),
@@ -364,7 +368,10 @@ def _pose_label_tasks(lm_list: Sequence[Any]) -> dict[str, Any]:
         "rule_label": lbl,
         "torso_vertical_span": round(torso, 4),
         "arms_up": bool(arms_up),
-        "thresholds_note": "sit_like if torso<0.08; arms_up if wrists above shoulders with visibility>0.5.",
+        "thresholds_note": (
+            "sit_like if torso<0.08; arms_up if wrists above shoulders "
+            "with visibility>0.5."
+        ),
     }
 
 
@@ -410,7 +417,10 @@ def cmd_mediapipe(args: argparse.Namespace) -> int:
             {
                 "status": "failed",
                 "error": str(exc),
-                "hint": "Network required once to download .task models into reports/prebuilt_week5/_mediapipe_models/",
+                "hint": (
+                    "Network required once to download .task models into "
+                    "reports/prebuilt_week5/_mediapipe_models/"
+                ),
             },
         )
         print("MediaPipe setup failed:", exc, file=sys.stderr)
@@ -490,8 +500,10 @@ def cmd_mediapipe(args: argparse.Namespace) -> int:
             "mediapipe_version": getattr(mp, "__version__", "unknown"),
             "api": "tasks FaceLandmarker + PoseLandmarker (IMAGE)",
             "coordinate_system": "normalized 0-1, origin top-left; z relative depth",
-            "face_landmark_schema": "478 points when detected (face_landmarker.task)",
-            "pose_landmark_schema": "33 BlazePose keypoints (pose_landmarker_lite.task)",
+            "face_landmark_schema": ("478 points when detected (face_landmarker.task)"),
+            "pose_landmark_schema": (
+                "33 BlazePose keypoints (pose_landmarker_lite.task)"
+            ),
             "face_latency_ms": bench_summary(face_lat),
             "pose_latency_ms": bench_summary(pose_lat),
             "rss_mb_approx": _rss_mb(),
@@ -506,24 +518,28 @@ def cmd_mediapipe(args: argparse.Namespace) -> int:
 
 
 def _write_tts_compare_md(path: Path) -> None:
-    body = """# TTS engine comparison (Week 5)
-
-Subjective quality and latency depend on voice pack and CPU. Fill measured numbers after running `python -m src.training.scripts.verify_prebuilt_week5 tts`.
-
-| Engine | Quality (typical) | Latency | Model size | Offline | License | Windows notes |
-| --- | --- | --- | --- | --- | --- | --- |
-| Piper | Strong neural TTS | Low (ONNXRuntime) | ~15–60 MB / voice | Yes | GPL | Primary path in this repo; CLI `piper`. |
-| Kokoro | Strong (when available) | Medium | Varies | Often | Check upstream | May require extra runtime or non-Windows builds; verify before production. |
-| pyttsx3 | Robotic (SAPI) | Very low | None (OS voice) | Yes | MIT | Baseline fallback; poor prosody. |
-
-## Interrupt behavior
-
-- **Piper CLI** (`synthesize_with_piper`): one subprocess per utterance. To interrupt, terminate the subprocess or use an app-level queue that stops scheduling new synth jobs.
-- **pyttsx3**: engine-specific; often `stop()` on the driver if exposed.
-- **Kokoro**: depends on integration; treat like Piper (process or stream cancel).
-
-Document what your app implements; library alone does not guarantee mid-utterance cut-in.
-"""
+    body = (
+        "# TTS engine comparison (Week 5)\n\n"
+        "Subjective quality and latency depend on voice pack and CPU.\n"
+        "Fill measured numbers after: "
+        "`python -m src.training.scripts.verify_prebuilt_week5 tts`.\n\n"
+        "| Engine | Quality | Latency | Model size | Offline | License | "
+        "Windows notes |\n"
+        "| --- | --- | --- | --- | --- | --- | --- |\n"
+        "| Piper | Strong neural TTS | Low (ONNXRuntime) | ~15–60 MB / voice | "
+        "Yes | GPL | Primary path; CLI `piper`. |\n"
+        "| Kokoro | Strong (when available) | Medium | Varies | Often | "
+        "Check upstream | May need extra runtime; verify before production. |\n"
+        "| pyttsx3 | Robotic (SAPI) | Very low | None (OS voice) | Yes | MIT | "
+        "Baseline fallback; poor prosody. |\n\n"
+        "## Interrupt behavior\n\n"
+        "- **Piper CLI**: one subprocess per utterance. Interrupt via terminate "
+        "or app queue that stops new synth jobs.\n"
+        "- **pyttsx3**: engine-specific; often `stop()` on the driver.\n"
+        "- **Kokoro**: treat like Piper (process or stream cancel).\n\n"
+        "Document what your app implements; libraries do not guarantee "
+        "mid-utterance cut-in.\n"
+    )
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(body, encoding="utf-8")
 
@@ -592,7 +608,10 @@ def cmd_tts(args: argparse.Namespace) -> int:
 
     interrupt_note = {
         "scenario": "long_utterance_vs_short_alert",
-        "piper_cli_behavior": "Each call blocks until WAV written; interrupt by killing subprocess or skipping queue.",
+        "piper_cli_behavior": (
+            "Each call blocks until WAV written; interrupt by killing "
+            "subprocess or skipping queue."
+        ),
         "test_status": "documented_only",
     }
 

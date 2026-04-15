@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 import cv2
 import numpy as np
@@ -37,6 +38,7 @@ def put_vietnamese_lines(
     font_path = _pick_font()
     for text, pos, fs, col_bgr in lines:
         col_rgb = (int(col_bgr[2]), int(col_bgr[1]), int(col_bgr[0]))
+        font: Any
         try:
             if font_path:
                 font = ImageFont.truetype(str(font_path), fs)

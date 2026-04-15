@@ -112,7 +112,9 @@ class VisualEncoder:
                 return cached
 
         x = preprocess_mobilenet_frame(frame_rgb, image_size=self.image_size)
-        outputs = self._session.run(None, {self._input_name: x})
+        sess = self._session
+        assert sess is not None
+        outputs = sess.run(None, {self._input_name: x})
         if self.output_index >= len(outputs):
             raise IndexError("output_index out of range")
         vec = (

@@ -81,8 +81,8 @@ def run(
     if not images:
         raise ValueError("no validation images found")
 
-    YOLO = import_yolo()
-    model = YOLO(weights)
+    yolo_cls = import_yolo()
+    model = yolo_cls(weights)
 
     samples: list[ImageEval] = []
     for start in range(0, len(images), max(1, batch_predict)):
@@ -179,7 +179,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--device",
         default="auto",
-        help="Ultralytics device string: auto (Arc XPU > CUDA > CPU), cpu, cuda, xpu, 0, ...",
+        help=(
+            "Ultralytics device: auto (Arc XPU > CUDA > CPU), cpu, cuda, xpu, 0, ..."
+        ),
     )
     parser.add_argument("--batch-predict", type=int, default=8)
     parser.add_argument("--max-images", type=int, default=None)

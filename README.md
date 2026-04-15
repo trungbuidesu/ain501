@@ -97,6 +97,18 @@ theo hướng dẫn chính thức của PyTorch/Intel. Máy không có GPU Intel
 trợ có thể bỏ qua kiểm thử XPU. Ghi chú phần cứng và XPU:
 [agents/intel_arc_xpu_notes.md](agents/intel_arc_xpu_notes.md).
 
+### Quy ước thiết bị (train vs production)
+
+- **Train / fine-tune:** có thể dùng `--device auto` để tận dụng tăng tốc phần cứng
+  (Intel Arc XPU nếu khả dụng, hoặc CUDA nếu môi trường hỗ trợ).
+- **Production / benchmark ONNX:** pipeline benchmark tuần 6 mặc định chạy
+  **CPU** qua `CPUExecutionProvider` trong
+  [configs/benchmark/week6.yaml](configs/benchmark/week6.yaml).
+- **Giữ `auto` trong production:** vẫn hợp lệ nếu muốn tận dụng phần cứng hiện có.
+  Khi cần kết quả lặp lại ổn định giữa máy (reproducible CPU), ép CPU tường minh:
+  `--cpu` hoặc `--device cpu` (ví dụ với
+  `python -m src.training.scripts.verify_prebuilt_week5 ...`).
+
 Dự phòng PowerShell khi `python` không có trong PATH nhưng env đã được activate:
 
 ```powershell

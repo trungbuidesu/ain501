@@ -11,6 +11,7 @@ from src.training.eval.yolov8_coco_remap import (
     coco80_index,
     map50_macro,
 )
+from src.training.scripts.eval_yolov8_accessibility_remap import resolve_predict_device
 
 
 def test_coco80_dog_index() -> None:
@@ -74,3 +75,11 @@ def test_map50_macro_two_classes() -> None:
     ]
     m_ap, _, _ = map50_macro(samples, num_classes=2, iou_threshold=0.5)
     assert m_ap > 0.99
+
+
+def test_resolve_predict_device_keeps_cpu() -> None:
+    assert resolve_predict_device("cpu") == "cpu"
+
+
+def test_resolve_predict_device_falls_back_from_xpu() -> None:
+    assert resolve_predict_device("xpu") == "cpu"

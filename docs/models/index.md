@@ -8,7 +8,6 @@ Bảng phân loại dưới đây tổng hợp các hạt nhân tư duy học s�
 
 | Mã Nhận Diện Đồ Án (Model ID) | Nền Tảng Khởi Sinh (Base Architecture) | Tác Vụ Đặc Thù (Task Mapping) | Rào Cản Triển Khai (Edge Constraints) |
 | --- | --- | --- | --- |
-| **[FastVLM-0.5B](fastvlm.md)** | ~500M params | Sinh mô tả hình ảnh cấp 2 (Tier 2 VLM captioning). | ~300MB Size |
 | **[YOLOv8-nano](yolov8n.md)** | ~3.2M params | Nhận diện đối tượng & chướng ngại vật (Object + hazard detection). | ~6MB Size (quantized) |
 | **[MoViNet-A0](movinet.md)** | ~3M params | Nhận diện hành động (Action recognition). | ~5MB Size |
 | **[MobileNetV3-Small](mobilenetv3.md)** | ~2.5M params | Bộ máy chiết xuất đặc trưng (Feature extraction). | ~4MB Size |

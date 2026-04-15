@@ -68,6 +68,40 @@ python -m src.training.scripts.mobilenetv3 --config configs/models/mobilenetv3_s
 - One ORT code path (`src/utils/onnx_benchmark.py`) keeps RSS and latency methodology consistent with earlier per-model scripts.
 - Active learning stays intentionally small: inbox + CSV + merge script, documented in `docs/active_learning.md`.
 
+## Code review notes (current state)
+
+This pass reviewed the new capture stack and YOLO remap evaluation path and then applied focused fixes.
+
+### Findings and resolution
+
+1. **High — YOLO remap script default device could fail on Intel Arc/XPU envs**
+   - **Issue:** `eval_yolov8_accessibility_remap.py --device auto` could resolve to `xpu`, but current Ultralytics detection API in this environment rejected `xpu` for `.predict()`, causing immediate runtime failure.
+   - **Fix applied:** `resolve_predict_device()` now detects `xpu*` and falls back to `cpu` with a warning.
+   - **Impact:** Script is now robust in Arc environments without requiring manual device override.
+
+2. **Medium — Capture loop `max_frames` off-by-one**
+   - **Issue:** In `run_capture_app`, stop condition used `n_read >= max_frames` before processing, so one frame was skipped from processing when hitting the boundary.
+   - **Fix applied:** Condition changed to `n_read > max_frames`, which preserves exactly `max_frames` processed frames.
+
+3. **Medium — `screen.backend` config was parsed but not enforced**
+   - **Issue:** `configs/capture_pipeline.yaml` exposes `screen.backend` (`auto|dxcam|mss`) but `frame_source_from_config()` always used default `ScreenSource(...)`, effectively ignoring backend choice.
+   - **Fix applied:** `frame_source_from_config()` now passes `backend=cfg.screen.backend`. `ScreenSource` validates backend values, raises for unsupported combinations (`dxcam` + explicit region), and honors explicit backend selection.
+
+### Test coverage updates added in this pass
+
+- `tests/test_yolov8_coco_remap.py`
+  - Added device resolution checks (`cpu` pass-through, `xpu` fallback).
+- `tests/test_capture_phase1.py`
+  - Added assertion that `screen.backend` from config is forwarded to source construction.
+  - Added `run_capture_app` regression test for `max_frames` boundary behavior.
+
+Targeted test run:
+
+```text
+pytest tests/test_yolov8_coco_remap.py tests/test_capture_phase1.py -q
+# 22 passed, 2 skipped
+```
+
 ## Checklist cross-links
 
 - `checklist/yolov8n.md`

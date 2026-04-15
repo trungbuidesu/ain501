@@ -10,7 +10,6 @@ nav:
       - Tăng tốc XPU: general/xpu_hardware.md
       - Kiến Trúc Mô Hình:
           - Tổng hợp cấu trúc (Ontology): models/index.md
-          - FastVLM-0.5B (Captioning): models/fastvlm.md
           - YOLOv8-nano (Object Detection): models/yolov8n.md
           - MoViNet-A0 (Action Recognition): models/movinet.md
           - MobileNetV3-Small (Trích Xuất): models/mobilenetv3.md
@@ -28,6 +27,7 @@ nav:
   - Tài liệu hiện có:
       - Data Pipeline: data_pipeline.md
       - Week 6 — benchmark & registry: training/week6_training_log.md
+      - Phase 2 MVP object-to-speech: training/phase2_mvp.md
       - Active learning (MVP): active_learning.md
 
 plugins:

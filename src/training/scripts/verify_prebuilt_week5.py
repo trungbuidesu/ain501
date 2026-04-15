@@ -1,18 +1,13 @@
-"""Week 5 pre-built model verification: PaddleOCR, MediaPipe, FastVLM, TTS.
+"""Week 5 pre-built model verification: PaddleOCR, MediaPipe, TTS.
 
 Run from repo root::
 
     python -m src.training.scripts.verify_prebuilt_week5 paddleocr --synthetic
     python -m src.training.scripts.verify_prebuilt_week5 mediapipe --synthetic
-    python -m src.training.scripts.verify_prebuilt_week5 fastvlm --synthetic --limit 2
     python -m src.training.scripts.verify_prebuilt_week5 tts
     python -m src.training.scripts.verify_prebuilt_week5 all --synthetic
 
 Artifacts default to ``reports/prebuilt_week5/``.
-
-FastVLM inference uses ``src.utils.device.resolve_device``: on a machine with
-Intel Arc (e.g. A770) and PyTorch+XPU, ``--device auto`` prefers **xpu** over CUDA
-then CPU; use ``--cpu`` to force CPU.
 """
 
 from __future__ import annotations
@@ -27,7 +22,6 @@ import urllib.request
 import wave
 from collections.abc import Callable, Sequence
 from pathlib import Path
-from threading import Thread
 from typing import Any
 
 import numpy as np
@@ -46,8 +40,6 @@ POSE_LANDMARKER_LITE_URL = (
 SYNTH_IMAGE_DIR = REPORT_DIR / "_synth_images"
 UTTERANCES_PATH = Path("data/prebuilt_week5/tts_utterances.json")
 TTS_CONFIG = Path("configs/datasets/tts_piper_accessibility.yaml")
-FASTVLM_DEFAULT_ID = "apple/FastVLM-0.5B"
-IMAGE_TOKEN_INDEX = -200
 
 
 def _rss_mb() -> float | None:
@@ -518,186 +510,6 @@ def cmd_mediapipe(args: argparse.Namespace) -> int:
         pose_lm.close()
 
 
-def _fastvlm_torch_device_and_dtype(
-    args: argparse.Namespace,
-) -> tuple[Any, Any]:
-    """Pick torch device/dtype for FastVLM: Arc XPU (auto) > CUDA > CPU; float32 on XPU/CPU."""
-
-    import torch
-
-    from src.utils.device import resolve_device
-
-    if args.cpu:
-        return torch.device("cpu"), torch.float32
-    requested = getattr(args, "device", "auto")
-    dev = resolve_device(requested if isinstance(requested, str) else "auto")
-    if dev.type == "cuda":
-        return dev, torch.float16
-    return dev, torch.float32
-
-
-def _fastvlm_build_inputs(
-    model: Any,
-    tok: Any,
-    image: Image.Image,
-    prompt: str,
-    device: Any,
-) -> tuple[Any, Any, Any]:
-    import torch
-
-    messages = [{"role": "user", "content": f"<image>\n{prompt}"}]
-    rendered = tok.apply_chat_template(
-        messages,
-        add_generation_prompt=True,
-        tokenize=False,
-    )
-    pre, post = rendered.split("<image>", 1)
-    pre_ids = tok(pre, return_tensors="pt", add_special_tokens=False).input_ids
-    post_ids = tok(post, return_tensors="pt", add_special_tokens=False).input_ids
-    img_tok = torch.tensor([[IMAGE_TOKEN_INDEX]], dtype=pre_ids.dtype)
-    input_ids = torch.cat([pre_ids, img_tok, post_ids], dim=1).to(device)
-    attention_mask = torch.ones_like(input_ids, device=device)
-    px = model.get_vision_tower().image_processor(images=image, return_tensors="pt")[
-        "pixel_values"
-    ]
-    px = px.to(device, dtype=model.dtype)
-    return input_ids, attention_mask, px
-
-
-def cmd_fastvlm(args: argparse.Namespace) -> int:
-    _ensure_report_dir()
-    captions_path = REPORT_DIR / "fastvlm_captions.jsonl"
-    bench_path = REPORT_DIR / "fastvlm_benchmark.json"
-
-    if args.skip_model:
-        _write_json(
-            bench_path,
-            {
-                "status": "skipped",
-                "reason": "--skip-model set; fill after downloading apple/FastVLM-0.5B",
-                "model_id": args.model_id,
-            },
-        )
-        captions_path.write_text("", encoding="utf-8")
-        print("Skipped FastVLM inference; wrote", bench_path)
-        return 0
-
-    try:
-        import torch
-        from transformers import AutoModelForCausalLM, AutoTokenizer, TextIteratorStreamer
-    except ImportError as exc:
-        _write_json(
-            bench_path,
-            {"status": "failed", "error": str(exc)},
-        )
-        print("Transformers/torch import failed:", exc, file=sys.stderr)
-        return 1
-
-    device, dtype = _fastvlm_torch_device_and_dtype(args)
-    device_str = str(device)
-
-    try:
-        tok = AutoTokenizer.from_pretrained(args.model_id, trust_remote_code=True)
-        model = AutoModelForCausalLM.from_pretrained(
-            args.model_id,
-            torch_dtype=dtype,
-            device_map=None,
-            trust_remote_code=True,
-        ).to(device)
-    except Exception as exc:
-        _write_json(
-            bench_path,
-            {
-                "status": "failed",
-                "error": str(exc),
-                "hint": "huggingface-cli download apple/FastVLM-0.5B",
-            },
-        )
-        print("FastVLM load failed:", exc, file=sys.stderr)
-        return 1
-
-    images = _collect_images(args.image_dir, args.synthetic, args.limit)
-    prompt = args.prompt
-
-    ttfts: list[float] = []
-    e2e: list[float] = []
-    captions_path.parent.mkdir(parents=True, exist_ok=True)
-
-    with captions_path.open("w", encoding="utf-8") as sink:
-        for img_path in images:
-            image = Image.open(img_path).convert("RGB")
-            input_ids, attention_mask, px = _fastvlm_build_inputs(
-                model, tok, image, prompt, device_str
-            )
-            streamer = TextIteratorStreamer(
-                tok, skip_prompt=True, skip_special_tokens=True
-            )
-            gen_kwargs = dict(
-                inputs=input_ids,
-                attention_mask=attention_mask,
-                images=px,
-                max_new_tokens=args.max_new_tokens,
-                streamer=streamer,
-            )
-            thread = Thread(target=model.generate, kwargs=gen_kwargs)
-            t0 = time.perf_counter()
-            thread.start()
-            first_token_s: float | None = None
-            chunks: list[str] = []
-            for text in streamer:
-                if first_token_s is None:
-                    first_token_s = time.perf_counter() - t0
-                chunks.append(text)
-            thread.join()
-            t1 = time.perf_counter()
-            caption = "".join(chunks).strip()
-            e2e_s = t1 - t0
-            if first_token_s is not None:
-                ttfts.append(first_token_s * 1000.0)
-            e2e.append(e2e_s * 1000.0)
-            row = {
-                "image_id": str(img_path.as_posix()),
-                "model_id": args.model_id,
-                "prompt": prompt,
-                "caption": caption,
-                "ttft_ms": round(first_token_s * 1000.0, 3) if first_token_s else None,
-                "e2e_ms": round(e2e_s * 1000.0, 3),
-                "quality_rubric": "human_review_pending",
-            }
-            sink.write(json.dumps(row, ensure_ascii=False) + "\n")
-
-    tt_sorted = sorted(ttfts)
-    e2e_sorted = sorted(e2e)
-    bench: dict[str, Any] = {
-        "status": "ok",
-        "model_id": args.model_id,
-        "device": device_str,
-        "dtype": str(dtype),
-        "prompt_logged": prompt,
-        "image_count": len(images),
-        "e2e_latency_ms": {
-            "p50": round(_percentile(e2e_sorted, 50), 3),
-            "p95": round(_percentile(e2e_sorted, 95), 3),
-        },
-        "rss_mb_approx": _rss_mb(),
-        "captions_jsonl": str(captions_path.as_posix()),
-        "optional_quant_note": "INT8/INT4 or GPTQ: calibrate on a small stratified image set; compare rubric before/after.",
-    }
-    if tt_sorted:
-        bench["ttft_ms"] = {
-            "p50": round(_percentile(tt_sorted, 50), 3),
-            "p95": round(_percentile(tt_sorted, 95), 3),
-        }
-    if device.type == "xpu" and hasattr(torch, "xpu"):
-        try:
-            bench["xpu_device_name"] = torch.xpu.get_device_name(0)
-        except RuntimeError:
-            pass
-    _write_json(bench_path, bench)
-    print("Wrote", captions_path, "and", bench_path)
-    return 0
-
-
 def _write_tts_compare_md(path: Path) -> None:
     body = """# TTS engine comparison (Week 5)
 
@@ -805,7 +617,6 @@ def cmd_all(args: argparse.Namespace) -> int:
     steps: list[tuple[str, Callable[[argparse.Namespace], int]]] = [
         ("paddleocr", cmd_paddleocr),
         ("mediapipe", cmd_mediapipe),
-        ("fastvlm", cmd_fastvlm),
         ("tts", cmd_tts),
     ]
     rc = 0
@@ -842,57 +653,14 @@ def build_parser() -> argparse.ArgumentParser:
     )
     mp.set_defaults(func=cmd_mediapipe)
 
-    fv = sub.add_parser("fastvlm", help="FastVLM-0.5B captions + benchmark")
-    add_common(fv)
-    fv.add_argument("--model-id", default=os.environ.get("FASTVLM_MODEL_ID", FASTVLM_DEFAULT_ID))
-    fv.add_argument(
-        "--prompt",
-        default="Describe the image briefly for a blind traveler.",
-    )
-    fv.add_argument("--max-new-tokens", type=int, default=96)
-    fv.add_argument(
-        "--device",
-        default="auto",
-        choices=("auto", "cpu", "cuda", "xpu"),
-        help="Torch device for FastVLM: auto prefers Intel Arc XPU, then CUDA, then CPU (see src.utils.device)",
-    )
-    fv.add_argument(
-        "--cpu",
-        action="store_true",
-        help="Force CPU (overrides --device)",
-    )
-    fv.add_argument(
-        "--skip-model",
-        action="store_true",
-        help="Do not load HF model; write stub benchmark JSON",
-    )
-    fv.set_defaults(func=cmd_fastvlm)
-
     tt = sub.add_parser("tts", help="Piper samples + comparison markdown")
     tt.set_defaults(func=cmd_tts)
 
-    all_p = sub.add_parser("all", help="Run paddleocr, mediapipe, fastvlm, tts with shared flags")
+    all_p = sub.add_parser("all", help="Run paddleocr, mediapipe, tts with shared flags")
     add_common(all_p)
     all_p.add_argument("--lang", default="en")
     all_p.add_argument("--warmup", type=int, default=2)
     all_p.add_argument("--bench-iters", type=int, default=10)
-    all_p.add_argument("--model-id", default=os.environ.get("FASTVLM_MODEL_ID", FASTVLM_DEFAULT_ID))
-    all_p.add_argument(
-        "--prompt",
-        default="Describe the image briefly for a blind traveler.",
-    )
-    all_p.add_argument("--max-new-tokens", type=int, default=96)
-    all_p.add_argument(
-        "--device",
-        default="auto",
-        choices=("auto", "cpu", "cuda", "xpu"),
-        help="Torch device for FastVLM step (same as fastvlm --device)",
-    )
-    all_p.add_argument("--cpu", action="store_true", help="Force CPU for FastVLM (overrides --device)")
-    all_p.add_argument(
-        "--skip-model",
-        action="store_true",
-    )
     all_p.add_argument(
         "--full-landmarks",
         action="store_true",

@@ -10,10 +10,6 @@ Trạng thái: not run / in progress / done — note Paddle + PaddleOCR versions
 
 Trạng thái: not run / in progress / done — note MediaPipe wheel version.
 
-### Trạng thái FastVLM
-
-Trạng thái: weights missing / ran inference / skipped (`--skip-model`) — note `model_id` and device.
-
 ### Trạng thái TTS
 
 Trạng thái: voices missing / `validate-tts` ok / benchmark done — note `models/tts/piper` layout.
@@ -34,15 +30,6 @@ Trạng thái: voices missing / `validate-tts` ok / benchmark done — note `mod
 - [ ] Pose: 20 images/frames; keypoints + rule-based pose label (stand/sit/arms_up).
 - [ ] CPU benchmark: `reports/prebuilt_week5/mediapipe_benchmark_cpu.json`.
 - [ ] Update `docs/models/mediapipe.md` with landmark indices, coords, pose thresholds.
-
-## FastVLM-0.5B (Tier 2)
-
-- [ ] Obtain weights (Hugging Face `apple/FastVLM-0.5B` or ONNX/GGUF if you port); optional env `FASTVLM_MODEL_ID`.
-- [ ] Smoke: image + prompt -> caption; log prompt in sample report.
-- [ ] 20 diverse images -> `reports/prebuilt_week5/fastvlm_captions.jsonl` + quality rubric fields.
-- [ ] Benchmark: latency, RAM, time-to-first-token (if streaming) -> `reports/prebuilt_week5/fastvlm_benchmark.json`.
-- [ ] Document prompt templates in `docs/models/fastvlm.md`.
-- [ ] (Optional) COCO calibration + QAT/GPTQ; compare caption rubric before/after.
 
 ## TTS
 

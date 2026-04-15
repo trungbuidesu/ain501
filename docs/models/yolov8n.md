@@ -36,6 +36,21 @@ Do tính phức hợp phân cảnh tại môi trường hiện thực của ngư
 - **Tập `object_detection_accessibility_merged`:** Nhãn dùng **class id 0–15** theo thứ tự riêng (`classes.txt`). Trọng số COCO có **80 lớp** với **thứ tự id COCO**, không trùng thứ tự subset (ví dụ *dog* trong COCO là id 16, trong subset là 1). Chạy `val` trực tiếp với `nc: 16` và nhãn 0–15 sẽ **lệch ánh xạ** — mAP tổng có thể rất thấp dù chỉ vài lớp trùng tình cờ (thường *person*). Đây là vấn đề **cấu hình đánh giá / ánh xạ lớp**, không phải `conf` hay `imgsz` sai mặc định.
 - **Hướng xử lý:** Fine-tune head 16 lớp; hoặc giữ nhãn theo **id COCO gốc** + yaml 80 lớp; hoặc map pred→subset khi tính metric.
 
+### Lệnh remap eval (không đổi labels)
+
+```text
+python -m src.training.scripts.eval_yolov8_accessibility_remap \
+  --data-yaml data/processed/object_detection_accessibility_merged/yolov8n_data.yaml \
+  --weights yolov8n.pt \
+  --imgsz 640 \
+  --conf 0.001 \
+  --device auto \
+  --output-json reports/yolov8n/accessibility_coco_remap_eval.json
+```
+
+- Script sẽ map **COCO pred class id → subset id** theo tên lớp trước khi tính AP.
+- Trong môi trường Ultralytics hiện tại nếu `auto` resolve ra `xpu` nhưng backend detect không nhận `xpu`, script sẽ **fallback sang CPU** và in warning để tránh fail runtime.
+
 ## Kết quả Huấn luyện Thử nghiệm (Pilot Results)
 
 Dự án đã hoàn thành giai đoạn Pilot training cho YOLOv8n:

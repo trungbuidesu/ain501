@@ -87,7 +87,7 @@ def run_capture_app(cfg: CapturePipelineConfig, *, max_frames: int | None) -> in
                 print("source ended or read failed", file=sys.stderr)
                 break
             n_read += 1
-            if max_frames is not None and n_read >= max_frames:
+            if max_frames is not None and n_read > max_frames:
                 break
             buf.push(pkt)
             emit = det.should_process(prev_rgb, pkt.data)

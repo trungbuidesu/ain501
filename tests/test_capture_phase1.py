@@ -10,7 +10,9 @@ import cv2
 import mss
 import numpy as np
 import pytest
+from _pytest.monkeypatch import MonkeyPatch
 
+import src.capture.app as capture_app
 from src.capture.app import run_capture_app
 from src.capture.config import ChangeDetectionConfig, load_capture_config
 from src.capture.fake_source import FakeFrameSource
@@ -159,6 +161,31 @@ def test_frame_source_from_config_webcam() -> None:
     src.close()
 
 
+def test_frame_source_from_config_screen_honors_backend(monkeypatch: MonkeyPatch) -> None:
+    cfg = load_capture_config(
+        Path(__file__).resolve().parents[1] / "configs" / "capture_pipeline.yaml",
+    )
+    cfg = replace(
+        cfg,
+        source=replace(cfg.source, type="screen"),
+        screen=replace(cfg.screen, backend="mss"),
+    )
+    seen: dict[str, str | None] = {"backend": None}
+
+    class _DummyScreenSource:
+        def __init__(self, region, *, backend: str = "auto") -> None:
+            seen["backend"] = backend
+            self._region = region
+
+        def close(self) -> None:
+            return None
+
+    monkeypatch.setattr("src.capture.sources.ScreenSource", _DummyScreenSource)
+    src = frame_source_from_config(cfg)
+    src.close()
+    assert seen["backend"] == "mss"
+
+
 def test_integration_fake_capture_counts_changes() -> None:
     cfg = ChangeDetectionConfig(
         method="ssim",
@@ -227,6 +254,47 @@ def test_run_capture_app_file_source(tmp_path: Path) -> None:
         timing=replace(cfg.timing, target_fps=60.0),
     )
     assert run_capture_app(cfg, max_frames=20) == 0
+
+
+def test_run_capture_app_respects_max_frames(monkeypatch: MonkeyPatch) -> None:
+    cfg = load_capture_config(
+        Path(__file__).resolve().parents[1] / "configs" / "capture_pipeline.yaml",
+    )
+    pkt = FramePacket(
+        data=np.zeros((8, 8, 3), dtype=np.uint8),
+        t_mono=0.0,
+        source="webcam",
+        frame_id=0,
+    )
+
+    class _DummySource:
+        def __init__(self) -> None:
+            self.read_calls = 0
+            self.closed = False
+
+        def read(self):
+            self.read_calls += 1
+            if self.read_calls <= 3:
+                return pkt
+            return None
+
+        def close(self) -> None:
+            self.closed = True
+
+    dummy = _DummySource()
+
+    class _AlwaysChange:
+        def __init__(self, _cfg) -> None:
+            return None
+
+        def should_process(self, _prev, _curr) -> bool:
+            return True
+
+    monkeypatch.setattr(capture_app, "frame_source_from_config", lambda _cfg: dummy)
+    monkeypatch.setattr(capture_app, "ChangeDetector", _AlwaysChange)
+    assert run_capture_app(cfg, max_frames=1) == 0
+    assert dummy.read_calls >= 1
+    assert dummy.closed is True
 
 
 def test_screen_region_crop_integration() -> None:

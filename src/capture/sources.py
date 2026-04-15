@@ -81,29 +81,39 @@ class ScreenSource:
         self,
         region: ScreenRegion | None = None,
         *,
-        prefer_dxcam: bool = True,
+        backend: str = "auto",
     ) -> None:
         self._region = region
         self._frame_id = 0
         self._dxcam: Any | None = None
         self._mss: Any | None = None
+        backend_norm = backend.strip().lower()
+        if backend_norm not in {"auto", "dxcam", "mss"}:
+            raise ValueError(f"unknown screen backend: {backend}")
         # User region uses global virtual-desktop coords. dxcam's buffer is not
         # guaranteed to match that space; cropping dxcam output was wrong and could
         # hang or return None. Use mss for any explicit region (multi-monitor safe).
-        if region is not None:
+        if region is not None and backend_norm == "dxcam":
+            raise ValueError("backend=dxcam is not supported with explicit region crop")
+
+        if backend_norm == "mss":
             import mss
 
             self._mss = mss.mss()
-        elif prefer_dxcam:
+        elif backend_norm == "dxcam":
+            self._dxcam = create_dxcam_if_available()
+            if self._dxcam is None:
+                raise RuntimeError("dxcam backend requested but dxcam is not available")
+        elif region is not None:
+            import mss
+
+            self._mss = mss.mss()
+        else:
             self._dxcam = create_dxcam_if_available()
             if self._dxcam is None:
                 import mss
 
                 self._mss = mss.mss()
-        else:
-            import mss
-
-            self._mss = mss.mss()
 
     def read(self) -> FramePacket | None:
         rgb = grab_screen_rgb(
@@ -166,5 +176,5 @@ def frame_source_from_config(
             raise ValueError("source.file_path is required when source.type is file")
         return FileVideoSource(s.file_path, loop=s.file_loop)
     if s.type == "screen":
-        return ScreenSource(cfg.screen.region)
+        return ScreenSource(cfg.screen.region, backend=cfg.screen.backend)
     raise ValueError(f"unknown source type: {s.type}")

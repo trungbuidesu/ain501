@@ -27,9 +27,23 @@ from src.utils.device import resolve_device
 
 
 def resolve_predict_device(requested: str) -> str:
+    """Resolve a runtime device string accepted by current Ultralytics detect API."""
+
     if requested.strip().lower() == "auto":
-        return str(resolve_device("auto"))
-    return requested
+        device = str(resolve_device("auto"))
+    else:
+        device = requested
+    # NOTE: With current Ultralytics builds in this project, detection `.predict()`
+    # accepts cpu/cuda indices but may reject `xpu` even when torch.xpu is available.
+    # Fall back to CPU to keep remap evaluation runnable and deterministic.
+    if device.startswith("xpu"):
+        print(
+            "warning: Ultralytics detection backend rejected xpu in this env; "
+            "falling back to cpu for remap evaluation.",
+            file=sys.stderr,
+        )
+        return "cpu"
+    return device
 
 
 def import_yolo():

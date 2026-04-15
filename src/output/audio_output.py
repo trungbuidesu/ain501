@@ -6,6 +6,7 @@ import subprocess
 import sys
 import threading
 import time
+import json
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -13,6 +14,32 @@ from shutil import which
 from typing import Any
 
 PRIORITY_RANK = {"hazard": 0, "navigation": 1, "info": 2}
+_DEBUG_LOG_PATH = Path("debug-079ff7.log")
+_DEBUG_SESSION_ID = "079ff7"
+
+
+def _debug_log(
+    *,
+    run_id: str,
+    hypothesis_id: str,
+    location: str,
+    message: str,
+    data: dict[str, Any],
+) -> None:
+    payload = {
+        "sessionId": _DEBUG_SESSION_ID,
+        "runId": run_id,
+        "hypothesisId": hypothesis_id,
+        "location": location,
+        "message": message,
+        "data": data,
+        "timestamp": int(time.time() * 1000),
+    }
+    try:
+        with _DEBUG_LOG_PATH.open("a", encoding="utf-8") as f:
+            f.write(json.dumps(payload, ensure_ascii=True) + "\n")
+    except OSError:
+        return
 
 
 @dataclass(order=True, slots=True)
@@ -89,8 +116,26 @@ class AudioOutputManager:
             eng = pyttsx3.init()
 
             def _speak(text: str) -> Any:
+                # region agent log
+                _debug_log(
+                    run_id="tts_runtime",
+                    hypothesis_id="H1_tts_main_thread_block",
+                    location="src/output/audio_output.py:_try_pyttsx3._speak",
+                    message="pyttsx3_speak_start",
+                    data={"thread_name": threading.current_thread().name},
+                )
+                # endregion
                 eng.say(text)
                 eng.runAndWait()
+                # region agent log
+                _debug_log(
+                    run_id="tts_runtime",
+                    hypothesis_id="H1_tts_main_thread_block",
+                    location="src/output/audio_output.py:_try_pyttsx3._speak",
+                    message="pyttsx3_speak_done",
+                    data={"thread_name": threading.current_thread().name},
+                )
+                # endregion
                 return _DummyProc()
 
             self._synth_fn = _speak
@@ -175,6 +220,15 @@ class AudioOutputManager:
         return True
 
     def _run(self) -> None:
+        # region agent log
+        _debug_log(
+            run_id="tts_runtime",
+            hypothesis_id="H1_tts_main_thread_block",
+            location="src/output/audio_output.py:_run",
+            message="tts_worker_start",
+            data={"thread_name": threading.current_thread().name},
+        )
+        # endregion
         while not self._stop:
             if not self.process_next():
                 time.sleep(0.01)

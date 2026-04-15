@@ -16,7 +16,6 @@ from src.agents.ocr_agent import OcrAgent
 from src.caption.orchestrator import CaptionOrchestrator
 from src.caption.template_engine import CaptionEvent, SpatialTemplateEngine
 from src.capture.types import FramePacket
-from src.core.debug_log import append_debug_log
 from src.core.types import PipelineStatus, VerbosityLevel
 from src.encoder.visual_encoder import VisualEncoder
 from src.output.audio_output import AudioOutputManager
@@ -291,29 +290,6 @@ class AppRuntime:
 
         e2e_ms = (time.perf_counter() - tick_start) * 1000.0
         caption_sources = self._orchestrator.describe_sources(events)
-        # region agent log
-        append_debug_log(
-            run_id="pre-fix-router",
-            hypothesis_id="H3_active_agents_and_path",
-            location="src/app/runtime.py:process_frame",
-            message="runtime_stage_summary",
-            data={
-                "scene_type": (routing.scene_type if routing is not None else None),
-                "active_agents": sorted(active),
-                "router_ms": (round(router_ms, 3) if router_ms is not None else None),
-                "manager_ms": (
-                    round(manager_ms, 3) if manager_ms is not None else None
-                ),
-                "detect_ms": (round(detect_ms, 3) if detect_ms is not None else None),
-                "template_ms": round(template_ms, 3),
-                "e2e_ms": round(e2e_ms, 3),
-                "action_packets_len": (
-                    int(len(action_packets)) if action_packets is not None else 0
-                ),
-                "tier1_mgr_enabled": bool(tier1_mgr),
-            },
-        )
-        # endregion
 
         return FrameProcessResult(
             events=list(events),

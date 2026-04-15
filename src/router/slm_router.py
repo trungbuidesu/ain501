@@ -56,6 +56,7 @@ class FallbackSignals:
     """Heuristic signals for routing when the model confidence is low."""
 
     motion_diff: float
+    feature_shift: float
     edge_density: float
     skin_ratio: float
 
@@ -77,6 +78,9 @@ def compute_fallback_signals(
     current_rgb: np.ndarray,
     previous_rgb: np.ndarray | None,
     *,
+    current_feat: np.ndarray | None = None,
+    previous_feat: np.ndarray | None = None,
+    max_metric_side: int = 320,
     skin_hsv_lower: tuple[int, int, int] = (0, 48, 80),
     skin_hsv_upper: tuple[int, int, int] = (25, 255, 255),
 ) -> FallbackSignals:
@@ -84,19 +88,53 @@ def compute_fallback_signals(
 
     if current_rgb.ndim != 3 or current_rgb.shape[2] != 3:
         raise ValueError("current_rgb must be HWC RGB uint8")
-    gray = cv2.cvtColor(current_rgb, cv2.COLOR_RGB2GRAY)
+    h, w = current_rgb.shape[:2]
+    scale = 1.0
+    longest = max(h, w)
+    if longest > int(max_metric_side):
+        scale = float(max_metric_side) / float(longest)
+    if scale < 1.0:
+        target_w = max(1, int(w * scale))
+        target_h = max(1, int(h * scale))
+        cur = cv2.resize(
+            current_rgb,
+            (target_w, target_h),
+            interpolation=cv2.INTER_AREA,
+        )
+        prev = (
+            cv2.resize(
+                previous_rgb,
+                (target_w, target_h),
+                interpolation=cv2.INTER_AREA,
+            )
+            if previous_rgb is not None
+            else None
+        )
+    else:
+        cur = current_rgb
+        prev = previous_rgb
+    gray = cv2.cvtColor(cur, cv2.COLOR_RGB2GRAY)
     if previous_rgb is not None:
-        pg = cv2.cvtColor(previous_rgb, cv2.COLOR_RGB2GRAY)
+        assert prev is not None
+        pg = cv2.cvtColor(prev, cv2.COLOR_RGB2GRAY)
         motion_diff = float(
             np.mean(np.abs(gray.astype(np.float32) - pg.astype(np.float32)))
         )
     else:
         motion_diff = 0.0
+    feature_shift = 0.0
+    if current_feat is not None and previous_feat is not None:
+        a = np.asarray(current_feat, dtype=np.float32).reshape(-1)
+        b = np.asarray(previous_feat, dtype=np.float32).reshape(-1)
+        denom = float(np.linalg.norm(a) * np.linalg.norm(b))
+        if denom > 1e-12:
+            cos_sim = float(np.dot(a, b) / denom)
+            feature_shift = float(max(0.0, 1.0 - cos_sim))
 
     edges = cv2.Canny(gray, 50, 150)
     edge_density = float(np.mean(edges > 0))
 
-    hsv = cv2.cvtColor(current_rgb, cv2.COLOR_RGB2HSV)
+    hsv = cv2.cvtColor(cur, cv2.COLOR_RGB2HSV)
     lo = np.array(skin_hsv_lower, dtype=np.uint8)
     hi = np.array(skin_hsv_upper, dtype=np.uint8)
     mask = cv2.inRange(hsv, lo, hi)
@@ -104,6 +142,7 @@ def compute_fallback_signals(
 
     return FallbackSignals(
         motion_diff=motion_diff,
+        feature_shift=feature_shift,
         edge_density=edge_density,
         skin_ratio=skin_ratio,
     )
@@ -113,6 +152,7 @@ def _infer_scene_from_signals(
     signals: FallbackSignals,
     *,
     motion_diff_threshold: float,
+    feature_shift_threshold: float,
     edge_density_threshold: float,
     skin_ratio_threshold: float,
     motion_diff_scene_change: float,
@@ -121,7 +161,10 @@ def _infer_scene_from_signals(
 
     if signals.motion_diff >= motion_diff_scene_change:
         return "scene_change"
-    if signals.motion_diff >= motion_diff_threshold:
+    if (
+        signals.motion_diff >= motion_diff_threshold
+        or signals.feature_shift >= feature_shift_threshold
+    ):
         return "motion"
     if signals.edge_density >= edge_density_threshold:
         return "text_present"
@@ -159,6 +202,8 @@ class SLMRouter:
         scene_to_agents: Mapping[str, Any] | None = None,
         confidence_threshold: float = 0.45,
         image_size: int = 160,
+        use_model: bool = False,
+        fallback_max_metric_side: int = 320,
         fallback: Mapping[str, Any] | None = None,
         providers: list[str] | None = None,
         session: Any | None = None,
@@ -168,8 +213,11 @@ class SLMRouter:
         self.class_names = tuple(class_names)
         self.confidence_threshold = float(confidence_threshold)
         self.image_size = int(image_size)
+        self._use_model = bool(use_model)
+        self._fallback_max_metric_side = int(fallback_max_metric_side)
         fb = dict(fallback or {})
         self._motion_diff_thr = float(fb.get("motion_diff_threshold", 8.0))
+        self._feature_shift_thr = float(fb.get("feature_shift_threshold", 0.03))
         self._edge_density_thr = float(fb.get("edge_density_threshold", 0.08))
         self._skin_ratio_thr = float(fb.get("skin_ratio_threshold", 0.12))
         self._motion_scene_change_thr = float(fb.get("motion_diff_scene_change", 18.0))
@@ -182,13 +230,13 @@ class SLMRouter:
 
         resolved = resolve_scene_classifier_path(model_path)
         self.model_path = resolved
-        if strict_artifacts and not self.model_path.is_file():
+        if strict_artifacts and self._use_model and not self.model_path.is_file():
             raise FileNotFoundError(
                 f"Scene classifier ONNX missing: {self.model_path}. "
                 "Train/export or set router.model_path to a valid file."
             )
         self._session = session
-        if session is None and self.model_path.is_file():
+        if session is None and self._use_model and self.model_path.is_file():
             self._session = create_session(self.model_path, providers=providers)
         if self._session is not None:
             inp = self._session.get_inputs()[0]
@@ -230,8 +278,17 @@ class SLMRouter:
         self,
         frame_rgb: np.ndarray,
         previous_rgb: np.ndarray | None,
+        *,
+        current_feat: np.ndarray | None = None,
+        previous_feat: np.ndarray | None = None,
     ) -> RoutingDecision:
-        signals = compute_fallback_signals(frame_rgb, previous_rgb)
+        signals = compute_fallback_signals(
+            frame_rgb,
+            previous_rgb,
+            current_feat=current_feat,
+            previous_feat=previous_feat,
+            max_metric_side=self._fallback_max_metric_side,
+        )
 
         used_model = False
         used_fallback = False
@@ -249,6 +306,7 @@ class SLMRouter:
                 fb_scene = _infer_scene_from_signals(
                     signals,
                     motion_diff_threshold=self._motion_diff_thr,
+                    feature_shift_threshold=self._feature_shift_thr,
                     edge_density_threshold=self._edge_density_thr,
                     skin_ratio_threshold=self._skin_ratio_thr,
                     motion_diff_scene_change=self._motion_scene_change_thr,
@@ -263,6 +321,7 @@ class SLMRouter:
             scene_type = _infer_scene_from_signals(
                 signals,
                 motion_diff_threshold=self._motion_diff_thr,
+                feature_shift_threshold=self._feature_shift_thr,
                 edge_density_threshold=self._edge_density_thr,
                 skin_ratio_threshold=self._skin_ratio_thr,
                 motion_diff_scene_change=self._motion_scene_change_thr,

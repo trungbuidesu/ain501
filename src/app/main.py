@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import json as _json
 import json
 import queue
 import statistics
@@ -26,6 +27,33 @@ from src.core.hotkeys import has_pynput, start_hotkey_listener, stop_hotkey_list
 from src.detection.change_detector import ChangeDetector
 from src.output.audio_output import play_hazard_beep
 from src.ui.state import DemoControlState
+
+_DEBUG_LOG_PATH = Path("debug-079ff7.log")
+_DEBUG_SESSION_ID = "079ff7"
+
+
+def _debug_log(
+    *,
+    run_id: str,
+    hypothesis_id: str,
+    location: str,
+    message: str,
+    data: dict[str, Any],
+) -> None:
+    payload = {
+        "sessionId": _DEBUG_SESSION_ID,
+        "runId": run_id,
+        "hypothesisId": hypothesis_id,
+        "location": location,
+        "message": message,
+        "data": data,
+        "timestamp": int(time.time() * 1000),
+    }
+    try:
+        with _DEBUG_LOG_PATH.open("a", encoding="utf-8") as f:
+            f.write(_json.dumps(payload, ensure_ascii=True) + "\n")
+    except OSError:
+        return
 
 
 def _as_mapping(x: Any) -> dict[str, Any]:
@@ -371,6 +399,29 @@ def _run_app_loop(
     tier1_meta: list[dict[str, Any]] = []
     last_tick = time.monotonic()
     fps_smooth = 0.0
+    combo_name = (
+        f"dry{int(dry_run)}_visual{int(visual)}_tts{int(enable_tts and not dry_run)}"
+    )
+    t_loop0 = time.perf_counter()
+    packet_age_samples_ms: list[float] = []
+    ui_show_samples_ms: list[float] = []
+    tts_block_samples_ms: list[float] = []
+    tts_enqueue_samples_ms: list[float] = []
+    # region agent log
+    _debug_log(
+        run_id=combo_name,
+        hypothesis_id="H4_combo_baseline",
+        location="src/app/main.py:_run_app_loop",
+        message="combo_start",
+        data={
+            "dry_run": bool(dry_run),
+            "visual": bool(visual),
+            "enable_tts": bool(enable_tts),
+            "target_fps": float(capture_cfg.timing.target_fps),
+            "thread_name": threading.current_thread().name,
+        },
+    )
+    # endregion
 
     try:
         for packet in source_iter:
@@ -386,6 +437,8 @@ def _run_app_loop(
                 continue
             prev = packet.data.copy()
             emitted += 1
+            packet_age_ms = (time.monotonic() - float(packet.t_mono)) * 1000.0
+            packet_age_samples_ms.append(packet_age_ms)
 
             now = time.monotonic()
             dt = now - last_tick
@@ -446,14 +499,21 @@ def _run_app_loop(
                     )
                     _safe_print(cap)
                 elif not is_muted and enable_tts:
+                    t_tts0 = time.perf_counter()
                     if event.priority == "hazard" and hazard_beep:
+                        t_beep0 = time.perf_counter()
                         play_hazard_beep()
+                        tts_block_samples_ms.append(
+                            (time.perf_counter() - t_beep0) * 1000.0
+                        )
                     ok = audio.enqueue(event.text, event.priority, event.signature)
+                    tts_enqueue_samples_ms.append((time.perf_counter() - t_tts0) * 1000.0)
                     if not ok and not audio.is_enabled:
                         audio.speak_print_fallback(event.text)
                 overlay.show_text(event.text)
             if demo is not None and demo.running:
                 cap_text = "\n".join(e.text for e in ev_filt[:2]) or ""
+                t_ui0 = time.perf_counter()
                 demo.show_frame(
                     packet.data,
                     result.detections,
@@ -461,6 +521,7 @@ def _run_app_loop(
                     cap_text,
                     status,
                 )
+                ui_show_samples_ms.append((time.perf_counter() - t_ui0) * 1000.0)
                 if not demo.running:
                     break
 
@@ -499,6 +560,66 @@ def _run_app_loop(
         "tier1_enabled": cfg.tier1_enabled,
         "rag_enabled": cfg.rag_enabled,
     }
+    elapsed_s = max(1e-9, (time.perf_counter() - t_loop0))
+    report["loop_elapsed_s"] = float(elapsed_s)
+    report["processed_fps"] = float(processed / elapsed_s)
+    report["emitted_fps"] = float(emitted / elapsed_s)
+    report["packet_age_ms_p50"] = (
+        float(statistics.median(packet_age_samples_ms)) if packet_age_samples_ms else None
+    )
+    report["packet_age_ms_p95"] = (
+        float(_percentile(sorted(packet_age_samples_ms), 95))
+        if packet_age_samples_ms
+        else None
+    )
+    report["ui_show_ms_p50"] = (
+        float(statistics.median(ui_show_samples_ms)) if ui_show_samples_ms else None
+    )
+    report["tts_block_ms_p50"] = (
+        float(statistics.median(tts_block_samples_ms))
+        if tts_block_samples_ms
+        else None
+    )
+    report["tts_enqueue_ms_p50"] = (
+        float(statistics.median(tts_enqueue_samples_ms))
+        if tts_enqueue_samples_ms
+        else None
+    )
+    # region agent log
+    _debug_log(
+        run_id=combo_name,
+        hypothesis_id="H4_combo_baseline",
+        location="src/app/main.py:_run_app_loop",
+        message="combo_summary",
+        data={
+            "processed_frames": int(processed),
+            "emitted_frames": int(emitted),
+            "loop_elapsed_s": round(elapsed_s, 4),
+            "processed_fps": round(float(processed / elapsed_s), 3),
+            "emitted_fps": round(float(emitted / elapsed_s), 3),
+            "packet_age_ms_p50": (
+                round(float(statistics.median(packet_age_samples_ms)), 3)
+                if packet_age_samples_ms
+                else None
+            ),
+            "ui_show_ms_p50": (
+                round(float(statistics.median(ui_show_samples_ms)), 3)
+                if ui_show_samples_ms
+                else None
+            ),
+            "tts_block_ms_p50": (
+                round(float(statistics.median(tts_block_samples_ms)), 3)
+                if tts_block_samples_ms
+                else None
+            ),
+            "tts_enqueue_ms_p50": (
+                round(float(statistics.median(tts_enqueue_samples_ms)), 3)
+                if tts_enqueue_samples_ms
+                else None
+            ),
+        },
+    )
+    # endregion
     if stage_router_ms:
         rs = sorted(stage_router_ms)
         report["router_ms_p50"] = float(statistics.median(stage_router_ms))
@@ -613,8 +734,10 @@ def _run_app_threaded(
     q: queue.Queue[FramePacket | None] = queue.Queue(maxsize=2)
     stop = threading.Event()
     exc_holder: list[BaseException] = []
+    dropped_frames = 0
 
     def capture_worker() -> None:
+        nonlocal dropped_frames
         n = 0
         try:
             while not stop.is_set():
@@ -626,6 +749,12 @@ def _run_app_threaded(
                 if max_frames is not None and n > max_frames:
                     q.put(None)
                     return
+                if q.full():
+                    try:
+                        _ = q.get_nowait()
+                        dropped_frames += 1
+                    except queue.Empty:
+                        pass
                 q.put(packet)
         except BaseException as e:
             exc_holder.append(e)
@@ -650,6 +779,15 @@ def _run_app_threaded(
             yield item
 
     try:
+        # region agent log
+        _debug_log(
+            run_id="threaded_pipeline",
+            hypothesis_id="H3_queue_backlog",
+            location="src/app/main.py:_run_app_threaded",
+            message="threaded_pipeline_start",
+            data={"queue_maxsize": 2},
+        )
+        # endregion
         return _run_app_loop(
             cfg,
             max_frames=None,
@@ -661,6 +799,15 @@ def _run_app_threaded(
             hazard_beep=hazard_beep,
         )
     finally:
+        # region agent log
+        _debug_log(
+            run_id="threaded_pipeline",
+            hypothesis_id="H3_queue_backlog",
+            location="src/app/main.py:_run_app_threaded",
+            message="threaded_pipeline_end",
+            data={"dropped_frames": int(dropped_frames), "queue_maxsize": 2},
+        )
+        # endregion
         stop.set()
         ct.join(timeout=5.0)
         if exc_holder:

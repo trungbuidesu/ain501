@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from concurrent.futures import as_completed
 from concurrent.futures import ThreadPoolExecutor
 from concurrent.futures import TimeoutError as FutureTimeout
 from dataclasses import dataclass, field
@@ -59,12 +60,16 @@ class AgentManager:
     ) -> dict[str, AgentResult]:
         """Execute active agents; return mapping agent_name -> AgentResult."""
 
+        import time
+
         results: dict[str, AgentResult] = {}
         futures: dict[str, Any] = {}
+        future_to_name: dict[Any, str] = {}
 
         def wrap(name: str, fn: Callable[[], Any], timeout_s: float) -> None:
             fut = self._pool.submit(fn)
             futures[name] = (fut, timeout_s)
+            future_to_name[fut] = name
 
         if "object" in active:
             wrap(
@@ -94,13 +99,13 @@ class AgentManager:
                 self.timeout_face_pose_s,
             )
 
-        import time
-
-        for name, (fut, timeout_s) in futures.items():
-            t0 = time.perf_counter()
+        started_at = time.perf_counter()
+        for fut in as_completed(future_to_name):
+            name = future_to_name[fut]
+            _, timeout_s = futures[name]
             try:
                 payload = fut.result(timeout=timeout_s)
-                latency = (time.perf_counter() - t0) * 1000.0
+                latency = (time.perf_counter() - started_at) * 1000.0
                 results[name] = AgentResult(
                     agent=name,
                     status="ok",
@@ -110,7 +115,7 @@ class AgentManager:
                 )
                 self.stats.success += 1
             except FutureTimeout:
-                latency = (time.perf_counter() - t0) * 1000.0
+                latency = timeout_s * 1000.0
                 results[name] = AgentResult(
                     agent=name,
                     status="timeout",
@@ -120,7 +125,7 @@ class AgentManager:
                 )
                 self.stats.timeout += 1
             except Exception as exc:
-                latency = (time.perf_counter() - t0) * 1000.0
+                latency = (time.perf_counter() - started_at) * 1000.0
                 results[name] = AgentResult(
                     agent=name,
                     status="error",
@@ -129,5 +134,4 @@ class AgentManager:
                     error=str(exc),
                 )
                 self.stats.error += 1
-
         return results

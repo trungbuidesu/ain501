@@ -1,4 +1,4 @@
-# Phase 3 — RAG Lite + Orchestrator
+# RAG Lite + Orchestrator
 
 ## Tổng quan
 

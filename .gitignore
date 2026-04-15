@@ -222,6 +222,7 @@ reports/
 /site/
 chroma_db/
 chromadb/
+yolov8n_int8_openvino_model/
 *.onnx
 *.pt
 src/training/data/**/__pycache__/

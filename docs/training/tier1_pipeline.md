@@ -1,4 +1,4 @@
-# Phase 3 — Tier 1: router + parallel agents
+# Tier 1 Pipeline: router + parallel agents
 
 Tier 1 extends the accessibility app (`src/app/main.py`) with:
 
@@ -16,7 +16,7 @@ Tier 1 extends the accessibility app (`src/app/main.py`) with:
 
 | Block | Purpose |
 | --- | --- |
-| `tier1.enabled` | Master switch (`false` keeps legacy Phase 2 behavior). |
+| `tier1.enabled` | Master switch (`false` keeps legacy behavior). |
 | `tier1.strict_artifacts` | If `true`, missing ONNX for router/action raises at startup (recommended for delivery). |
 | `tier1.object_only` | Debug: only YOLO, no router or other experts. CLI: `--object-only`. |
 | `tier1.ring_buffer_maxlen` | Frames kept for temporal action clips. |
@@ -34,7 +34,7 @@ Enable Tier 1 in YAML (`tier1.enabled: true`) after placing:
 - `models/scene_classifier_int8.onnx`
 - `models/movinet_a0_int8.onnx`
 - `models/yolov8n_int8.onnx`
-- Piper voice (see [phase2_mvp.md](phase2_mvp.md))
+- Piper voice (see [app_runtime.md](app_runtime.md))
 
 ## Benchmarks
 

@@ -27,9 +27,9 @@ nav:
   - Tài liệu hiện có:
       - Data Pipeline: data_pipeline.md
       - Week 6 — benchmark & registry: training/week6_training_log.md
-      - Phase 2 MVP object-to-speech: training/phase2_mvp.md
-      - Phase 3 Tier 1 (router + agents): training/phase3_tier1.md
-      - Phase 3 RAG Lite + orchestrator: training/phase3_rag.md
+      - App runtime object-to-speech: training/app_runtime.md
+      - Tier 1 pipeline (router + agents): training/tier1_pipeline.md
+      - RAG Lite + orchestrator: training/rag_orchestrator.md
       - Active learning (MVP): active_learning.md
 
 plugins:

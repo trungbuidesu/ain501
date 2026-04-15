@@ -120,10 +120,10 @@ $AIN501_PY=Join-Path $env:CONDA_PREFIX "python.exe"
 ### App runtime (object-to-speech, optional Tier 1 router)
 
 - **Chạy mặc định:** `python -m src.app` (config: [`configs/app.yaml`](configs/app.yaml))
-- **Tier 1:** bật `tier1.enabled: true` trong [`configs/app.yaml`](configs/app.yaml) (cần ONNX scene + MoViNet; xem `models/registry.json`). Tài liệu: [docs/training/phase3_tier1.md](docs/training/phase3_tier1.md).
+- **Tier 1:** bật `tier1.enabled: true` trong [`configs/app.yaml`](configs/app.yaml) (cần ONNX scene + MoViNet; xem `models/registry.json`). Tài liệu: [docs/training/tier1_pipeline.md](docs/training/tier1_pipeline.md).
 - **Chỉ YOLO (debug):** `python -m src.app --object-only`
 - **Benchmark CPU từng agent Tier 1:** `python -m src.training.scripts.benchmark_tier1_agents` → `reports/phase3/tier1_benchmark.md`
-- **RAG Lite:** bật `rag.enabled: true` trong [`configs/app.yaml`](configs/app.yaml) (cần `models/minilm_l6.onnx` + `data/knowledge/*.json`). Tài liệu: [docs/training/phase3_rag.md](docs/training/phase3_rag.md).
+- **RAG Lite:** bật `rag.enabled: true` trong [`configs/app.yaml`](configs/app.yaml) (cần `models/minilm_l6.onnx` + `data/knowledge/*.json`). Tài liệu: [docs/training/rag_orchestrator.md](docs/training/rag_orchestrator.md).
 
 **Môi trường:** khuyến nghị conda env `ain501` (Python 3.10+), cài dev: `pip install -e ".[dev]"`.
 
@@ -192,7 +192,7 @@ Các bộ dữ liệu (dataset) đang được khai báo cấu hình:
 ## MVP pipeline (Object-to-Speech)
 
 Ứng dụng chạy pipeline capture → YOLO → mô tả không gian (template / RAG) → Piper TTS. Hướng dẫn đầy đủ (cài Piper/giọng, chỉnh [`configs/app.yaml`](configs/app.yaml) và `capture_pipeline.yaml`, lệnh chạy, đầu ra `reports/app/`, xử lý sự cố) nằm trong
-[docs/training/phase2_mvp.md](docs/training/phase2_mvp.md).
+[docs/training/app_runtime.md](docs/training/app_runtime.md).
 
 ## Notebook khám phá
 

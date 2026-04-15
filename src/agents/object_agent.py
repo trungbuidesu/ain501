@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+import os
+import time
 from pathlib import Path
 from typing import Any
 
@@ -78,6 +80,7 @@ class ObjectAgent:
         self.conf_threshold = float(conf_threshold)
         self.iou_threshold = float(iou_threshold)
         self.max_detections = int(max_detections)
+        self._debug = os.environ.get("YOLO_DEBUG", "0") == "1"
         if session is not None:
             self._session = session
         else:
@@ -87,11 +90,25 @@ class ObjectAgent:
                 hint="INT8 ONNX path is listed under models.registry.json artifacts.",
             )
             self._session = create_session(self.model_path, providers=providers)
+        self._providers = list(getattr(self._session, "get_providers", lambda: [])())
         input_meta = self._session.get_inputs()[0]
         self._input_name = input_meta.name
         shape = getattr(input_meta, "shape", None) or []
+        self._input_shape = list(shape)
         batch_dim = shape[0] if len(shape) > 0 else None
         self._static_batch = int(batch_dim) if isinstance(batch_dim, int) else 1
+        if self._debug:
+            size_mb = self.model_path.stat().st_size / (1024 * 1024)
+            print(
+                (
+                    "[yolo][init] "
+                    f"path={self.model_path} size_mb={size_mb:.2f} "
+                    f"providers={self._providers} input_name={self._input_name} "
+                    f"input_shape={self._input_shape} "
+                    f"conf_threshold={self.conf_threshold}"
+                ),
+                flush=True,
+            )
 
     def preprocess(self, frame_rgb: np.ndarray) -> tuple[np.ndarray, tuple[int, int]]:
         """Resize RGB frame to model square input and return NCHW float32."""
@@ -127,15 +144,40 @@ class ObjectAgent:
     def detect_instances(self, frame_rgb: np.ndarray) -> list[dict[str, Any]]:
         """Return per-instance records with label/confidence/bbox/count."""
 
+        t0 = time.perf_counter()
         x, orig_shape = self.preprocess(frame_rgb)
+        t1 = time.perf_counter()
         outputs = self._session.run(None, {self._input_name: x})
+        t2 = time.perf_counter()
         raw = outputs[0]
         boxes, scores, class_ids = decode_yolo_predictions(
             raw,
             conf_threshold=self.conf_threshold,
         )
+        t3 = time.perf_counter()
         if boxes.shape[0] == 0:
+            if self._debug:
+                preprocess_ms = (t1 - t0) * 1000.0
+                inference_ms = (t2 - t1) * 1000.0
+                decode_ms = (t3 - t2) * 1000.0
+                total_ms = (time.perf_counter() - t0) * 1000.0
+                print(
+                    (
+                        "[yolo][timing] "
+                        f"preprocess_ms={preprocess_ms:.2f} "
+                        f"inference_ms={inference_ms:.2f} "
+                        f"decode_ms={decode_ms:.2f} "
+                        f"nms_ms=0.00 total_ms={total_ms:.2f} "
+                        f"raw_shape={list(np.asarray(raw).shape)} "
+                        f"orig_hw={orig_shape[0]}x{orig_shape[1]} "
+                        f"model_hw={self.input_size}x{self.input_size} "
+                        "candidates=0 kept=0"
+                    ),
+                    flush=True,
+                )
             return []
+        n_candidates = int(boxes.shape[0])
+        t_nms0 = time.perf_counter()
         keep = nms_class_aware(
             boxes,
             scores,
@@ -143,6 +185,7 @@ class ObjectAgent:
             iou_threshold=self.iou_threshold,
             max_detections=self.max_detections,
         )
+        t_nms1 = time.perf_counter()
         boxes = self._rescale_boxes(boxes[keep], orig_shape)
         scores = scores[keep]
         class_ids = class_ids[keep]
@@ -173,6 +216,39 @@ class ObjectAgent:
                     "count": int(counts[name]),
                 }
             )
+        if self._debug:
+            preprocess_ms = (t1 - t0) * 1000.0
+            inference_ms = (t2 - t1) * 1000.0
+            decode_ms = (t3 - t2) * 1000.0
+            nms_ms = (t_nms1 - t_nms0) * 1000.0
+            total_ms = (time.perf_counter() - t0) * 1000.0
+            stages = {
+                "preprocess_ms": preprocess_ms,
+                "inference_ms": inference_ms,
+                "decode_ms": decode_ms,
+                "nms_ms": nms_ms,
+            }
+            bottleneck = max(stages, key=stages.get)
+            print(
+                (
+                    "[yolo][timing] "
+                    f"preprocess_ms={preprocess_ms:.2f} "
+                    f"inference_ms={inference_ms:.2f} "
+                    f"decode_ms={decode_ms:.2f} "
+                    f"nms_ms={nms_ms:.2f} total_ms={total_ms:.2f} "
+                    f"raw_shape={list(np.asarray(raw).shape)} "
+                    f"orig_hw={orig_shape[0]}x{orig_shape[1]} "
+                    f"model_hw={self.input_size}x{self.input_size} "
+                    f"candidates={n_candidates} kept={len(keep)} "
+                    f"bottleneck={bottleneck}"
+                ),
+                flush=True,
+            )
+            top5 = sorted(rows, key=lambda r: float(r["confidence"]), reverse=True)[:5]
+            summary = ", ".join(
+                f"{r['label']}:{float(r['confidence']):.3f}" for r in top5
+            )
+            print(f"[yolo][top5] {summary}", flush=True)
         return rows
 
     def detect(self, frame_rgb: np.ndarray) -> list[dict[str, Any]]:

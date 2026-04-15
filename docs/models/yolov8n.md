@@ -30,6 +30,12 @@ Do tính phức hợp phân cảnh tại môi trường hiện thực của ngư
 
 > CLI tĩnh `python -m src.training.scripts.yolov8n predict-errors` là bắt buộc đối với mỗi vòng lập checkpoint epoch nhằm định danh các nhãn mờ sai cực (False Negatives / Overlapped labels) dựa vào ma trận so khớp Confidence Filtering.
 
+## Đánh giá (validation): COCO vs tập accessibility 16 lớp
+
+- **Kiểm tra model gốc:** `yolov8n.pt` trên **COCO val** (`data=coco.yaml`, `imgsz=640`) cần cho **mAP50 ~ 0.52** (cùng bản Ultralytics). Nếu đạt, trọng số pretrained không hỏng.
+- **Tập `object_detection_accessibility_merged`:** Nhãn dùng **class id 0–15** theo thứ tự riêng (`classes.txt`). Trọng số COCO có **80 lớp** với **thứ tự id COCO**, không trùng thứ tự subset (ví dụ *dog* trong COCO là id 16, trong subset là 1). Chạy `val` trực tiếp với `nc: 16` và nhãn 0–15 sẽ **lệch ánh xạ** — mAP tổng có thể rất thấp dù chỉ vài lớp trùng tình cờ (thường *person*). Đây là vấn đề **cấu hình đánh giá / ánh xạ lớp**, không phải `conf` hay `imgsz` sai mặc định.
+- **Hướng xử lý:** Fine-tune head 16 lớp; hoặc giữ nhãn theo **id COCO gốc** + yaml 80 lớp; hoặc map pred→subset khi tính metric.
+
 ## Kết quả Huấn luyện Thử nghiệm (Pilot Results)
 
 Dự án đã hoàn thành giai đoạn Pilot training cho YOLOv8n:

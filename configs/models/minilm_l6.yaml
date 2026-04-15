@@ -1,0 +1,35 @@
+name: all_minilm_l6_v2
+role: text_embedding_rag
+model:
+  hf_name: sentence-transformers/all-MiniLM-L6-v2
+  max_seq_length: 128
+  pooling: mean
+  normalize_embeddings: true
+training:
+  seed: 501
+  objective: infonce
+  batch_size: 32
+  epochs: 8
+  lr: 2.0e-5
+  warmup_ratio: 0.1
+  weight_decay: 0.01
+  grad_clip_norm: 1.0
+  margin: 0.2
+data:
+  pairs_csv: data/processed/text_embedding/minilm_pairs.csv
+  train_ratio: 0.8
+  val_ratio: 0.1
+output:
+  checkpoint_dir: models/text/minilm_l6
+  log_dir: runs/minilm_l6
+  report_dir: reports/minilm_l6
+  onnx_path: models/minilm_l6.onnx
+benchmark:
+  profile_name: current-cpu
+  runtime: onnxruntime
+  batch_size: 1
+  warmup: 20
+  iterations: 100
+evaluation:
+  default_k: 5
+  target_latency_ms: 5.0

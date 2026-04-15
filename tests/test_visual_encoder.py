@@ -58,7 +58,7 @@ def test_visual_encoder_encode_packet() -> None:
 def test_visual_encoder_latency_verify_missing_report(tmp_path) -> None:
     session = _FakeEncoderSession()
     enc = VisualEncoder(session=session, enable_cache=False)
-    result = enc.verify_latency_against_phase0(
+    result = enc.verify_latency_against_reference(
         1.0,
         benchmark_report_path=tmp_path / "missing.json",
     )

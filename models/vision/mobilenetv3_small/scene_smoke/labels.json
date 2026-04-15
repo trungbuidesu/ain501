@@ -1,0 +1,18 @@
+{
+  "bathroom": 0,
+  "corridor": 1,
+  "crosswalk": 2,
+  "elevator/door": 3,
+  "elevator_lobby": 4,
+  "general_store/indoor": 5,
+  "kitchen": 6,
+  "living_room": 7,
+  "office": 8,
+  "park": 9,
+  "parking_lot": 10,
+  "restaurant": 11,
+  "shopfront": 12,
+  "staircase": 13,
+  "street": 14,
+  "supermarket": 15
+}

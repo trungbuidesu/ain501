@@ -56,6 +56,58 @@ Tài liệu vận hành pipeline chi tiết vẫn có thể đọc trực tiếp
 
 ## Bắt Đầu
 
+## Quick Start (máy mới)
+
+### 1. Clone repo
+
+```bash
+git clone <repo-url>
+cd ain501
+```
+
+### 2. Tạo environment
+
+```bash
+conda create -n ain501 python=3.10
+conda activate ain501
+pip install -r requirements.txt
+```
+
+### 3. Download models
+
+```bash
+# Option A: tải models_release.zip từ kênh phát hành nội bộ
+# Sau đó giải nén vào thư mục models/
+unzip models_release.zip -d .
+
+# Option B: copy trực tiếp thư mục models/ từ máy gốc
+```
+
+PowerShell:
+
+```powershell
+Expand-Archive -Path .\models_release.zip -DestinationPath . -Force
+```
+
+### 4. Verify
+
+```bash
+python scripts/verify_models.py
+```
+
+### 5. Chạy app
+
+```bash
+# Headless (audio only)
+python -m src.app
+
+# Visual + TTS
+python -m src.app --visual --tts
+
+# Dry-run
+python -m src.app --dry-run --max-frames 10
+```
+
 ### 1. Yêu Cầu
 
 - [Miniconda](https://docs.conda.io/en/latest/miniconda.html) hoặc
@@ -128,6 +180,32 @@ $AIN501_PY=Join-Path $env:CONDA_PREFIX "python.exe"
 **Môi trường:** khuyến nghị conda env `ain501` (Python 3.10+), cài dev: `pip install -e ".[dev]"`.
 
 **Kiểm tra đầy đủ trước khi PR (từ thư mục gốc repo):** `black .` → `ruff check .` → `mypy .` → `pytest -q` → `python -m src.app --dry-run` → `python -m src.app --visual --dry-run`. Không cần `--config` trừ khi muốn file YAML khác; mặc định là [`configs/app.yaml`](configs/app.yaml).
+
+### Packaging cho deploy runtime
+
+Mục tiêu deploy: clone repo + cài dependency runtime + verify model + chạy `python -m src.app`.
+
+```bash
+pip install -r requirements.txt
+python scripts/verify_models.py
+python scripts/package_models.py --output models_release.zip
+python -m src.app --dry-run --max-frames 20
+```
+
+PowerShell (conda env `ain501`):
+
+```powershell
+$AIN501_PY="C:\Users\bdtrung29.1\miniconda3\envs\ain501\python.exe"
+& $AIN501_PY -m pip install -r requirements.txt
+& $AIN501_PY scripts/verify_models.py
+& $AIN501_PY scripts/package_models.py --output models_release.zip
+& $AIN501_PY -m src.app --dry-run --max-frames 20
+```
+
+Tham khảo thêm:
+- Manifest runtime: [`DEPLOY_MANIFEST.md`](DEPLOY_MANIFEST.md)
+- Danh sách model runtime: [`models/README.md`](models/README.md)
+- Script setup nhanh: [`scripts/setup.sh`](scripts/setup.sh)
 
 ## Pipeline Dữ Liệu
 

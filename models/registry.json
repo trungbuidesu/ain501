@@ -1,0 +1,212 @@
+{
+  "schema_version": 1,
+  "description": "AIN501 deployable ONNX models (local paths). Large binaries are gitignored; clone or train to populate.",
+  "models": [
+    {
+      "id": "yolov8n",
+      "display_name": "YOLOv8n",
+      "version": "1.0",
+      "source": "ultralytics + project fine-tune",
+      "task": "object_detection",
+      "config_path": "configs/models/yolov8n.yaml",
+      "training": {
+        "dataset": "object_detection_accessibility",
+        "epochs": 100,
+        "notes": "Pilot metrics may use pilot preset (5 epochs); see reports path."
+      },
+      "primary_metric": {
+        "name": "mAP50",
+        "higher_is_better": true
+      },
+      "metrics_json": {
+        "fp32": {
+          "path": "reports/yolov8n/accessibility_coco_remap_eval.json",
+          "keys": ["mAP50"]
+        },
+        "int8": {
+          "path": "reports/yolov8n/accessibility_coco_remap_eval.json",
+          "keys": ["mAP50"]
+        }
+      },
+      "artifacts": {
+        "fp32_onnx": null,
+        "int8_onnx": {
+          "path": "models/yolov8n_int8.onnx",
+          "input_specs": {
+            "images": { "shape": [16, 3, 640, 640], "dtype": "float32" }
+          }
+        }
+      },
+      "latency_unit": "ms_per_image",
+      "latency_normalization": {
+        "divide_batch_by": 16,
+        "description": "Graph uses static batch 16; suite reports per-image ms."
+      },
+      "expected_latency_ms": {
+        "edge_cpu": 30.0,
+        "notes": "Rough budget; run benchmark_suite for this machine."
+      }
+    },
+    {
+      "id": "movinet_a0",
+      "display_name": "MoViNet-A0",
+      "version": "1.0",
+      "source": "movinets + Kinetics-600 pretrain",
+      "task": "action_recognition",
+      "config_path": "configs/models/movinet_a0.yaml",
+      "training": {
+        "dataset": "HMDB-51 accessibility subset",
+        "epochs": 30
+      },
+      "primary_metric": {
+        "name": "top1_accuracy",
+        "higher_is_better": true
+      },
+      "metrics_json": {
+        "fp32": {
+          "path": "reports/movinet_a0/hmdb_retrain_summary.json",
+          "keys": ["evaluation", "top1_accuracy"]
+        },
+        "int8": {
+          "path": "reports/movinet_a0/hmdb_retrain_summary.json",
+          "keys": ["evaluation", "top1_accuracy"]
+        }
+      },
+      "artifacts": {
+        "fp32_onnx": {
+          "path": "models/movinet_a0_fp32.onnx",
+          "input_specs": {
+            "input": { "shape": [1, 3, 6, 172, 172], "dtype": "float32" }
+          }
+        },
+        "int8_onnx": {
+          "path": "models/movinet_a0_int8.onnx",
+          "input_specs": {
+            "input": { "shape": [1, 3, 6, 172, 172], "dtype": "float32" }
+          }
+        }
+      },
+      "latency_unit": "ms_per_clip",
+      "expected_latency_ms": {
+        "edge_cpu": 50.0
+      }
+    },
+    {
+      "id": "scene_classifier",
+      "display_name": "Scene classifier (router)",
+      "version": "1.0",
+      "source": "project train-from-scratch",
+      "task": "scene_router",
+      "config_path": "configs/models/scene_classifier.yaml",
+      "training": {
+        "dataset": "scene_router_manifest",
+        "epochs": 20
+      },
+      "primary_metric": {
+        "name": "test_accuracy",
+        "higher_is_better": true
+      },
+      "metrics_json": {
+        "fp32": {
+          "path": "reports/scene_classifier/latest_summary.json",
+          "keys": ["test_accuracy"]
+        },
+        "int8": {
+          "path": "reports/scene_classifier/latest_summary.json",
+          "keys": ["test_accuracy"]
+        }
+      },
+      "artifacts": {
+        "fp32_onnx": {
+          "path": "models/scene_classifier_fp32.onnx",
+          "input_specs": {
+            "images": { "shape": [1, 3, 160, 160], "dtype": "float32" }
+          }
+        },
+        "int8_onnx": {
+          "path": "models/scene_classifier_int8.onnx",
+          "input_specs": {
+            "images": { "shape": [1, 3, 160, 160], "dtype": "float32" }
+          }
+        }
+      },
+      "latency_unit": "ms_per_image",
+      "expected_latency_ms": {
+        "edge_cpu": 5.0
+      }
+    },
+    {
+      "id": "mobilenetv3_small",
+      "display_name": "MobileNetV3-Small (embedding)",
+      "version": "1.0",
+      "source": "torchvision + optional fine-tune",
+      "task": "image_embedding",
+      "config_path": "configs/models/mobilenetv3_small.yaml",
+      "training": {
+        "dataset": "scene subset / custom manifest",
+        "epochs": 20
+      },
+      "primary_metric": {
+        "name": "train_accuracy_proxy",
+        "higher_is_better": true
+      },
+      "metrics_json": {
+        "fp32": {
+          "path": "reports/mobilenetv3_small/latest_summary.json",
+          "keys": ["best_val_accuracy"]
+        },
+        "int8": null
+      },
+      "artifacts": {
+        "fp32_onnx": {
+          "path": "models/mobilenetv3_small_fp32.onnx",
+          "input_specs": {
+            "images": { "shape": [1, 3, 224, 224], "dtype": "float32" }
+          }
+        },
+        "int8_onnx": null
+      },
+      "latency_unit": "ms_per_image",
+      "expected_latency_ms": {
+        "edge_cpu": 15.0
+      }
+    },
+    {
+      "id": "minilm_l6",
+      "display_name": "all-MiniLM-L6-v2",
+      "version": "1.0",
+      "source": "sentence-transformers",
+      "task": "text_embedding",
+      "config_path": "configs/models/minilm_l6.yaml",
+      "training": {
+        "dataset": "caption_template_pairs",
+        "epochs": 8
+      },
+      "primary_metric": {
+        "name": "recall_at_k",
+        "higher_is_better": true
+      },
+      "metrics_json": {
+        "fp32": {
+          "path": "reports/minilm_l6/check_run_summary.json",
+          "keys": ["final_retrieval", "recall_at_k"]
+        },
+        "int8": null
+      },
+      "artifacts": {
+        "fp32_onnx": {
+          "path": "models/minilm_l6.onnx",
+          "input_specs": {
+            "input_ids": { "shape": [1, 128], "dtype": "int64" },
+            "attention_mask": { "shape": [1, 128], "dtype": "int64" }
+          }
+        },
+        "int8_onnx": null
+      },
+      "latency_unit": "ms_per_query",
+      "expected_latency_ms": {
+        "edge_cpu": 5.0
+      }
+    }
+  ]
+}

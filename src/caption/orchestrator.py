@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from difflib import SequenceMatcher
 from typing import Any
 
@@ -171,19 +172,30 @@ class CaptionOrchestrator:
             frame_height=frame_height,
             agent_results=agent_results,
         )
+        if os.environ.get("RAG_DEBUG") == "1":
+            print(f"[rag] query='{query}'", flush=True)
         base_events: list[CaptionEvent]
 
         if self._rag_enabled and self._kb is not None and query:
             hits = self._kb.search(query)
             if hits:
+                if os.environ.get("RAG_DEBUG") == "1":
+                    print(
+                        f"[rag] hits={len(hits)} source=rag",
+                        flush=True,
+                    )
                 base_events = _scored_to_events(hits)
             else:
+                if os.environ.get("RAG_DEBUG") == "1":
+                    print("[rag] no hits -> source=template", flush=True)
                 base_events = self._engine.render(
                     detections,
                     frame_width=frame_width,
                     frame_height=frame_height,
                 )
         else:
+            if os.environ.get("RAG_DEBUG") == "1":
+                print("[rag] disabled/empty-query -> source=template", flush=True)
             base_events = self._engine.render(
                 detections,
                 frame_width=frame_width,

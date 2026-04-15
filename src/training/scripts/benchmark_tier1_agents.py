@@ -1,4 +1,4 @@
-"""Generate Tier 1 CPU benchmark summary into ``reports/phase3/tier1_benchmark.md``.
+"""Generate Tier 1 CPU benchmark summary into ``reports/tier1/tier1_benchmark.md``.
 
 Run from repo root::
 
@@ -19,7 +19,7 @@ def _repo_root() -> Path:
 
 def main() -> int:
     root = _repo_root()
-    out_dir = root / "reports" / "phase3"
+    out_dir = root / "reports" / "tier1"
     out_dir.mkdir(parents=True, exist_ok=True)
     md_path = out_dir / "tier1_benchmark.md"
     lines: list[str] = [

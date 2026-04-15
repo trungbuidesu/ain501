@@ -61,7 +61,7 @@ rag:
   top_k: 3
   min_similarity: 0.3
   dedup_similarity: 0.8
-  enabled: false
+  enabled: true
 
 ui:
   enabled: false

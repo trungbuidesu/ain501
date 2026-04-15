@@ -154,14 +154,14 @@ class VisualEncoder:
             "latency_ms_p95": float(ordered[p95_idx]),
         }
 
-    def verify_latency_against_phase0(
+    def verify_latency_against_reference(
         self,
         measured_p50_ms: float,
         *,
         benchmark_report_path: Path | str = Path("reports/week6/benchmark_report.json"),
         tolerance_ratio: float = 0.5,
     ) -> dict[str, Any]:
-        """Compare measured p50 latency against Phase 0 benchmark row."""
+        """Compare measured p50 latency against reference benchmark row."""
 
         report_path = Path(benchmark_report_path)
         benchmark_p50 = None
@@ -174,7 +174,7 @@ class VisualEncoder:
         if benchmark_p50 is None:
             return {
                 "status": "inconclusive",
-                "reason": "phase0_mobilenet_row_missing",
+                "reason": "reference_mobilenet_row_missing",
                 "measured_p50_ms": float(measured_p50_ms),
             }
         allowed_upper = float(benchmark_p50) * (1.0 + float(tolerance_ratio))

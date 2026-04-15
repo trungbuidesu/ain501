@@ -1,0 +1,28 @@
+# Core
+opencv-python>=4.8
+numpy>=1.24
+onnxruntime>=1.16
+pyyaml>=6.0
+
+# Agents
+paddleocr>=2.7
+mediapipe>=0.10
+
+# RAG
+faiss-cpu>=1.7
+transformers>=4.36
+
+# TTS
+pyttsx3>=2.90
+piper-tts>=1.2
+
+# UI
+Pillow>=10.0
+
+# Optional runtime utilities
+pynput>=1.7
+sounddevice>=0.4
+psutil>=5.9
+scikit-image>=0.21
+mss>=10.0.0
+dxcam>=0.0.5

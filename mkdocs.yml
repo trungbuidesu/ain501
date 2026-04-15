@@ -27,6 +27,7 @@ nav:
   - Tài liệu hiện có:
       - Data Pipeline: data_pipeline.md
       - Week 6 — benchmark & registry: training/week6_training_log.md
+      - Benchmark summary snapshot: training/benchmark_summary.md
       - App runtime object-to-speech: training/app_runtime.md
       - Tier 1 pipeline (router + agents): training/tier1_pipeline.md
       - RAG Lite + orchestrator: training/rag_orchestrator.md

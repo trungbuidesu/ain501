@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 from typing import Any, Protocol, cast
 
@@ -110,12 +111,22 @@ class KnowledgeBase:
         """Return top-k scored entries, or None if best score is below threshold."""
 
         if not text.strip() or self._index is None or not self._entries:
+            if os.environ.get("RAG_DEBUG") == "1":
+                print(
+                    "[rag] search skipped: empty text or empty index",
+                    flush=True,
+                )
             return None
         q = self._embedder.encode(text).reshape(1, -1).astype(np.float32)
         scores, idxs = self._index.search(q, min(self.top_k, len(self._entries)))
         scores_flat = scores[0]
         idxs_flat = idxs[0]
         best = float(scores_flat[0])
+        if os.environ.get("RAG_DEBUG") == "1":
+            print(
+                (f"[rag] top_score={best:.4f} " f"threshold={self.min_similarity:.4f}"),
+                flush=True,
+            )
         if best < self.min_similarity:
             return None
         hits: list[ScoredEntry] = []

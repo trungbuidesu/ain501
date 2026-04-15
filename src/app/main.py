@@ -436,7 +436,6 @@ def _run_app_loop(
                     if not ok and not audio.is_enabled:
                         audio.speak_print_fallback(event.text)
                 overlay.show_text(event.text)
-
             if demo is not None and demo.running:
                 cap_text = "\n".join(e.text for e in ev_filt[:2]) or ""
                 demo.show_frame(
@@ -499,8 +498,8 @@ def _run_app_loop(
     out.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
 
     if cfg.tier1_enabled:
-        phase3_dir = Path(__file__).resolve().parents[2] / "reports" / "phase3"
-        phase3_dir.mkdir(parents=True, exist_ok=True)
+        tier1_dir = Path(__file__).resolve().parents[2] / "reports" / "tier1"
+        tier1_dir.mkdir(parents=True, exist_ok=True)
         tier1_report = {
             "tier1": True,
             "strict_artifacts": cfg.tier1_strict_artifacts,
@@ -515,7 +514,7 @@ def _run_app_loop(
                 else None
             ),
         }
-        (phase3_dir / "tier1_benchmark.json").write_text(
+        (tier1_dir / "tier1_benchmark.json").write_text(
             json.dumps(tier1_report, indent=2) + "\n",
             encoding="utf-8",
         )

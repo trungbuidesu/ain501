@@ -1,0 +1,40 @@
+name: scene_classifier
+role: scene_router
+classes:
+  names:
+    - static
+    - motion
+    - text_present
+    - face_detected
+    - scene_change
+model:
+  variant: tiny_cnn
+  num_classes: 5
+  image_size: 160
+  weights: none
+training:
+  seed: 501
+  lr: 0.001
+  batch_size: 32
+  epochs: 20
+  num_workers: 0
+  label_smoothing: 0.05
+  weighted_sampling: true
+qat:
+  enabled: true
+  epochs: 3
+  lr: 0.0001
+  backend: fbgemm
+  calibration_batches: 20
+output:
+  checkpoint_dir: models/vision/scene_classifier
+  log_dir: runs/scene_classifier
+  report_dir: reports/scene_classifier
+  onnx_fp32: models/scene_classifier_fp32.onnx
+  onnx_int8: models/scene_classifier_int8.onnx
+benchmark:
+  profile_name: current-cpu
+  runtime: onnxruntime
+  batch_size: 1
+  warmup: 20
+  iterations: 100

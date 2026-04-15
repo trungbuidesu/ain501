@@ -216,14 +216,24 @@ screenshots/
 /data/*
 !/data/knowledge/
 !/data/knowledge/**
-models/
+
+# Models (download separately; do not commit heavy binaries)
+models/**/*.onnx
+models/**/*.pt
+models/**/*.bin
+!models/README.md
+!models/registry.json
+
 runs/
 reports/
 /site/
 chroma_db/
 chromadb/
 yolov8n_int8_openvino_model/
-*.onnx
+models_release.zip
+requirements_full.txt
+/*.onnx
+# Keep training checkpoints out of git.
 *.pt
 src/training/data/**/__pycache__/
 src/training/data/**/*.py[codz]

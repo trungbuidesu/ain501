@@ -59,6 +59,7 @@ class AppConfig:
     tier1_enabled: bool
     tier1_strict_artifacts: bool
     tier1_object_only: bool
+    tier1_action_enabled: bool
     tier1_ring_maxlen: int
     tier1_router_path: Path | None
     tier1_router_confidence: float
@@ -237,6 +238,7 @@ def load_app_config(path: Path | str) -> AppConfig:
         tier1_enabled=bool(t1.get("enabled", False)),
         tier1_strict_artifacts=bool(t1.get("strict_artifacts", True)),
         tier1_object_only=bool(t1.get("object_only", False)),
+        tier1_action_enabled=bool(t1.get("action_enabled", True)),
         tier1_ring_maxlen=int(t1.get("ring_buffer_maxlen", 48)),
         tier1_router_path=(
             _resolve_under_root(

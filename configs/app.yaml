@@ -40,8 +40,9 @@ tier1:
   enabled: true
   strict_artifacts: true
   object_only: false
+  action_enabled: true
   ring_buffer_maxlen: 48
-  action_clip_frames: 6
+  action_clip_frames: 16
   movinet_int8: models/movinet_a0_int8.onnx
   ocr_confidence: 0.5
   ocr_grid: 2

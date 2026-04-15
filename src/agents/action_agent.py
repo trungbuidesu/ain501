@@ -133,6 +133,18 @@ class ActionAgent:
         if self._session is not None:
             inp = self._session.get_inputs()[0]
             self._input_name = inp.name
+            shape = list(getattr(inp, "shape", []) or [])
+            # Align clip geometry with ONNX static dimensions when provided.
+            if len(shape) >= 5:
+                t_dim = shape[2]
+                h_dim = shape[3]
+                w_dim = shape[4]
+                if isinstance(t_dim, int) and t_dim > 0:
+                    self.input_frames = int(t_dim)
+                if isinstance(h_dim, int) and h_dim > 0:
+                    self.height = int(h_dim)
+                if isinstance(w_dim, int) and w_dim > 0:
+                    self.width = int(w_dim)
         else:
             self._input_name = "input"
 

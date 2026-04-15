@@ -392,11 +392,8 @@ def main() -> int:
             "Y" if isinstance(out, list) else "N",
         )
     except Exception as exc:
-        print(f"[ocr-smoke] skipped_or_failed: {exc}")
-        if "No module named 'paddle'" in str(exc):
-            add_smoke("OCRAgent", "read text no crash", "SKIP")
-        else:
-            add_smoke("OCRAgent", "read text no crash", "N")
+        print(f"[ocr-smoke] failed: {exc}")
+        add_smoke("OCRAgent", "read text no crash", "N")
 
     try:
         rag_cfg = cfg.get("rag", {}) if isinstance(cfg.get("rag"), dict) else {}

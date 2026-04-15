@@ -16,6 +16,7 @@ from src.agents.ocr_agent import OcrAgent
 from src.caption.orchestrator import CaptionOrchestrator
 from src.caption.template_engine import CaptionEvent, SpatialTemplateEngine
 from src.capture.types import FramePacket
+from src.core.debug_log import append_debug_log
 from src.core.types import PipelineStatus, VerbosityLevel
 from src.encoder.visual_encoder import VisualEncoder
 from src.output.audio_output import AudioOutputManager
@@ -104,6 +105,8 @@ class AppRuntime:
                 scene_path,
                 confidence_threshold=cfg.tier1_router_confidence,
                 image_size=cfg.tier1_router_image_size,
+                use_model=False,
+                fallback_max_metric_side=192,
                 scene_to_agents={
                     k: list(v) for k, v in cfg.tier1_scene_to_agents.items()
                 },
@@ -113,11 +116,13 @@ class AppRuntime:
             from src.capture.ring_buffer import RingBuffer
 
             self._ring = RingBuffer(cfg.tier1_ring_maxlen)
-            self._action_agent = ActionAgent(
-                cfg.tier1_movinet_path,
-                input_frames=cfg.tier1_action_clip_frames,
-                strict_artifacts=strict,
-            )
+            self._action_agent = None
+            if cfg.tier1_action_enabled:
+                self._action_agent = ActionAgent(
+                    cfg.tier1_movinet_path,
+                    input_frames=cfg.tier1_action_clip_frames,
+                    strict_artifacts=strict,
+                )
             ocr_agent = OcrAgent(
                 confidence_threshold=cfg.tier1_ocr_confidence,
                 grid=cfg.tier1_ocr_grid,
@@ -138,6 +143,7 @@ class AppRuntime:
             )
 
         self._prev_processed_rgb: np.ndarray | None = None
+        self._prev_route_feat: np.ndarray | None = None
 
     def set_rag_enabled(self, enabled: bool) -> None:
         """Toggle RAG retrieval (e.g. demo hotkey)."""
@@ -191,8 +197,9 @@ class AppRuntime:
     ) -> FrameProcessResult:
         """Run full pipeline for one frame (after change gate)."""
 
+        route_feat: np.ndarray | None = None
         if self._encoder is not None:
-            _ = self._encoder.encode_packet(packet)
+            route_feat = self._encoder.encode_packet(packet)
 
         cfg = self._cfg
         routing: RoutingDecision | None = None
@@ -203,10 +210,20 @@ class AppRuntime:
 
         if cfg.tier1_enabled and not cfg.tier1_object_only and self._router is not None:
             t_r0 = time.perf_counter()
-            routing = self._router.route(packet.data, self._prev_processed_rgb)
+            routing = self._router.route(
+                packet.data,
+                self._prev_processed_rgb,
+                current_feat=route_feat,
+                previous_feat=self._prev_route_feat,
+            )
             router_ms = (time.perf_counter() - t_r0) * 1000.0
             active = routing.active_agents
+            if self._action_agent is None and "action" in active:
+                active = frozenset(name for name in active if name != "action")
             self._prev_processed_rgb = packet.data.copy()
+            self._prev_route_feat = (
+                route_feat.copy() if route_feat is not None else self._prev_route_feat
+            )
         elif cfg.tier1_enabled and cfg.tier1_object_only:
             active = frozenset({"object"})
 
@@ -274,6 +291,29 @@ class AppRuntime:
 
         e2e_ms = (time.perf_counter() - tick_start) * 1000.0
         caption_sources = self._orchestrator.describe_sources(events)
+        # region agent log
+        append_debug_log(
+            run_id="pre-fix-router",
+            hypothesis_id="H3_active_agents_and_path",
+            location="src/app/runtime.py:process_frame",
+            message="runtime_stage_summary",
+            data={
+                "scene_type": (routing.scene_type if routing is not None else None),
+                "active_agents": sorted(active),
+                "router_ms": (round(router_ms, 3) if router_ms is not None else None),
+                "manager_ms": (
+                    round(manager_ms, 3) if manager_ms is not None else None
+                ),
+                "detect_ms": (round(detect_ms, 3) if detect_ms is not None else None),
+                "template_ms": round(template_ms, 3),
+                "e2e_ms": round(e2e_ms, 3),
+                "action_packets_len": (
+                    int(len(action_packets)) if action_packets is not None else 0
+                ),
+                "tier1_mgr_enabled": bool(tier1_mgr),
+            },
+        )
+        # endregion
 
         return FrameProcessResult(
             events=list(events),

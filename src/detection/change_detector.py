@@ -4,9 +4,16 @@ from __future__ import annotations
 
 import cv2
 import numpy as np
-from skimage.metrics import structural_similarity
 
 from src.capture.config import ChangeDetectionConfig
+
+
+def _try_structural_similarity() -> object | None:
+    try:
+        from skimage.metrics import structural_similarity as ssim_fn
+    except ImportError:
+        return None
+    return ssim_fn
 
 
 def _resize_max_side(rgb: np.ndarray, max_side: int | None) -> np.ndarray:
@@ -31,6 +38,8 @@ class ChangeDetector:
         self._frac_above = cfg.changed_fraction_trigger_above
         self._pix_thr = cfg.pixel_diff_threshold
         self._max_side = cfg.max_metric_side
+        self._warned_missing_ssim = False
+        self._ssim_func: object | None = _try_structural_similarity()
 
     def should_process(self, prev: np.ndarray | None, curr: np.ndarray) -> bool:
         if prev is None:
@@ -40,10 +49,25 @@ class ChangeDetector:
         if a.shape != b.shape:
             return True
         if self._method == "ssim":
+            if self._ssim_func is None:
+                if not self._warned_missing_ssim:
+                    print(
+                        "[change_detector] scikit-image is missing; "
+                        "falling back to pixel-diff change detection.",
+                        flush=True,
+                    )
+                    self._warned_missing_ssim = True
+                g1 = cv2.cvtColor(a, cv2.COLOR_RGB2GRAY)
+                g2 = cv2.cvtColor(b, cv2.COLOR_RGB2GRAY)
+                diff = np.abs(g1.astype(np.int16) - g2.astype(np.int16))
+                frac = float((diff > self._pix_thr).mean())
+                return frac > self._frac_above
             g1 = cv2.cvtColor(a, cv2.COLOR_RGB2GRAY)
             g2 = cv2.cvtColor(b, cv2.COLOR_RGB2GRAY)
+            ssim_fn = self._ssim_func
+            assert callable(ssim_fn)
             s = float(
-                structural_similarity(
+                ssim_fn(
                     g1,
                     g2,
                     data_range=255,

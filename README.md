@@ -265,7 +265,7 @@ Các bộ dữ liệu (dataset) đang được khai báo cấu hình:
 - **Sinh mô tả video (Video Captioning):** Bộ gốc MSVD. Sinh caption thuyết minh sự kiện (Tier 2/deferred).
 - **Giọng nói ảo (TTS Validation):** Khai phá các model ONNX của Piper để kiểm chứng tín hiệu phát âm thanh đầu ra.
 - **Ước lượng chiều sâu (Depth Estimation):** Slot model dự phòng cho thuật toán MiDaS.
-- **Kho Tri Thức Vector (Vector Database):** Tích hợp ChromaDB để lưu trữ không gian nhúng (Embeddings) phục vụ truy xuất ngữ nghĩa (RAG) và tra cứu siêu dữ liệu dự án.
+- **Kho Tri Thức Vector (Vector Retrieval):** Dùng FAISS (IndexFlatIP) để truy xuất embedding cho RAG và tra cứu tri thức dự án.
 
 ## MVP pipeline (Object-to-Speech)
 

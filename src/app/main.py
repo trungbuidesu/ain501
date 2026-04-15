@@ -22,7 +22,7 @@ from src.capture.config import load_capture_config
 from src.capture.paced_loop import pace_after_frame
 from src.capture.sources import frame_source_from_config
 from src.capture.types import FramePacket
-from src.core.hotkeys import start_hotkey_listener, stop_hotkey_listener
+from src.core.hotkeys import has_pynput, start_hotkey_listener, stop_hotkey_listener
 from src.detection.change_detector import ChangeDetector
 from src.output.audio_output import play_hazard_beep
 from src.ui.state import DemoControlState
@@ -339,9 +339,15 @@ def _run_app_loop(
 
     hk_handle: Any = None
     if cfg.hotkeys:
-        pair = start_hotkey_listener(cfg.hotkeys, demo_control)
-        if pair is not None:
-            hk_handle = pair[0]
+        if has_pynput():
+            pair = start_hotkey_listener(cfg.hotkeys, demo_control)
+            if pair is not None:
+                hk_handle = pair[0]
+        else:
+            _safe_print(
+                "[hotkeys] disabled: pynput is not installed; "
+                "install 'pynput' to enable global hotkeys."
+            )
 
     stage_detect_ms: list[float] = []
     stage_template_ms: list[float] = []

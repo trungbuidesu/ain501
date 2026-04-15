@@ -9,6 +9,16 @@ from typing import Any
 from src.ui.state import DemoControlState
 
 
+def has_pynput() -> bool:
+    """Return True when the optional hotkey backend is installed."""
+
+    try:
+        import pynput.keyboard  # noqa: F401
+    except ImportError:
+        return False
+    return True
+
+
 def _to_pynput_combo(spec: str) -> str:
     """Map ``ctrl+shift+m`` to ``<ctrl>+<shift>+m``."""
 

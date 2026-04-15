@@ -92,13 +92,18 @@ def main() -> int:
     else:
         lines.append("## PaddleOCR")
         lines.append("")
-        lines.append("*Skipped: no sample image under `reports/prebuilt_week5/_synth_images/`.*")
+        lines.append(
+            "*Skipped: no sample image under `reports/prebuilt_week5/_synth_images/`.*"
+        )
         lines.append("")
 
     try:
         import numpy as np
 
-        from src.agents.face_pose_agent import FacePoseAgent, benchmark_face_pose_latency
+        from src.agents.face_pose_agent import (
+            FacePoseAgent,
+            benchmark_face_pose_latency,
+        )
 
         agent = FacePoseAgent(strict_artifacts=False)
         rgb = np.zeros((128, 128, 3), dtype=np.uint8)

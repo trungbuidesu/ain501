@@ -59,7 +59,9 @@ def build_scene_router_manifest(
                 f"{min_samples_per_class}"
             )
         selected = _sample_rows(rows, max_samples_per_class, rng)
-        splits = split_names(len(selected), train_ratio=train_ratio, val_ratio=val_ratio)
+        splits = split_names(
+            len(selected), train_ratio=train_ratio, val_ratio=val_ratio
+        )
         for row, split in zip(selected, splits, strict=True):
             output_rows.append(
                 {
@@ -121,7 +123,9 @@ def collect_scene_change_rows(
         if not frame_dir.exists():
             continue
         frames = sorted(
-            path for path in frame_dir.iterdir() if path.suffix.lower() in IMAGE_EXTENSIONS
+            path
+            for path in frame_dir.iterdir()
+            if path.suffix.lower() in IMAGE_EXTENSIONS
         )
         if len(frames) < 2:
             continue
@@ -170,7 +174,10 @@ def collect_face_detected_rows(
         if not root.exists():
             continue
         for image_path in sorted(root.rglob("*")):
-            if not image_path.is_file() or image_path.suffix.lower() not in IMAGE_EXTENSIONS:
+            if (
+                not image_path.is_file()
+                or image_path.suffix.lower() not in IMAGE_EXTENSIONS
+            ):
                 continue
             rows.append({"path": str(image_path), "source": root.name})
             if len(rows) >= max_samples:
@@ -202,7 +209,9 @@ def read_csv_rows(path: Path) -> list[dict[str, str]]:
         return list(csv.DictReader(file))
 
 
-def write_scene_router_manifest(rows: Sequence[dict[str, str]], output_csv: Path) -> None:
+def write_scene_router_manifest(
+    rows: Sequence[dict[str, str]], output_csv: Path
+) -> None:
     """Write the unified scene router manifest."""
 
     output_csv.parent.mkdir(parents=True, exist_ok=True)

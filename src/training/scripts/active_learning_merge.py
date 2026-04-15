@@ -47,9 +47,16 @@ def write_manifest(rows: list[dict[str, str]], path: Path, *, append: bool) -> N
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--annotations", type=Path, required=True, help="CSV: path,label_correct[,split,source,notes]")
+    parser.add_argument(
+        "--annotations",
+        type=Path,
+        required=True,
+        help="CSV: path,label_correct[,split,source,notes]",
+    )
     parser.add_argument("--output-csv", type=Path, default=DEFAULT_OUT)
-    parser.add_argument("--append", action="store_true", help="Append rows if file exists")
+    parser.add_argument(
+        "--append", action="store_true", help="Append rows if file exists"
+    )
     parser.add_argument("--source", default="active_learning")
     parser.add_argument("--default-split", default="train")
     args = parser.parse_args(argv)

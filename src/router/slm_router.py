@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any
 
 import cv2
 import numpy as np
@@ -86,7 +87,9 @@ def compute_fallback_signals(
     gray = cv2.cvtColor(current_rgb, cv2.COLOR_RGB2GRAY)
     if previous_rgb is not None:
         pg = cv2.cvtColor(previous_rgb, cv2.COLOR_RGB2GRAY)
-        motion_diff = float(np.mean(np.abs(gray.astype(np.float32) - pg.astype(np.float32))))
+        motion_diff = float(
+            np.mean(np.abs(gray.astype(np.float32) - pg.astype(np.float32)))
+        )
     else:
         motion_diff = 0.0
 
@@ -193,8 +196,12 @@ class SLMRouter:
         else:
             self._input_name = "images"
 
-        self._mean = np.array([0.485, 0.456, 0.406], dtype=np.float32).reshape(1, 3, 1, 1)
-        self._std = np.array([0.229, 0.224, 0.225], dtype=np.float32).reshape(1, 3, 1, 1)
+        self._mean = np.array([0.485, 0.456, 0.406], dtype=np.float32).reshape(
+            1, 3, 1, 1
+        )
+        self._std = np.array([0.229, 0.224, 0.225], dtype=np.float32).reshape(
+            1, 3, 1, 1
+        )
 
     def _preprocess(self, frame_rgb: np.ndarray) -> np.ndarray:
         h, w = frame_rgb.shape[:2]
@@ -211,7 +218,9 @@ class SLMRouter:
 
     def _run_model(self, x: np.ndarray) -> tuple[np.ndarray, tuple[float, ...], int]:
         if self._session is None:
-            raise RuntimeError("ONNX session not available (missing model or strict mode off)")
+            raise RuntimeError(
+                "ONNX session not available (missing model or strict mode off)"
+            )
         logits = self._session.run(None, {self._input_name: x})[0]
         probs = _softmax(np.asarray(logits, dtype=np.float32))
         idx = int(np.argmax(probs))

@@ -161,7 +161,9 @@ def test_frame_source_from_config_webcam() -> None:
     src.close()
 
 
-def test_frame_source_from_config_screen_honors_backend(monkeypatch: MonkeyPatch) -> None:
+def test_frame_source_from_config_screen_honors_backend(
+    monkeypatch: MonkeyPatch,
+) -> None:
     cfg = load_capture_config(
         Path(__file__).resolve().parents[1] / "configs" / "capture_pipeline.yaml",
     )

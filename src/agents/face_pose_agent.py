@@ -5,8 +5,9 @@ from __future__ import annotations
 import statistics
 import time
 import urllib.request
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Any, Sequence
+from typing import Any
 
 import numpy as np
 
@@ -72,12 +73,7 @@ def _pose_rule(lm_list: Sequence[Any]) -> tuple[str, float]:
     sh_y = (ls_y + rs_y) / 2.0
     hip_y = (lh_y + rh_y) / 2.0
     torso = float(hip_y - sh_y)
-    arms_up = (
-        lw_v > 0.5
-        and rw_v > 0.5
-        and lw_y < ls_y - 0.03
-        and rw_y < rs_y - 0.03
-    )
+    arms_up = lw_v > 0.5 and rw_v > 0.5 and lw_y < ls_y - 0.03 and rw_y < rs_y - 0.03
     if arms_up:
         return "arms_raised", 0.75
     if torso < 0.08:
@@ -95,7 +91,11 @@ class FacePoseAgent:
         strict_artifacts: bool = False,
     ) -> None:
         root = Path(__file__).resolve().parents[2]
-        self._model_dir = Path(model_dir) if model_dir else root / "reports" / "prebuilt_week5" / "_mediapipe_models"
+        self._model_dir = (
+            Path(model_dir)
+            if model_dir
+            else root / "reports" / "prebuilt_week5" / "_mediapipe_models"
+        )
         self._strict = strict_artifacts
         self._face_lm: Any = None
         self._pose_lm: Any = None
@@ -111,8 +111,12 @@ class FacePoseAgent:
             raise RuntimeError("mediapipe is required for FacePoseAgent") from exc
         self._mp = mp
         try:
-            face_path = _ensure_task_model(self._model_dir, FACE_LANDMARKER_URL, "face_landmarker.task")
-            pose_path = _ensure_task_model(self._model_dir, POSE_LANDMARKER_LITE_URL, "pose_landmarker_lite.task")
+            face_path = _ensure_task_model(
+                self._model_dir, FACE_LANDMARKER_URL, "face_landmarker.task"
+            )
+            pose_path = _ensure_task_model(
+                self._model_dir, POSE_LANDMARKER_LITE_URL, "pose_landmarker_lite.task"
+            )
         except OSError as exc:
             if self._strict:
                 raise FileNotFoundError(

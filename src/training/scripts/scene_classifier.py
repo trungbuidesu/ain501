@@ -47,7 +47,9 @@ from src.utils import TrainingLogger, resolve_device
 
 DEFAULT_CONFIG = Path("configs/models/scene_classifier.yaml")
 DEFAULT_SCENE_MANIFEST = Path("data/processed/scene_accessibility/manifest.csv")
-DEFAULT_UCF_FRAMES_MANIFEST = Path("data/processed/action_accessibility/manifest_frames.csv")
+DEFAULT_UCF_FRAMES_MANIFEST = Path(
+    "data/processed/action_accessibility/manifest_frames.csv"
+)
 DEFAULT_TEXTOCR_TRAIN_ANN = Path("data/external/textocr/TextOCR_0.1_train.json")
 DEFAULT_TEXTOCR_VAL_ANN = Path("data/external/textocr/TextOCR_0.1_val.json")
 DEFAULT_TEXTOCR_IMAGES = Path("data/external/textocr/train_val_images")
@@ -152,7 +154,9 @@ def build_arg_parser() -> argparse.ArgumentParser:
     describe.add_argument("--weights", choices=["default", "imagenet", "none"])
 
     prepare_manifest = subparsers.add_parser("prepare-manifest")
-    prepare_manifest.add_argument("--scene-manifest", type=Path, default=DEFAULT_SCENE_MANIFEST)
+    prepare_manifest.add_argument(
+        "--scene-manifest", type=Path, default=DEFAULT_SCENE_MANIFEST
+    )
     prepare_manifest.add_argument(
         "--ucf-frames-manifest",
         type=Path,
@@ -161,7 +165,9 @@ def build_arg_parser() -> argparse.ArgumentParser:
     prepare_manifest.add_argument(
         "--textocr-train-ann", type=Path, default=DEFAULT_TEXTOCR_TRAIN_ANN
     )
-    prepare_manifest.add_argument("--textocr-val-ann", type=Path, default=DEFAULT_TEXTOCR_VAL_ANN)
+    prepare_manifest.add_argument(
+        "--textocr-val-ann", type=Path, default=DEFAULT_TEXTOCR_VAL_ANN
+    )
     prepare_manifest.add_argument(
         "--textocr-images-root", type=Path, default=DEFAULT_TEXTOCR_IMAGES
     )
@@ -171,7 +177,9 @@ def build_arg_parser() -> argparse.ArgumentParser:
         nargs="*",
         default=list(DEFAULT_FACE_ROOTS),
     )
-    prepare_manifest.add_argument("--output-csv", type=Path, default=DEFAULT_OUTPUT_MANIFEST)
+    prepare_manifest.add_argument(
+        "--output-csv", type=Path, default=DEFAULT_OUTPUT_MANIFEST
+    )
     prepare_manifest.add_argument("--min-per-class", type=int, default=500)
     prepare_manifest.add_argument("--max-per-class", type=int, default=1000)
     prepare_manifest.add_argument("--seed", type=int, default=501)
@@ -290,10 +298,16 @@ def describe_model(args: argparse.Namespace, config: dict[str, Any]) -> dict[str
     model_cfg = _config_section(config, "model")
     classes_container = _config_section(config, "classes")
     class_values = classes_container.get("names", list(SCENE_ROUTER_LABELS))
-    class_names = [str(name) for name in class_values] if isinstance(class_values, list) else list(SCENE_ROUTER_LABELS)
+    class_names = (
+        [str(name) for name in class_values]
+        if isinstance(class_values, list)
+        else list(SCENE_ROUTER_LABELS)
+    )
     variant = args.variant or str(model_cfg.get("variant", "tiny_cnn"))
     weights = args.weights or str(model_cfg.get("weights", "none"))
-    model = build_scene_classifier(variant, num_classes=len(class_names), weights=weights)
+    model = build_scene_classifier(
+        variant, num_classes=len(class_names), weights=weights
+    )
     total_params = sum(parameter.numel() for parameter in model.parameters())
     trainable_params = sum(
         parameter.numel() for parameter in model.parameters() if parameter.requires_grad
@@ -379,7 +393,9 @@ def train_model(args: argparse.Namespace, config: dict[str, Any]) -> dict[str, A
     checkpoint_dir = args.checkpoint_dir or Path(
         str(output_cfg.get("checkpoint_dir", "models/vision/scene_classifier"))
     )
-    log_dir = args.log_dir or Path(str(output_cfg.get("log_dir", "runs/scene_classifier")))
+    log_dir = args.log_dir or Path(
+        str(output_cfg.get("log_dir", "runs/scene_classifier"))
+    )
     set_random_seed(seed)
 
     rows = read_manifest_rows(args.manifest_csv)
@@ -396,9 +412,9 @@ def train_model(args: argparse.Namespace, config: dict[str, Any]) -> dict[str, A
         raise ValueError("manifest must contain test rows")
 
     device = resolve_device(args.device)
-    model = build_scene_classifier(variant, num_classes=len(label_to_index), weights=weights).to(
-        device
-    )
+    model = build_scene_classifier(
+        variant, num_classes=len(label_to_index), weights=weights
+    ).to(device)
     if isinstance(model, MobileNetSceneHead):
         freeze_mobilenet_scene_backbone(model, freeze=False)
 
@@ -575,7 +591,9 @@ def evaluate_model(args: argparse.Namespace) -> dict[str, Any]:
     criterion = nn.CrossEntropyLoss()
     device = resolve_device(args.device)
     model = model.to(device)
-    metrics = run_epoch(model, loader, criterion, device, label_to_index, optimizer=None)
+    metrics = run_epoch(
+        model, loader, criterion, device, label_to_index, optimizer=None
+    )
     return {
         "split": args.split,
         "loss": metrics.loss,
@@ -594,13 +612,17 @@ def run_qat(args: argparse.Namespace, config: dict[str, Any]) -> dict[str, Any]:
     qat_cfg = _config_section(config, "qat")
     epochs = args.epochs or int(qat_cfg.get("epochs", 3))
     lr = args.lr or float(qat_cfg.get("lr", 1e-4))
-    batch_size = args.batch_size or int(_config_section(config, "training").get("batch_size", 32))
+    batch_size = args.batch_size or int(
+        _config_section(config, "training").get("batch_size", 32)
+    )
     preferred_backend = str(args.backend or qat_cfg.get("backend", "fbgemm"))
     supported_engines = set(torch.backends.quantized.supported_engines)
     backend = preferred_backend
     if backend not in supported_engines:
         fallback_order = ("fbgemm", "qnnpack", "onednn", "x86")
-        matched = next((name for name in fallback_order if name in supported_engines), None)
+        matched = next(
+            (name for name in fallback_order if name in supported_engines), None
+        )
         if matched is None:
             raise ValueError(
                 "Unsupported quantization backend and no fallback available: "
@@ -624,7 +646,9 @@ def run_qat(args: argparse.Namespace, config: dict[str, Any]) -> dict[str, Any]:
 
     model.train()
     model.qconfig = torch.ao.quantization.get_default_qat_qconfig(backend)
-    prepared = cast(TinySceneCNN, torch.ao.quantization.prepare_qat(model, inplace=False))
+    prepared = cast(
+        TinySceneCNN, torch.ao.quantization.prepare_qat(model, inplace=False)
+    )
     loader = build_loader(
         train_rows,
         label_to_index,
@@ -649,7 +673,9 @@ def run_qat(args: argparse.Namespace, config: dict[str, Any]) -> dict[str, Any]:
             f"qat_epoch={epoch} "
             f"train_loss={metrics.loss:.6f} train_acc={metrics.accuracy:.6f}"
         )
-    quantized = cast(TinySceneCNN, torch.ao.quantization.convert(prepared.eval(), inplace=False))
+    quantized = cast(
+        TinySceneCNN, torch.ao.quantization.convert(prepared.eval(), inplace=False)
+    )
     save_checkpoint(
         args.output_checkpoint,
         model=quantized,
@@ -713,7 +739,9 @@ def export_onnx(args: argparse.Namespace, config: dict[str, Any]) -> dict[str, A
         report["output_int8"] = str(output_int8)
         report["int8_quantization_scope"] = "MatMul,Gemm"
     if args.verify_parity and report["output_int8"]:
-        parity = verify_onnx_parity(model, output_fp32, output_int8, image_size=image_size)
+        parity = verify_onnx_parity(
+            model, output_fp32, output_int8, image_size=image_size
+        )
         report["parity"] = parity
     return report
 
@@ -733,8 +761,12 @@ def verify_onnx_parity(
         pytorch_logits = cast(torch.Tensor, model(sample))
         pytorch_top1 = pytorch_logits.argmax(dim=1).cpu().numpy()
     input_payload = sample.cpu().numpy().astype(np.float32)
-    fp32_session = ort.InferenceSession(str(fp32_path), providers=["CPUExecutionProvider"])
-    int8_session = ort.InferenceSession(str(int8_path), providers=["CPUExecutionProvider"])
+    fp32_session = ort.InferenceSession(
+        str(fp32_path), providers=["CPUExecutionProvider"]
+    )
+    int8_session = ort.InferenceSession(
+        str(int8_path), providers=["CPUExecutionProvider"]
+    )
     input_name = fp32_session.get_inputs()[0].name
     fp32_logits = fp32_session.run(None, {input_name: input_payload})[0]
     int8_logits = int8_session.run(None, {input_name: input_payload})[0]
@@ -756,7 +788,9 @@ def benchmark_model(args: argparse.Namespace, config: dict[str, Any]) -> dict[st
     batch_size = args.batch_size or int(benchmark_cfg.get("batch_size", 1))
     warmup = args.warmup or int(benchmark_cfg.get("warmup", 20))
     iterations = args.iterations or int(benchmark_cfg.get("iterations", 100))
-    profile_name = args.profile_name or str(benchmark_cfg.get("profile_name", "current-cpu"))
+    profile_name = args.profile_name or str(
+        benchmark_cfg.get("profile_name", "current-cpu")
+    )
     sample = torch.randn(batch_size, 3, image_size, image_size, dtype=torch.float32)
     start_ram = current_process_rss_mb()
 
@@ -768,9 +802,13 @@ def benchmark_model(args: argparse.Namespace, config: dict[str, Any]) -> dict[st
     else:
         onnx_path = args.onnx_path
         if onnx_path is None:
-            onnx_path = Path(str(_config_section(config, "output").get("onnx_int8", "")))
+            onnx_path = Path(
+                str(_config_section(config, "output").get("onnx_int8", ""))
+            )
         if not onnx_path or not onnx_path.exists():
-            raise ValueError("--onnx-path is required and must exist for onnxruntime benchmark")
+            raise ValueError(
+                "--onnx-path is required and must exist for onnxruntime benchmark"
+            )
         timings = benchmark_onnxruntime(onnx_path, sample.numpy(), warmup, iterations)
 
     end_ram = current_process_rss_mb()
@@ -906,8 +944,7 @@ def write_evaluation_reports(
     output_dir.mkdir(parents=True, exist_ok=True)
     labels = sorted(label_to_index, key=label_to_index.get)
     matrix: dict[str, dict[str, int]] = {
-        true_label: {pred_label: 0 for pred_label in labels}
-        for true_label in labels
+        true_label: dict.fromkeys(labels, 0) for true_label in labels
     }
     misclassified: list[PredictionRecord] = []
     for record in records:
@@ -920,7 +957,9 @@ def write_evaluation_reports(
         writer = csv.writer(file)
         writer.writerow(["true_label", *labels])
         for true_label in labels:
-            writer.writerow([true_label, *[matrix[true_label][pred] for pred in labels]])
+            writer.writerow(
+                [true_label, *[matrix[true_label][pred] for pred in labels]]
+            )
 
     misclassified_path = output_dir / "misclassifications.csv"
     with misclassified_path.open("w", newline="", encoding="utf-8") as file:
@@ -956,14 +995,18 @@ def build_loader(
     if train and weighted_sampling:
         counts = Counter(row["label"] for row in rows)
         weights = [1.0 / counts[row["label"]] for row in rows]
-        sampler = WeightedRandomSampler(weights, num_samples=len(weights), replacement=True)
+        sampler = WeightedRandomSampler(
+            weights, num_samples=len(weights), replacement=True
+        )
         loader = DataLoader(
             dataset,
             batch_size=batch_size,
             sampler=sampler,
             num_workers=num_workers,
         )
-        return cast(DataLoader[tuple[torch.Tensor, torch.Tensor, tuple[str, ...]]], loader)
+        return cast(
+            DataLoader[tuple[torch.Tensor, torch.Tensor, tuple[str, ...]]], loader
+        )
     loader = DataLoader(
         dataset,
         batch_size=batch_size,
@@ -1014,7 +1057,11 @@ def ensure_required_splits(
     """Ensure train/val/test splits exist for tiny manifests."""
 
     split_counts = Counter(row["split"] for row in rows)
-    if split_counts.get("train", 0) > 0 and split_counts.get("val", 0) > 0 and split_counts.get("test", 0) > 0:
+    if (
+        split_counts.get("train", 0) > 0
+        and split_counts.get("val", 0) > 0
+        and split_counts.get("test", 0) > 0
+    ):
         return list(rows)
 
     rng = random.Random(seed)

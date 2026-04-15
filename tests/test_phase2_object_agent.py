@@ -26,7 +26,7 @@ def test_object_agent_detect_two_person_one_car() -> None:
     raw = np.array(
         [
             [
-                [40, 40, 120, 220, 0.95, 0],   # person
+                [40, 40, 120, 220, 0.95, 0],  # person
                 [180, 50, 260, 210, 0.90, 0],  # person
                 [300, 120, 430, 260, 0.88, 3],  # car
             ]

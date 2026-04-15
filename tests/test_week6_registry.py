@@ -4,7 +4,11 @@ from __future__ import annotations
 
 import numpy as np
 
-from src.training.scripts.benchmark_suite import load_registry, repo_root, rubric_decision
+from src.training.scripts.benchmark_suite import (
+    load_registry,
+    repo_root,
+    rubric_decision,
+)
 from src.training.scripts.verify_onnx_registry import collect_onnx_entries
 from src.utils.onnx_benchmark import feeds_from_input_specs
 

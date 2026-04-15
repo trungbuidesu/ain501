@@ -53,12 +53,22 @@ def ingest_one(
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--image", type=Path, action="append", dest="images", help="Image file (repeatable)")
+    parser.add_argument(
+        "--image",
+        type=Path,
+        action="append",
+        dest="images",
+        help="Image file (repeatable)",
+    )
     parser.add_argument("--inbox", type=Path, default=DEFAULT_INBOX)
     parser.add_argument("--model-id", required=True)
     parser.add_argument("--confidence", type=float, default=float("nan"))
-    parser.add_argument("--prediction-json", type=str, default="", help="Inline JSON object string")
-    parser.add_argument("--prediction-file", type=Path, help="Path to JSON prediction payload")
+    parser.add_argument(
+        "--prediction-json", type=str, default="", help="Inline JSON object string"
+    )
+    parser.add_argument(
+        "--prediction-file", type=Path, help="Path to JSON prediction payload"
+    )
     args = parser.parse_args(argv)
     if not args.images:
         print("need at least one --image", file=sys.stderr)

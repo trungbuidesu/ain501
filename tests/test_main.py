@@ -3,19 +3,19 @@ from __future__ import annotations
 from dataclasses import replace
 from pathlib import Path
 
-from src.app.phase2_mvp import load_phase2_config, run_phase2
+from src.app.main import load_app_config, run_app
 from src.capture.fake_source import FakeFrameSource
 
 
-def test_load_phase2_config_defaults() -> None:
-    cfg = load_phase2_config(Path("configs/phase2_mvp.yaml"))
+def test_load_app_config_defaults() -> None:
+    cfg = load_app_config(Path("configs/app.yaml"))
     assert cfg.conf_threshold > 0
     assert cfg.iou_threshold > 0
     assert cfg.max_detections > 0
 
 
-def test_run_phase2_with_fake_source(monkeypatch, tmp_path) -> None:
-    cfg = load_phase2_config(Path("configs/phase2_mvp.yaml"))
+def test_run_app_with_fake_source(monkeypatch, tmp_path) -> None:
+    cfg = load_app_config(Path("configs/app.yaml"))
     cfg = replace(
         cfg,
         yolo_model_path=tmp_path / "yolov8n_int8.onnx",
@@ -53,15 +53,15 @@ def test_run_phase2_with_fake_source(monkeypatch, tmp_path) -> None:
             return True
 
     monkeypatch.setattr(
-        "src.app.phase2_mvp.ObjectAgent",
+        "src.app.runtime.ObjectAgent",
         lambda *a, **k: _Agent(),
     )
     monkeypatch.setattr(
-        "src.app.phase2_mvp.AudioOutputManager",
+        "src.app.runtime.AudioOutputManager",
         lambda *a, **k: _Audio(),
     )
 
     source = FakeFrameSource(64, 64, 10, pattern="alternate")
-    report = run_phase2(cfg, max_frames=8, source_override=source)
+    report = run_app(cfg, max_frames=8, source_override=source)
     assert report["processed_frames"] >= 8
-    assert (cfg.reports_dir / "phase2_latency.json").is_file()
+    assert (cfg.reports_dir / "app_latency.json").is_file()

@@ -53,6 +53,10 @@ class AudioOutputManager:
         self._enabled = True
         self._disabled_reason: str | None = None
 
+    @property
+    def is_enabled(self) -> bool:
+        return self._enabled
+
     def start(self) -> None:
         if self._worker is not None:
             return
@@ -65,17 +69,37 @@ class AudioOutputManager:
                     self._piper_executable = resolved
             model_exists = self.model_path.exists()
             if resolved is None or not model_exists:
-                self._enabled = False
-                reasons: list[str] = []
-                if resolved is None:
-                    reasons.append("piper_executable_not_found")
-                if not model_exists:
-                    reasons.append("piper_model_missing")
-                self._disabled_reason = ",".join(reasons)
-                return
+                if not self._try_pyttsx3():
+                    self._enabled = False
+                    reasons: list[str] = []
+                    if resolved is None:
+                        reasons.append("piper_executable_not_found")
+                    if not model_exists:
+                        reasons.append("piper_model_missing")
+                    self._disabled_reason = ",".join(reasons)
+                    return
         self._stop = False
         self._worker = threading.Thread(target=self._run, daemon=True)
         self._worker.start()
+
+    def _try_pyttsx3(self) -> bool:
+        try:
+            import pyttsx3  # type: ignore[import-untyped]
+
+            eng = pyttsx3.init()
+
+            def _speak(text: str) -> Any:
+                eng.say(text)
+                eng.runAndWait()
+                return _DummyProc()
+
+            self._synth_fn = _speak
+            self._uses_builtin_piper = False
+            self._enabled = True
+            self._disabled_reason = None
+            return True
+        except Exception:
+            return False
 
     def stop(self) -> None:
         self._stop = True
@@ -155,6 +179,11 @@ class AudioOutputManager:
             if not self.process_next():
                 time.sleep(0.01)
 
+    def speak_print_fallback(self, text: str) -> None:
+        """Console fallback when Piper and pyttsx3 are unavailable."""
+
+        print(f"[tts] {text}", flush=True)
+
     def _spawn_piper(self, text: str) -> Any:
         ts = int(time.time() * 1000.0)
         out_wav = self.output_dir / f"tts_{ts}.wav"
@@ -166,6 +195,35 @@ class AudioOutputManager:
             str(out_wav),
         ]
         return _piper_proc(command, text)
+
+
+class _DummyProc:
+    def wait(self, timeout: float | None = None) -> int:
+        return 0
+
+    def terminate(self) -> None:
+        return None
+
+
+def play_hazard_beep() -> None:
+    """Short alert tone before hazard speech (Windows-friendly)."""
+
+    try:
+        import winsound  # type: ignore[import-untyped]
+
+        winsound.Beep(880, 100)
+    except Exception:
+        try:
+            import numpy as np
+            import sounddevice as sd  # type: ignore[import-untyped]
+
+            sr = 22050
+            x = np.linspace(0.0, 0.1, int(sr * 0.1), dtype=np.float32)
+            wave = (0.15 * np.sin(2.0 * np.pi * 880.0 * x)).astype(np.float32)
+            sd.play(wave, sr)
+            sd.wait()
+        except Exception:
+            pass
 
 
 def _piper_proc(command: list[str], text: str) -> Any:

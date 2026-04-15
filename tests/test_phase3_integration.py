@@ -35,7 +35,13 @@ def test_router_selective_activation_mock() -> None:
 
     class _Ocr:
         def read_text(self, rgb: np.ndarray) -> list[dict[str, Any]]:
-            return [{"text": "x", "position": {"x": 0, "y": 0, "w": 1, "h": 1}, "confidence": 0.9}]
+            return [
+                {
+                    "text": "x",
+                    "position": {"x": 0, "y": 0, "w": 1, "h": 1},
+                    "confidence": 0.9,
+                }
+            ]
 
     mgr = AgentManager(
         object_agent=_FastObject(),

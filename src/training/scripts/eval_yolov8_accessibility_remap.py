@@ -15,8 +15,8 @@ from PIL import Image
 from src.training.eval.yolov8_coco_remap import (
     ImageEval,
     build_coco_id_to_subset_id,
-    load_subset_names_from_data_yaml,
     list_val_images,
+    load_subset_names_from_data_yaml,
     map50_macro,
     parse_yolo_gt_label,
     resolve_dataset_root,
@@ -114,7 +114,9 @@ def run(
                         continue
                     pred_subset_cls.append(int(coco_to_subset[coco_id]))
                     pred_conf_list.append(float(cf))
-                    pred_xyxy_list.append([float(row[0]), float(row[1]), float(row[2]), float(row[3])])
+                    pred_xyxy_list.append(
+                        [float(row[0]), float(row[1]), float(row[2]), float(row[3])]
+                    )
 
             if pred_subset_cls:
                 p_cls = np.array(pred_subset_cls, dtype=np.int64)
@@ -162,7 +164,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--data-yaml",
         type=Path,
-        default=Path("data/processed/object_detection_accessibility_merged/yolov8n_data.yaml"),
+        default=Path(
+            "data/processed/object_detection_accessibility_merged/yolov8n_data.yaml"
+        ),
     )
     parser.add_argument("--weights", default="yolov8n.pt")
     parser.add_argument("--imgsz", type=int, default=640)

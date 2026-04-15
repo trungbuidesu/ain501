@@ -7,6 +7,7 @@ from typing import Any
 
 import numpy as np
 
+from src.utils.artifact_paths import require_file
 from src.utils.onnx_benchmark import create_session
 
 DEFAULT_TOKENIZER = "sentence-transformers/all-MiniLM-L6-v2"
@@ -27,16 +28,24 @@ class MiniLMEmbedder:
     ) -> None:
         self.model_path = Path(model_path)
         self.max_length = int(max_length)
-        self._session = session if session is not None else create_session(
-            self.model_path,
-            providers=providers or ["CPUExecutionProvider"],
-        )
+        if session is not None:
+            self._session = session
+        else:
+            require_file(
+                self.model_path,
+                model_id="minilm_l6",
+                hint="Export or copy MiniLM-L6 ONNX; see configs/models/minilm_l6.yaml.",
+            )
+            self._session = create_session(
+                self.model_path,
+                providers=providers or ["CPUExecutionProvider"],
+            )
         from transformers import AutoTokenizer
 
         self._tokenizer = AutoTokenizer.from_pretrained(tokenizer_name)
 
     def encode(self, text: str) -> np.ndarray:
-        """Return L2-normalized float32 vector shape (dim,) — same space as FAISS index."""
+        """Return L2-normalized float32 vector (dim,) in the FAISS index space."""
 
         enc = self._tokenizer(
             text,

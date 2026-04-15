@@ -189,14 +189,10 @@ def describe_model(model_path: str) -> dict[str, Any]:
     tokenizer = getattr(first_module, "tokenizer", None)
     pooling_module = model._last_module()
     hidden_size = (
-        int(getattr(auto_model.config, "hidden_size", 384))
-        if auto_model
-        else 384
+        int(getattr(auto_model.config, "hidden_size", 384)) if auto_model else 384
     )
     num_layers = (
-        int(getattr(auto_model.config, "num_hidden_layers", 6))
-        if auto_model
-        else 6
+        int(getattr(auto_model.config, "num_hidden_layers", 6)) if auto_model else 6
     )
     max_seq_length = int(getattr(model, "max_seq_length", 128))
     vocab_size = int(getattr(tokenizer, "vocab_size", 0)) if tokenizer else 0
@@ -458,9 +454,7 @@ def fine_tune_model(args: argparse.Namespace, config: dict[str, Any]) -> dict[st
 
     objective = str(args.objective or training_cfg.get("objective", "infonce")).lower()
     epochs = int(
-        args.epochs
-        if args.epochs is not None
-        else training_cfg.get("epochs", 8)
+        args.epochs if args.epochs is not None else training_cfg.get("epochs", 8)
     )
     batch_size = int(
         args.batch_size
@@ -479,9 +473,7 @@ def fine_tune_model(args: argparse.Namespace, config: dict[str, Any]) -> dict[st
         else training_cfg.get("weight_decay", 0.01)
     )
     margin = float(
-        args.margin
-        if args.margin is not None
-        else training_cfg.get("margin", 0.2)
+        args.margin if args.margin is not None else training_cfg.get("margin", 0.2)
     )
     run_name = args.run_name or time.strftime("minilm_l6_%Y%m%d_%H%M%S")
     checkpoint_dir = Path(
@@ -509,8 +501,7 @@ def fine_tune_model(args: argparse.Namespace, config: dict[str, Any]) -> dict[st
         ]
     else:
         train_examples = [
-            InputExample(texts=[row.anchor, row.positive])
-            for row in train_rows
+            InputExample(texts=[row.anchor, row.positive]) for row in train_rows
         ]
         objective = "infonce"
 

@@ -43,7 +43,11 @@ def get_device(requested: str = "auto") -> torch.device:
     if requested != "auto":
         if requested == "xpu" and not hasattr(torch, "xpu"):
             return torch.device("cpu")
-        if requested == "xpu" and hasattr(torch, "xpu") and not torch.xpu.is_available():
+        if (
+            requested == "xpu"
+            and hasattr(torch, "xpu")
+            and not torch.xpu.is_available()
+        ):
             return torch.device("cpu")
         return torch.device(requested)
     if hasattr(torch, "xpu") and torch.xpu.is_available():
@@ -558,10 +562,12 @@ def main_ptq(args: argparse.Namespace) -> int:
     # So sánh dung lượng
     fp32_size = fp32_onnx_path.stat().st_size / (1024 * 1024)
     int8_size = int8_onnx_path.stat().st_size / (1024 * 1024)
-    print(f"\n--- Model Stats ---")
+    print("\n--- Model Stats ---")
     print(f"  FP32 ONNX Size: {fp32_size:.2f} MB")
     print(f"  INT8 ONNX Size: {int8_size:.2f} MB")
-    print(f"  Size Ratio: {int8_size / fp32_size:.2x} (Note: FP32 export in PT2.5 is highly optimized)")
+    print(
+        f"  Size Ratio: {int8_size / fp32_size:.2x} (Note: FP32 export in PT2.5 is highly optimized)"
+    )
 
     return 0
 

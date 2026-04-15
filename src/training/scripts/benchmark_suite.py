@@ -62,7 +62,11 @@ def run_benchmark_on_artifact(
         return None
     path = resolve_path(root, str(meta.get("path", "")))
     if path is None or not path.is_file():
-        return {"skipped": True, "reason": "artifact_missing", "path": str(meta.get("path"))}
+        return {
+            "skipped": True,
+            "reason": "artifact_missing",
+            "path": str(meta.get("path")),
+        }
     specs = meta.get("input_specs")
     if not isinstance(specs, dict):
         return {"skipped": True, "reason": "no_input_specs", "path": str(path)}
@@ -117,13 +121,25 @@ def build_row(
     fp32_metric: float | None = None
     int8_metric: float | None = None
     if isinstance(fp32_mpath, str) and isinstance(fp32_mkeys, list):
-        fp32_metric = load_json_metric(resolve_path(root, fp32_mpath) or Path(), [str(k) for k in fp32_mkeys])
+        fp32_metric = load_json_metric(
+            resolve_path(root, fp32_mpath) or Path(), [str(k) for k in fp32_mkeys]
+        )
     if isinstance(int8_mpath, str) and isinstance(int8_mkeys, list):
-        int8_metric = load_json_metric(resolve_path(root, int8_mpath) or Path(), [str(k) for k in int8_mkeys])
+        int8_metric = load_json_metric(
+            resolve_path(root, int8_mpath) or Path(), [str(k) for k in int8_mkeys]
+        )
 
     artifacts = model.get("artifacts") or {}
-    fp32_art = artifacts.get("fp32_onnx") if isinstance(artifacts.get("fp32_onnx"), dict) else None
-    int8_art = artifacts.get("int8_onnx") if isinstance(artifacts.get("int8_onnx"), dict) else None
+    fp32_art = (
+        artifacts.get("fp32_onnx")
+        if isinstance(artifacts.get("fp32_onnx"), dict)
+        else None
+    )
+    int8_art = (
+        artifacts.get("int8_onnx")
+        if isinstance(artifacts.get("int8_onnx"), dict)
+        else None
+    )
 
     fp32_bench = run_benchmark_on_artifact(
         root, fp32_art, warmup=warmup, iterations=iterations, providers=providers
@@ -246,6 +262,7 @@ def render_markdown(
         "| --- | --- | --- | --- | --- | --- | --- | --- | --- |",
     ]
     for row, decision in zip(rows, rubric_summary, strict=True):
+
         def fmt_float(v: Any) -> str:
             if v is None:
                 return "N/A"
@@ -302,17 +319,30 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG)
     parser.add_argument("--registry", type=Path)
     parser.add_argument("--output-dir", type=Path)
-    parser.add_argument("--model", action="append", dest="models", help="Filter registry model id (repeatable)")
-    parser.add_argument("--skip-benchmark", action="store_true", help="Only aggregate metrics, no ORT timing")
+    parser.add_argument(
+        "--model",
+        action="append",
+        dest="models",
+        help="Filter registry model id (repeatable)",
+    )
+    parser.add_argument(
+        "--skip-benchmark",
+        action="store_true",
+        help="Only aggregate metrics, no ORT timing",
+    )
     args = parser.parse_args(argv)
 
     cfg = load_yaml(args.config)
     root = repo_root()
-    reg_path = args.registry or resolve_path(root, str(cfg.get("registry_path", "models/registry.json")))
+    reg_path = args.registry or resolve_path(
+        root, str(cfg.get("registry_path", "models/registry.json"))
+    )
     if reg_path is None:
         print("registry path missing", file=sys.stderr)
         return 2
-    out_dir = args.output_dir or resolve_path(root, str(cfg.get("output_dir", "reports/week6")))
+    out_dir = args.output_dir or resolve_path(
+        root, str(cfg.get("output_dir", "reports/week6"))
+    )
     if out_dir is None:
         return 2
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -361,10 +391,14 @@ def main(argv: list[str] | None = None) -> int:
             ip = mb.get("int8") if isinstance(mb.get("int8"), dict) else None
             if fp and isinstance(fp.get("keys"), list):
                 p = resolve_path(root, str(fp.get("path", "")))
-                stub["fp32_metric"] = load_json_metric(p or Path(), [str(k) for k in fp["keys"]])
+                stub["fp32_metric"] = load_json_metric(
+                    p or Path(), [str(k) for k in fp["keys"]]
+                )
             if ip and isinstance(ip.get("keys"), list):
                 p = resolve_path(root, str(ip.get("path", "")))
-                stub["int8_metric"] = load_json_metric(p or Path(), [str(k) for k in ip["keys"]])
+                stub["int8_metric"] = load_json_metric(
+                    p or Path(), [str(k) for k in ip["keys"]]
+                )
             pm = model.get("primary_metric") or {}
             stub["metric_name"] = str(pm.get("name", "metric"))
             stub["higher_is_better"] = bool(pm.get("higher_is_better", True))
@@ -409,7 +443,9 @@ def main(argv: list[str] | None = None) -> int:
     json_path.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
     md_path = out_dir / "benchmark_report.md"
     md_path.write_text(render_markdown(report, rows, rubric_summary), encoding="utf-8")
-    print(json.dumps({"wrote_json": str(json_path), "wrote_md": str(md_path)}, indent=2))
+    print(
+        json.dumps({"wrote_json": str(json_path), "wrote_md": str(md_path)}, indent=2)
+    )
     return 0
 
 

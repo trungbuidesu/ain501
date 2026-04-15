@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from difflib import SequenceMatcher
-from typing import Any, Literal
+from typing import Any
 
 from src.agents.agent_manager import AgentResult
 from src.caption.template_engine import (
@@ -37,16 +36,6 @@ def _priority_int_to_str(p: int) -> str:
     return "info"
 
 
-@dataclass(frozen=True, slots=True)
-class CaptionResult:
-    """One utterance with provenance for logging and TTS."""
-
-    text: str
-    priority: str
-    source: Literal["rag", "template"]
-    signature: str
-
-
 def _bbox_ok(bbox: Any) -> bool:
     return isinstance(bbox, dict) and all(k in bbox for k in ("x1", "y1", "x2", "y2"))
 
@@ -71,9 +60,7 @@ def build_rag_query_string(
         bbox = det.get("bbox", {})
         if _bbox_ok(bbox):
             d_vn = _direction_from_bbox(bbox, float(frame_width))
-            t_vn = _distance_from_bbox(
-                bbox, float(frame_width), float(frame_height)
-            )
+            t_vn = _distance_from_bbox(bbox, float(frame_width), float(frame_height))
             d_en = _VI_TO_EN_DIR.get(d_vn, d_vn)
             t_en = _VI_TO_EN_DIST.get(t_vn, t_vn)
             parts.append(f"{label} {d_en} {t_en}")
@@ -156,6 +143,11 @@ class CaptionOrchestrator:
         self._dedup_sim = float(dedup_similarity)
         self._last_text: str | None = None
 
+    def set_rag_enabled(self, enabled: bool) -> None:
+        """Toggle RAG at runtime (e.g. demo hotkey); no-op if knowledge base is missing."""
+
+        self._rag_enabled = bool(enabled and self._kb is not None)
+
     def generate(
         self,
         detections: list[dict[str, Any]],
@@ -166,7 +158,10 @@ class CaptionOrchestrator:
         agent_results: dict[str, AgentResult] | None = None,
         merge_tier1: bool = False,
     ) -> list[CaptionEvent]:
-        """Return caption events for TTS; RAG when enabled and confident, else template."""
+        """Return caption events for TTS.
+
+        Uses RAG when enabled and confident; otherwise spatial templates.
+        """
 
         agent_results = agent_results or {}
         query = build_rag_query_string(
@@ -178,16 +173,10 @@ class CaptionOrchestrator:
         )
         base_events: list[CaptionEvent]
 
-        used_rag = False
-        if (
-            self._rag_enabled
-            and self._kb is not None
-            and query
-        ):
+        if self._rag_enabled and self._kb is not None and query:
             hits = self._kb.search(query)
             if hits:
                 base_events = _scored_to_events(hits)
-                used_rag = True
             else:
                 base_events = self._engine.render(
                     detections,
@@ -206,26 +195,27 @@ class CaptionOrchestrator:
         else:
             events = list(base_events)
 
-        events = self._dedup_events(events)
+        events = self._dedup_against_previous_frame(events)
         return events
 
-    def _dedup_events(self, events: list[CaptionEvent]) -> list[CaptionEvent]:
+    def _dedup_against_previous_frame(
+        self, events: list[CaptionEvent]
+    ) -> list[CaptionEvent]:
+        """Drop lines too similar to the last frame's final line (not within-batch)."""
+
         if not events:
             return events
+        old_last = self._last_text
         out: list[CaptionEvent] = []
         for ev in events:
-            if self._last_text is not None and _similar_enough(
-                ev.text, self._last_text, self._dedup_sim
-            ):
+            if old_last and _similar_enough(ev.text, old_last, self._dedup_sim):
                 continue
             out.append(ev)
-            self._last_text = ev.text
+        if out:
+            self._last_text = out[-1].text
         return out
 
     def describe_sources(self, events: list[CaptionEvent]) -> list[str]:
         """Return parallel source labels for logging (rag vs template)."""
 
-        return [
-            "rag" if e.signature.startswith("rag:") else "template"
-            for e in events
-        ]
+        return ["rag" if e.signature.startswith("rag:") else "template" for e in events]

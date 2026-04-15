@@ -1,6 +1,6 @@
 # Phase 3 — Tier 1: router + parallel agents
 
-Tier 1 extends the Phase 2 MVP (`src/app/phase2_mvp.py`) with:
+Tier 1 extends the accessibility app (`src/app/main.py`) with:
 
 1. **SLM router** (`src/router/slm_router.py`): Scene classifier ONNX INT8 → scene label + confidence; if confidence is below `router.confidence_threshold`, **fallback heuristics** apply (frame diff, edge density, skin-like pixels).
 2. **Policy** `router.scene_to_agents`: maps each scene class to a set of experts: `object`, `action`, `ocr`, `face_pose`.
@@ -12,7 +12,7 @@ Tier 1 extends the Phase 2 MVP (`src/app/phase2_mvp.py`) with:
    - `FacePoseAgent`: MediaPipe Face + Pose Tasks (`.task` models cached under `reports/prebuilt_week5/_mediapipe_models/` by default).
 5. **Captions**: `SpatialTemplateEngine` for objects; `src/caption/tier1_caption.py` appends action/OCR/face/pose utterances.
 
-## Configuration (`configs/phase2_mvp.yaml`)
+## Configuration (`configs/app.yaml`)
 
 | Block | Purpose |
 | --- | --- |
@@ -26,7 +26,7 @@ Tier 1 extends the Phase 2 MVP (`src/app/phase2_mvp.py`) with:
 ## Run
 
 ```bash
-python -m src.app.phase2_mvp --config configs/phase2_mvp.yaml --max-frames 200
+python -m src.app --max-frames 200
 ```
 
 Enable Tier 1 in YAML (`tier1.enabled: true`) after placing:
@@ -38,7 +38,7 @@ Enable Tier 1 in YAML (`tier1.enabled: true`) after placing:
 
 ## Benchmarks
 
-- **End-to-end**: `reports/phase2/phase2_latency.json` and `reports/phase3/tier1_benchmark.json` when `tier1.enabled` is true.
+- **End-to-end**: `reports/app/app_latency.json` and `reports/phase3/tier1_benchmark.json` when `tier1.enabled` is true.
 - **Per-agent CPU table**: `python -m src.training.scripts.benchmark_tier1_agents` → `reports/phase3/tier1_benchmark.md` (+ JSON sidecar).
 
 Targets (same machine, CPU): action p50 &lt; 15 ms, OCR p50 &lt; 30 ms, face/pose p50 &lt; 15 ms — see report for pass/fail.

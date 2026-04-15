@@ -94,7 +94,10 @@ def _packets_to_clip_rgb(
         frames = [packets[i].data for i in range(n)]
         while len(frames) < target_frames:
             frames.append(frames[-1])
-    out = [cv2.resize(rgb, (width, height), interpolation=cv2.INTER_LINEAR) for rgb in frames]
+    out = [
+        cv2.resize(rgb, (width, height), interpolation=cv2.INTER_LINEAR)
+        for rgb in frames
+    ]
     return np.stack(out, axis=0)
 
 
@@ -133,8 +136,12 @@ class ActionAgent:
         else:
             self._input_name = "input"
 
-        self._mean = np.array(DEFAULT_NORMALIZE_MEAN, dtype=np.float32).reshape(3, 1, 1, 1)
-        self._std = np.array(DEFAULT_NORMALIZE_STD, dtype=np.float32).reshape(3, 1, 1, 1)
+        self._mean = np.array(DEFAULT_NORMALIZE_MEAN, dtype=np.float32).reshape(
+            3, 1, 1, 1
+        )
+        self._std = np.array(DEFAULT_NORMALIZE_STD, dtype=np.float32).reshape(
+            3, 1, 1, 1
+        )
 
     def build_tensor(self, packets: list[FramePacket]) -> np.ndarray:
         """Build NCTHW float32 batch for ONNX runtime."""

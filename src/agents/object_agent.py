@@ -11,6 +11,7 @@ import numpy as np
 import yaml  # type: ignore[import-untyped]
 
 from src.agents.yolo_postprocess import decode_yolo_predictions, nms_class_aware
+from src.utils.artifact_paths import require_file
 from src.utils.onnx_benchmark import create_session
 
 
@@ -77,11 +78,15 @@ class ObjectAgent:
         self.conf_threshold = float(conf_threshold)
         self.iou_threshold = float(iou_threshold)
         self.max_detections = int(max_detections)
-        self._session = (
-            session
-            if session is not None
-            else create_session(self.model_path, providers=providers)
-        )
+        if session is not None:
+            self._session = session
+        else:
+            require_file(
+                self.model_path,
+                model_id="yolov8n",
+                hint="INT8 ONNX path is listed under models.registry.json artifacts.",
+            )
+            self._session = create_session(self.model_path, providers=providers)
         input_meta = self._session.get_inputs()[0]
         self._input_name = input_meta.name
         shape = getattr(input_meta, "shape", None) or []

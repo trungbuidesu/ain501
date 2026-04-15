@@ -37,7 +37,9 @@ def collect_onnx_entries(registry: dict[str, Any]) -> list[tuple[str, dict[str, 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--registry", type=Path, default=Path("models/registry.json"))
-    parser.add_argument("--model", help="Only verify entries for this registry model id")
+    parser.add_argument(
+        "--model", help="Only verify entries for this registry model id"
+    )
     args = parser.parse_args(argv)
 
     root = repo_root()

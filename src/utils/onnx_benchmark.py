@@ -172,7 +172,9 @@ def benchmark_onnx(
         "ram_mb_after_load": ram_after_load,
         "ram_mb_after_run": ram_after,
         "ram_mb_delta": ram_after - ram_before,
-        "file_size_mb": model_path.stat().st_size / (1024.0 * 1024.0)
-        if model_path.is_file()
-        else 0.0,
+        "file_size_mb": (
+            model_path.stat().st_size / (1024.0 * 1024.0)
+            if model_path.is_file()
+            else 0.0
+        ),
     }

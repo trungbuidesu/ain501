@@ -353,12 +353,7 @@ def _pose_label_tasks(lm_list: Sequence[Any]) -> dict[str, Any]:
     sh_y = (ls_y + rs_y) / 2.0
     hip_y = (lh_y + rh_y) / 2.0
     torso = float(hip_y - sh_y)
-    arms_up = (
-        lw_v > 0.5
-        and rw_v > 0.5
-        and lw_y < ls_y - 0.03
-        and rw_y < rs_y - 0.03
-    )
+    arms_up = lw_v > 0.5 and rw_v > 0.5 and lw_y < ls_y - 0.03 and rw_y < rs_y - 0.03
     if arms_up:
         lbl = "arms_up"
     elif torso < 0.08:
@@ -559,13 +554,13 @@ def cmd_tts(args: argparse.Namespace) -> int:
     for u in utterances:
         lang = u.get("lang", "en")
         text = u.get("text", "")
-        voice = next((e for e in entries if e.get("language", "").startswith(lang)), None)
+        voice = next(
+            (e for e in entries if e.get("language", "").startswith(lang)), None
+        )
         if voice is None:
             voice = entries[0] if entries else None
         if voice is None:
-            timings.append(
-                {"text": text, "lang": lang, "error": "no_voice_in_config"}
-            )
+            timings.append({"text": text, "lang": lang, "error": "no_voice_in_config"})
             continue
         model_path = Path(str(voice["model_path"]))
         wav_path = out_root / f"{lang}_{len(timings):02d}.wav"
@@ -609,7 +604,12 @@ def cmd_tts(args: argparse.Namespace) -> int:
         "rss_mb_approx": _rss_mb(),
     }
     _write_json(REPORT_DIR / "piper_benchmark_cpu.json", bench)
-    print("Wrote", REPORT_DIR / "tts_compare.md", "and", REPORT_DIR / "piper_benchmark_cpu.json")
+    print(
+        "Wrote",
+        REPORT_DIR / "tts_compare.md",
+        "and",
+        REPORT_DIR / "piper_benchmark_cpu.json",
+    )
     return 0
 
 
@@ -656,7 +656,9 @@ def build_parser() -> argparse.ArgumentParser:
     tt = sub.add_parser("tts", help="Piper samples + comparison markdown")
     tt.set_defaults(func=cmd_tts)
 
-    all_p = sub.add_parser("all", help="Run paddleocr, mediapipe, tts with shared flags")
+    all_p = sub.add_parser(
+        "all", help="Run paddleocr, mediapipe, tts with shared flags"
+    )
     add_common(all_p)
     all_p.add_argument("--lang", default="en")
     all_p.add_argument("--warmup", type=int, default=2)

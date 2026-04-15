@@ -21,7 +21,7 @@ class CaptionDebugOverlay:
         if app is None:
             app = QApplication([])
         label = QLabel("")
-        label.setWindowTitle("Phase2 Caption Debug")
+        label.setWindowTitle("Caption Debug")
         label.setWindowFlags(label.windowFlags() | Qt.WindowType.WindowStaysOnTopHint)
         label.setStyleSheet(
             "background-color: rgba(0,0,0,180); color: white; padding: 10px; "

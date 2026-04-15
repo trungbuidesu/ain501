@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Any
-
 from src.agents.agent_manager import AgentResult
 from src.caption.template_engine import CaptionEvent
 

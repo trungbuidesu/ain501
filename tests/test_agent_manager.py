@@ -14,7 +14,14 @@ from src.capture.types import FramePacket
 class _SlowObject:
     def detect_instances(self, frame_rgb: np.ndarray) -> list[dict[str, Any]]:
         time.sleep(0.08)
-        return [{"label": "person", "confidence": 0.9, "bbox": {"x1": 0, "y1": 0, "x2": 1, "y2": 1}, "count": 1}]
+        return [
+            {
+                "label": "person",
+                "confidence": 0.9,
+                "bbox": {"x1": 0, "y1": 0, "x2": 1, "y2": 1},
+                "count": 1,
+            }
+        ]
 
 
 class _SlowAction:

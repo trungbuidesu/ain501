@@ -216,7 +216,9 @@ def write_frames_manifest(rows: list[dict[str, str]], path: Path) -> None:
 
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", newline="", encoding="utf-8") as file:
-        writer = csv.DictWriter(file, fieldnames=["frame_dir", "label", "split", "n_frames"])
+        writer = csv.DictWriter(
+            file, fieldnames=["frame_dir", "label", "split", "n_frames"]
+        )
         writer.writeheader()
         writer.writerows(rows)
 

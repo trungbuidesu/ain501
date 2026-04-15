@@ -8,19 +8,23 @@ Tài liệu này mô tả cách cài đặt, cấu hình và chạy MVP Phase 2:
 2. `ChangeDetector` bỏ qua khung gần như không đổi để giảm tải.
 3. `ObjectAgent` chạy YOLOv8n ONNX INT8, NMS, trả danh sách `{label, confidence, bbox, count}`.
 4. `SpatialTemplateEngine` sinh câu tiếng Việt (hướng + khoảng cách), ưu tiên hazard.
-5. `AudioOutputManager` xếp hàng TTS Piper (ưu tiên / dedup), ghi WAV dưới `reports/phase2/audio/`.
-6. Báo cáo độ trễ ghi vào `reports/phase2/phase2_latency.json`.
+5. `AudioOutputManager` xếp hàng TTS Piper (ưu tiên / dedup), ghi WAV dưới `reports/app/audio/` (theo `output.reports_dir`).
+6. Báo cáo độ trễ ghi vào `reports/app/app_latency.json`.
 
-Mã entrypoint: `src/app/phase2_mvp.py`.
+Mã entrypoint: `src/app/main.py` (`python -m src.app`).
 
 ### 1.1 Tier 1 (router + parallel agents)
 
-Khi bật `tier1.enabled: true` trong `configs/phase2_mvp.yaml`, pipeline thêm **SLM router** (scene ONNX), **AgentManager** song song, buffer khung cho MoViNet, và các expert OCR / face-pose. Chi tiết kiến trúc, benchmark và troubleshooting: [phase3_tier1.md](phase3_tier1.md).
+Khi bật `tier1.enabled: true` trong `configs/app.yaml`, pipeline thêm **SLM router** (scene ONNX), **AgentManager** song song, buffer khung cho MoViNet, và các expert OCR / face-pose. Chi tiết kiến trúc, benchmark và troubleshooting: [phase3_tier1.md](phase3_tier1.md).
+
+### 1.2 RAG Lite + orchestrator (Phase 3)
+
+Caption có thể đi qua **MiniLM + FAISS** trên `data/knowledge/` khi `rag.enabled: true` trong [`configs/app.yaml`](../../configs/app.yaml). Fallback vẫn là spatial template engine. Chi tiết: [phase3_rag.md](phase3_rag.md).
 
 ## 2. Điều kiện cần
 
 - Python 3.10+, env đã cài project (`pip install -e ".[dev]"`).
-- **ONNX models** (đường dẫn mặc định trong `configs/phase2_mvp.yaml`):
+- **ONNX models** (đường dẫn mặc định trong `configs/app.yaml`):
   - `models/yolov8n_int8.onnx`
   - `models/mobilenetv3_small_fp32.onnx` (chỉ khi `encoder.enabled: true`)
 - **Piper TTS**:
@@ -52,14 +56,14 @@ Có thể tải từ Hugging Face `rhasspy/piper-voices` (chỉ các file cần 
 ### 3.3 Kiểm tra nhanh Piper (tùy chọn)
 
 ```powershell
-echo "xin chao" | & "$env:CONDA_PREFIX\Scripts\piper.exe" --model "models/tts/piper/vi/vi_VN/vais1000/medium/vi_VN-vais1000-medium.onnx" --output_file "reports/phase2/audio/manual_check.wav"
+echo "xin chao" | & "$env:CONDA_PREFIX\Scripts\piper.exe" --model "models/tts/piper/vi/vi_VN/vais1000/medium/vi_VN-vais1000-medium.onnx" --output_file "reports/app/audio/manual_check.wav"
 ```
 
 Chạy từ thư mục gốc repo; file WAV phải có kích thước > 0.
 
 ## 4. File cấu hình
 
-### 4.1 `configs/phase2_mvp.yaml`
+### 4.1 `configs/app.yaml`
 
 | Khóa | Ý nghĩa |
 | --- | --- |
@@ -72,7 +76,7 @@ Chạy từ thư mục gốc repo; file WAV phải có kích thước > 0.
 | `detector.iou_threshold` | IoU cho NMS class-aware. |
 | `detector.max_detections` | Giới hạn số box sau NMS. |
 | `caption.empty_policy` | `silent`: không đọc khi không có object; hoặc dùng message (xem code/template). |
-| `output.reports_dir` | Thư mục gốc báo cáo (`reports/phase2`). |
+| `output.reports_dir` | Thư mục gốc báo cáo (mặc định `reports/app`). |
 | `output.dedup_window_s` | Cửa sổ giây để không lặp lại cùng một “chữ ký” scene. |
 | `output.debug_overlay` | `true`: cửa sổ PySide6 hiển thị caption gần nhất (dev). |
 | `tier1.*` | Tier 1: `enabled`, `strict_artifacts`, `router`, `timeouts`, `ring_buffer_maxlen`, … — xem [phase3_tier1.md](phase3_tier1.md). |
@@ -100,19 +104,19 @@ Luôn chạy từ **thư mục gốc repo** (nơi có `configs/`).
 ### Bash / Git Bash
 
 ```bash
-python -m src.app.phase2_mvp --config configs/phase2_mvp.yaml
+python -m src.app
 ```
 
 ### PowerShell (khi `python` không trong PATH)
 
 ```powershell
-& "$env:CONDA_PREFIX\python.exe" -m src.app.phase2_mvp --config configs/phase2_mvp.yaml
+& "$env:CONDA_PREFIX\python.exe" -m src.app
 ```
 
 ### Smoke test (giới hạn số khung)
 
 ```bash
-python -m src.app.phase2_mvp --config configs/phase2_mvp.yaml --max-frames 120
+python -m src.app --max-frames 120
 ```
 
 ### Dừng app
@@ -121,14 +125,14 @@ Trong terminal đang chạy: `Ctrl + C`.
 
 ## 6. Bạn sẽ “thấy gì” khi chạy?
 
-- **Không bật `debug_overlay`**: app chủ yếu chạy nền; phản hồi là **âm thanh** (Piper) và file WAV trong `reports/phase2/audio/`, cộng log JSON độ trễ.
+- **Không bật `debug_overlay`**: app chủ yếu chạy nền; phản hồi là **âm thanh** (Piper) và file WAV trong `reports/app/audio/`, cộng log JSON độ trễ.
 - **`screen` + `select_region_on_start: true`**: một lần mở overlay kéo vùng màn hình (PySide6), sau đó capture theo vùng đó.
 - **`output.debug_overlay: true`**: thêm cửa sổ nhỏ hiển thị caption mới nhất (tiện dev).
 
 ## 7. Đầu ra
 
-- `reports/phase2/phase2_latency.json`: thống kê `processed_frames`, `emitted_frames`, độ trễ detect/template/e2e (ms).
-- `reports/phase2/audio/tts_<timestamp>.wav`: từng lần synthesize (tên theo thời gian).
+- `reports/app/app_latency.json`: thống kê `processed_frames`, `emitted_frames`, độ trễ detect/template/e2e (ms).
+- `reports/app/audio/tts_<timestamp>.wav`: từng lần synthesize (tên theo thời gian).
 
 ## 8. Xử lý sự cố thường gặp
 
@@ -143,7 +147,7 @@ Trong terminal đang chạy: `Ctrl + C`.
 ## 9. Kiểm thử tự động (dev)
 
 ```bash
-pytest tests/test_phase2_encoder.py tests/test_phase2_object_agent.py tests/test_phase2_template_engine.py tests/test_phase2_audio_output.py tests/test_phase2_mvp.py
+pytest tests/test_phase2_encoder.py tests/test_phase2_object_agent.py tests/test_phase2_template_engine.py tests/test_phase2_audio_output.py tests/test_main.py
 ```
 
 ## 10. Tài liệu liên quan

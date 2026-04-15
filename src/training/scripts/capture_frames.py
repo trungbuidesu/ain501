@@ -64,9 +64,7 @@ def capture_frames(
     interval = 1.0 / fps
     camera = create_dxcam_if_available()
     with mss.mss() as sct:
-        return _capture_screen_loop(
-            output_dir, frame_count, interval, camera, sct
-        )
+        return _capture_screen_loop(output_dir, frame_count, interval, camera, sct)
 
 
 def _capture_screen_loop(

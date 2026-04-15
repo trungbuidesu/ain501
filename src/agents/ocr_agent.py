@@ -82,7 +82,9 @@ def _normalize_paddle_output(result: Any) -> list[dict[str, Any]]:
     return []
 
 
-def _propose_rois(rgb: np.ndarray, *, grid: int = 2, pad: int = 8) -> list[tuple[int, int, int, int]]:
+def _propose_rois(
+    rgb: np.ndarray, *, grid: int = 2, pad: int = 8
+) -> list[tuple[int, int, int, int]]:
     """Split frame into a coarse grid of ROIs to reduce full-frame OCR cost."""
 
     h, w = rgb.shape[:2]

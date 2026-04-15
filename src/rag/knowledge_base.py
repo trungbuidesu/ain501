@@ -22,7 +22,7 @@ def load_json_entries(path: Path) -> list[KnowledgeEntry]:
     if not isinstance(raw, list):
         raise ValueError(f"{path} must be a JSON array")
     out: list[KnowledgeEntry] = []
-    for i, row in enumerate(raw):
+    for row in raw:
         if not isinstance(row, dict):
             continue
         q = str(row.get("query", "")).strip()
@@ -47,7 +47,10 @@ def load_json_entries(path: Path) -> list[KnowledgeEntry]:
 
 
 class KnowledgeBase:
-    """IndexFlatIP over L2-normalized MiniLM vectors; JSON knowledge under `knowledge_dir`."""
+    """FAISS IndexFlatIP over L2-normalized MiniLM vectors.
+
+    Loads JSON knowledge from ``knowledge_dir``.
+    """
 
     def __init__(
         self,
@@ -93,7 +96,7 @@ class KnowledgeBase:
         return len(self._entries)
 
     def search(self, text: str) -> list[ScoredEntry] | None:
-        """Return top-k scored entries, or None if best similarity is below threshold."""
+        """Return top-k scored entries, or None if best score is below threshold."""
 
         if not text.strip() or self._index is None or not self._entries:
             return None
@@ -111,7 +114,5 @@ class KnowledgeBase:
             sc = float(scores_flat[i])
             if sc < self.min_similarity:
                 break
-            hits.append(
-                ScoredEntry(entry=self._entries[int(idxs_flat[i])], score=sc)
-            )
+            hits.append(ScoredEntry(entry=self._entries[int(idxs_flat[i])], score=sc))
         return hits if hits else None

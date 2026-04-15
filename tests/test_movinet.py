@@ -16,7 +16,9 @@ except ImportError:
     MoViNetA0Backbone = None  # type: ignore[misc, assignment]
 
 SKIP_MOVINET = MoViNetA0Backbone is None
-SKIP_MOVINET_REASON = "movinets backend not installed (pip install from MoViNet upstream if needed)"
+SKIP_MOVINET_REASON = (
+    "movinets backend not installed (pip install from MoViNet upstream if needed)"
+)
 
 
 @pytest.mark.skipif(SKIP_MOVINET, reason=SKIP_MOVINET_REASON)

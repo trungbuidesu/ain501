@@ -126,7 +126,9 @@ def load_subset_names_from_data_yaml(path: Path) -> list[str]:
     return list(names)
 
 
-def resolve_dataset_root(data_yaml: Path, raw: dict[str, Any], *, cwd: Path | None = None) -> Path:
+def resolve_dataset_root(
+    data_yaml: Path, raw: dict[str, Any], *, cwd: Path | None = None
+) -> Path:
     """Resolve `path` like Ultralytics: relative to current working directory (repo root)."""
 
     root = raw.get("path")
@@ -164,7 +166,9 @@ def yolo_labels_path(image_path: Path, dataset_root: Path, val_rel: str) -> Path
     return (dataset_root.joinpath(*label_parts) / rel.with_suffix(".txt")).resolve()
 
 
-def parse_yolo_gt_label(path: Path, img_w: int, img_h: int) -> tuple[np.ndarray, np.ndarray]:
+def parse_yolo_gt_label(
+    path: Path, img_w: int, img_h: int
+) -> tuple[np.ndarray, np.ndarray]:
     """Return (cls_ids int (n,), boxes_xyxy (n,4)) in pixel coords; skip invalid lines."""
 
     if not path.is_file():
@@ -331,7 +335,9 @@ def write_eval_json(
         "mAP50_per_class": per_class,
         "n_gt_per_class": n_gt_per_class,
         "class_names_by_subset_id": name_by_subset,
-        "coco_class_id_to_subset_id": {str(k): v for k, v in sorted(coco_to_subset.items())},
+        "coco_class_id_to_subset_id": {
+            str(k): v for k, v in sorted(coco_to_subset.items())
+        },
         "weights": weights,
         "data_yaml": data_yaml,
         "imgsz": imgsz,

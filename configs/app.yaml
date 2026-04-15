@@ -1,3 +1,6 @@
+# Single application config: capture, models, detector, tier1, RAG, UI, hotkeys.
+# Default: python -m src.app  (uses this file)
+
 capture_config: configs/capture_pipeline.yaml
 
 models:
@@ -17,11 +20,10 @@ caption:
   empty_policy: silent
 
 output:
-  reports_dir: reports/phase2
+  reports_dir: reports/app
   dedup_window_s: 2.5
   debug_overlay: false
 
-# Tier 1: router + parallel experts (disabled by default; enable when ONNX artifacts exist).
 tier1:
   enabled: false
   strict_artifacts: true
@@ -52,3 +54,29 @@ tier1:
     action_s: 2.0
     ocr_s: 5.0
     face_pose_s: 3.0
+
+rag:
+  model_path: models/minilm_l6.onnx
+  knowledge_dir: data/knowledge
+  top_k: 3
+  min_similarity: 0.3
+  dedup_similarity: 0.8
+  enabled: false
+
+ui:
+  enabled: false
+  window_width: 960
+  window_height: 720
+  show_fps: true
+  show_detections: true
+  show_caption: true
+  show_dashboard: true
+  screenshot_dir: screenshots/
+
+verbosity: medium
+
+hotkeys:
+  toggle: ctrl+shift+s
+  describe_now: ctrl+shift+d
+  read_text: ctrl+shift+t
+  mute: ctrl+shift+m

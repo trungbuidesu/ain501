@@ -37,9 +37,16 @@ def load_config(path: Path) -> dict[str, Any]:
         return yaml.safe_load(f)
 
 
-def get_device() -> torch.device:
+def get_device(requested: str = "auto") -> torch.device:
     """Xác định thiết bị tính toán (XPU -> CPU)."""
-    if torch.xpu.is_available():
+    requested = requested.lower().strip()
+    if requested != "auto":
+        if requested == "xpu" and not hasattr(torch, "xpu"):
+            return torch.device("cpu")
+        if requested == "xpu" and hasattr(torch, "xpu") and not torch.xpu.is_available():
+            return torch.device("cpu")
+        return torch.device(requested)
+    if hasattr(torch, "xpu") and torch.xpu.is_available():
         return torch.device("xpu")
     return torch.device("cpu")
 
@@ -257,7 +264,10 @@ def main_fine_tune(args: argparse.Namespace) -> int:
     """Thực hiện fine-tuning MoViNet-A0."""
     config = load_config(args.config)
     class_names = get_class_names(args.manifest)
-    device = get_device()
+    requested_device = str(config["training"].get("device", "auto"))
+    device = get_device(requested_device)
+    train_workers = int(config["training"].get("num_workers", 4))
+    val_workers = max(0, min(train_workers, 2))
 
     print(f"Starting fine-tune on {device}...")
 
@@ -290,18 +300,18 @@ def main_fine_tune(args: argparse.Namespace) -> int:
         train_ds,
         batch_size=config["training"]["batch_size"],
         shuffle=True,
-        num_workers=4,
+        num_workers=train_workers,
         pin_memory=True,
         prefetch_factor=4,
-        persistent_workers=True,
+        persistent_workers=train_workers > 0,
     )
     val_loader = DataLoader(
         val_ds,
         batch_size=config["training"]["batch_size"],
         shuffle=False,
-        num_workers=2,
+        num_workers=val_workers,
         pin_memory=True,
-        persistent_workers=True,
+        persistent_workers=val_workers > 0,
     )
 
     # Model
@@ -318,7 +328,8 @@ def main_fine_tune(args: argparse.Namespace) -> int:
         print("Dry-run requested. Running 1 batch and exiting.")
         model.train()
         clips, labels = next(iter(train_loader))
-        clips, labels = clips.to(device), labels.to(device)
+        labels = labels.to(device)
+        clips = preprocess_batch(clips, device)
         model.clean_activation_buffers()
         outputs = model(clips)
         print(f"Output shape: {outputs.shape}")

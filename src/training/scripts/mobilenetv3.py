@@ -509,6 +509,19 @@ def fine_tune_model(args: argparse.Namespace, config: dict[str, Any]) -> None:
         json.dumps(label_to_index, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
     )
+    report_dir = Path(str(outputs.get("report_dir", "reports/mobilenetv3_small")))
+    report_dir.mkdir(parents=True, exist_ok=True)
+    summary_payload = {
+        "best_val_accuracy": float(best_accuracy),
+        "run_name": run_name,
+        "checkpoint_dir": str(output_dir),
+        "epochs_completed": epochs,
+        "manifest_csv": str(args.manifest_csv),
+    }
+    (report_dir / "latest_summary.json").write_text(
+        json.dumps(summary_payload, indent=2) + "\n",
+        encoding="utf-8",
+    )
     print(f"wrote_checkpoint_dir={output_dir}")
 
 

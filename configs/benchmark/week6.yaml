@@ -1,0 +1,16 @@
+registry_path: models/registry.json
+output_dir: reports/week6
+warmup: 10
+iterations: 50
+providers:
+  - CPUExecutionProvider
+rubric:
+  description: >
+    Default selection: prefer INT8 when metric drop <= max_metric_drop (absolute)
+    and INT8 latency meets per-model expected_latency_ms.edge_cpu after normalization.
+  max_absolute_metric_drop: 0.05
+  prefer_precision: int8
+notes: >
+  FP32 accuracy column uses the primary metric from metrics_json (task-dependent).
+  If only one ONNX exists, the other latency column is N/A. Metric drop is N/A
+  when INT8 metric was not re-measured separately.

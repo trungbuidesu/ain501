@@ -7,7 +7,7 @@ engine:
   voices_repository: https://huggingface.co/rhasspy/piper-voices
   install_extra: ".[tts]"
 paths:
-  voices_root: models/voices/piper
+  voices_root: models/tts/piper
   validation_output: data/tts_validation
 voices:
   defaults:
@@ -15,27 +15,27 @@ voices:
       id: vi_VN-vais1000-medium
       language: vi_VN
       quality: medium
-      model_path: models/voices/piper/vi/vi_VN/vais1000/medium/vi_VN-vais1000-medium.onnx
-      config_path: models/voices/piper/vi/vi_VN/vais1000/medium/vi_VN-vais1000-medium.onnx.json
+      model_path: models/tts/piper/vi/vi_VN/vais1000/medium/vi_VN-vais1000-medium.onnx
+      config_path: models/tts/piper/vi/vi_VN/vais1000/medium/vi_VN-vais1000-medium.onnx.json
       expected_sample_rate_hz: 22050
       prompt: "Xin chao. He thong ho tro dieu huong da san sang."
     en:
       id: en_US-lessac-medium
       language: en_US
       quality: medium
-      model_path: models/voices/piper/en/en_US/lessac/medium/en_US-lessac-medium.onnx
-      config_path: models/voices/piper/en/en_US/lessac/medium/en_US-lessac-medium.onnx.json
+      model_path: models/tts/piper/en/en_US/lessac/medium/en_US-lessac-medium.onnx
+      config_path: models/tts/piper/en/en_US/lessac/medium/en_US-lessac-medium.onnx.json
       expected_sample_rate_hz: 22050
       prompt: "Navigation assistance is ready."
   fallbacks:
     vi:
       id: vi_VN-vivos-x_low
-      model_path: models/voices/piper/vi/vi_VN/vivos/x_low/vi_VN-vivos-x_low.onnx
-      config_path: models/voices/piper/vi/vi_VN/vivos/x_low/vi_VN-vivos-x_low.onnx.json
+      model_path: models/tts/piper/vi/vi_VN/vivos/x_low/vi_VN-vivos-x_low.onnx
+      config_path: models/tts/piper/vi/vi_VN/vivos/x_low/vi_VN-vivos-x_low.onnx.json
     en:
       id: en_US-amy-medium
-      model_path: models/voices/piper/en/en_US/amy/medium/en_US-amy-medium.onnx
-      config_path: models/voices/piper/en/en_US/amy/medium/en_US-amy-medium.onnx.json
+      model_path: models/tts/piper/en/en_US/amy/medium/en_US-amy-medium.onnx
+      config_path: models/tts/piper/en/en_US/amy/medium/en_US-amy-medium.onnx.json
 validation:
   dry_run_default: true
   require_files:

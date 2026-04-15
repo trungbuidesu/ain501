@@ -27,6 +27,8 @@ nav:
           - Mở rộng (OCR, Chú thích video, TTS, Độ sâu): datasets/extended.md
   - Tài liệu hiện có:
       - Data Pipeline: data_pipeline.md
+      - Week 6 — benchmark & registry: training/week6_training_log.md
+      - Active learning (MVP): active_learning.md
 
 plugins:
   - search:

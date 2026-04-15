@@ -36,6 +36,23 @@ trên Intel Arc A770 (XPU). Quy ước:
 
 ---
 
+## Batch HMDB-51 Retrain (Phase 0)
+
+- [x] Custom split 80/20 phân tầng theo lớp
+  - Trạng thái: Đã chạy `prepare_hmdb.py` với seed 501. Kết quả `manifest_frames.csv` có 2,196 samples (`train=1,752`, `test=444`), mỗi lớp đều có train/test.
+- [x] Chuẩn hóa manifest cho `FrameClipDataset`
+  - Trạng thái: Đã đồng bộ schema `frame_dir,label,split,n_frames` và frame naming `frame_00000.jpg`.
+- [x] XPU dry-run batch
+  - Trạng thái: Lệnh `movinet fine-tune --dry-run` trên Arc A770 pass với output shape `torch.Size([16, 12])`.
+- [x] Full retrain 30 epochs (HMDB-51 12 classes)
+  - Trạng thái: Đã chạy xong 30 epochs trên XPU. Epoch 1-3 loss giảm (3.45 -> 2.41 -> 2.05) và val acc tăng từ 0.4189 lên 0.4887.
+- [x] Evaluate + error analysis
+  - Trạng thái: Top-1 Accuracy test = **0.5203**. Nhầm lẫn nhiều nhất: `walk->run (20)`, `turn->walk (16)`, `run->walk (11)`.
+- [x] Báo cáo tóm tắt retrain
+  - Trạng thái: Đã lưu `reports/movinet_a0/hmdb_retrain_summary.json`.
+
+---
+
 ## 2. Data Pipeline
 
 - [x] Xây dựng VideoClipDataset (video → frames on-the-fly)
@@ -127,8 +144,8 @@ trên Intel Arc A770 (XPU). Quy ước:
 - [x] Verify ONNX graph
   - Trạng thái: Đã kiểm tra bằng `verify_onnx.py` và `onnxruntime`. Graph hợp lệ.
 
-- [x] Benchmark latency ONNX vs PyTorch
-  - Trạng thái: Đã kiểm tra sơ bộ. ONNX Runtime cho latency ổn định hơn trên CPU.
+    * **Trạng thái**: **Retraining chính thức (XPU)** — Đã hủy bỏ kết quả cũ (fitness classes).
+    * **Định hướng**: HMDB-51 (walk, sit, stairs, etc.) hoặc UCF-101 accessibility subset.
 
 - [x] Lưu `models/movinet_a0_int8.onnx`
   - Trạng thái: Đã lưu trữ và sẵn sàng cho inference.

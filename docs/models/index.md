@@ -31,4 +31,6 @@ Hệ thống yêu cầu các ma trận đầu vào (Tensors input parameters) tu
 > [!IMPORTANT] Tính Hợp Lệ Cấu Trúc Đồ Graph (Graph Validations)
 > Mạng lưới (Backbones) bắt buộc phải vượt qua bài kiểm tra chép nhánh tĩnh OnnxRuntime (Dry-run conversion tracing) tại thời điểm khởi tạo nhằm ngừa gãy đổ luồng phân bổ (Deployment failures).
 
+Tuần 6: benchmark thống nhất và registry triển khai tại [`models/registry.json`](../../models/registry.json); báo cáo `reports/week6/benchmark_report.md` và ghi chú [Week 6 training log](../training/week6_training_log.md).
+
 Tiếp tục đi sâu phân tách từng Mô hình hệ cụ thể nằm trong mục lục chức năng đính kèm!

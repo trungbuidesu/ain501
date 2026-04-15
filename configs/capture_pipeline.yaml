@@ -1,0 +1,26 @@
+# Phase 1 capture pipeline: source, timing, change detection, optional screen region.
+
+source:
+  type: screen  # webcam | screen | file
+  webcam_index: 0
+  file_path: null
+  file_loop: false
+
+screen:
+  backend: auto  # auto prefers dxcam then mss
+  region: null  # { left, top, width, height } in screen pixels, or null for full primary monitor
+  select_region_on_start: true  # if true, open drag overlay once (screen only)
+
+timing:
+  target_fps: 8.0
+  buffer_size: 30
+
+change_detection:
+  method: ssim  # ssim | pixel_diff
+  # SSIM: trigger (emit to pipeline) when structural similarity drops below this (0..1).
+  ssim_trigger_below: 0.92
+  # Pixel diff: trigger when fraction of pixels with |diff| > pixel_diff_threshold exceeds this (0..1).
+  changed_fraction_trigger_above: 0.02
+  pixel_diff_threshold: 25
+  # Downscale longest edge for metrics (speed); null = use full resolution.
+  max_metric_side: 320

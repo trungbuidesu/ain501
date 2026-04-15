@@ -1,0 +1,23 @@
+# Screen capture full primary monitor — no region overlay (good for scripts / CI).
+
+source:
+  type: screen
+  webcam_index: 0
+  file_path: null
+  file_loop: false
+
+screen:
+  backend: auto
+  region: null
+  select_region_on_start: false
+
+timing:
+  target_fps: 1.5
+  buffer_size: 30
+
+change_detection:
+  method: ssim
+  ssim_trigger_below: 0.92
+  changed_fraction_trigger_above: 0.02
+  pixel_diff_threshold: 25
+  max_metric_side: 320

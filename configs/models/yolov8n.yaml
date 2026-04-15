@@ -15,14 +15,15 @@ training:
   mosaic: 1.0
   mixup: 0.1
   multi_scale: true
-  workers: 0
+  workers: 4
   patience: 20
   fraction: 1.0
   exist_ok: false
+  device: xpu
 pilot:
   epochs: 5
   batch: 16
-  device: auto
+  device: xpu
   name: pilot_5e
   fraction: 0.005
   workers: 0

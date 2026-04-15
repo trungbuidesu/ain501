@@ -12,7 +12,10 @@ import argparse
 import time
 from collections.abc import Sequence
 from pathlib import Path
-from typing import Any
+
+import mss
+
+from src.capture.screen_backend import create_dxcam_if_available, grab_screen_rgb
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -59,55 +62,34 @@ def capture_frames(
 
     output_dir.mkdir(parents=True, exist_ok=True)
     interval = 1.0 / fps
-    camera = _create_dxcam_camera()
-    if camera is not None:
-        return _capture_dxcam(camera, output_dir, frame_count, interval)
-    return _capture_mss(output_dir, frame_count, interval)
+    camera = create_dxcam_if_available()
+    with mss.mss() as sct:
+        return _capture_screen_loop(
+            output_dir, frame_count, interval, camera, sct
+        )
 
 
-def _create_dxcam_camera() -> Any | None:
-    """Tạo camera `dxcam` nếu thư viện khả dụng."""
-    try:
-        import dxcam
-    except ImportError:
-        return None
-    return dxcam.create()
-
-
-def _capture_dxcam(
-    camera: Any,
+def _capture_screen_loop(
     output_dir: Path,
     frame_count: int,
     interval: float,
+    dxcam_camera: object | None,
+    mss_instance: object,
 ) -> int:
-    """Ghi frame bằng `dxcam` và lưu ảnh JPEG ra thư mục đích."""
+    """Ghi frame màn hình (dxcam hoặc mss) và lưu JPEG; dùng chung ``screen_backend``."""
     from PIL import Image
 
     captured = 0
     for index in range(frame_count):
-        frame = camera.grab()
-        if frame is not None:
-            Image.fromarray(frame).save(output_dir / f"frame_{index:06d}.jpg")
+        rgb = grab_screen_rgb(
+            dxcam_camera=dxcam_camera,
+            mss_instance=mss_instance,
+            region=None,
+        )
+        if rgb is not None:
+            Image.fromarray(rgb).save(output_dir / f"frame_{index:06d}.jpg")
             captured += 1
         time.sleep(interval)
-    return captured
-
-
-def _capture_mss(output_dir: Path, frame_count: int, interval: float) -> int:
-    """Ghi frame bằng `mss` khi `dxcam` không khả dụng."""
-    import mss
-    from PIL import Image
-
-    captured = 0
-    with mss.mss() as screen_capture:
-        monitor = screen_capture.monitors[1]
-        for index in range(frame_count):
-            shot = screen_capture.grab(monitor)
-            Image.frombytes("RGB", shot.size, shot.rgb).save(
-                output_dir / f"frame_{index:06d}.jpg"
-            )
-            captured += 1
-            time.sleep(interval)
     return captured
 
 

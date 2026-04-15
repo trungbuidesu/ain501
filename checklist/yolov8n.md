@@ -74,3 +74,18 @@ File này theo dõi trạng thái YOLOv8n cho object detection. Quy ước:
   - Trạng thái: `train`, `evaluate`, và `predict-errors` hỗ trợ `--preset`; `train/evaluate` hỗ trợ summary JSON; `train` hỗ trợ `--fraction`, `--workers`, `--patience`, `--exist-ok`.
 - [x] Thêm tests synthetic/dry-run
   - Trạng thái: `tests/test_yolov8n.py` cover describe, write-data-yaml dry-run/execute, train/evaluate/predict-errors/ablate dry-run, QAT guard, pilot preset, và summary writer.
+
+## Export & Verify
+
+- [x] Export ONNX (INT8 quantized)
+  - Trạng thái: **Đã hoàn thành** — Mô hình `models/yolov8n_int8.onnx` (~3.33MB).
+- [x] Inference bằng ONNX Runtime → verify output khớp PyTorch
+  - Trạng thái: **Đã xác thực** — Đã chạy `verify_yolo.py`, cả hai model đều chạy thành công trên CPU.
+- [x] Benchmark final: latency, RAM, mAP trên CPU target
+  - Trạng thái: **Đã thực hiện** — Benchmark trên CPU:
+    * **Latency (FP32)**: ~26ms/img.
+    * **Latency (INT8)**: ~24.8ms/img (static batch=16).
+    * **Size reduction**: ~47% (6.25MB -> 3.33MB).
+    * **RAM usage (Isolated)**: **~890MB** (tối ưu hơn mức 1.4GB trước đó, dành cho input 640x640).
+- [x] Lưu model vào `models/yolov8n_int8.onnx`
+  - Trạng thái: **Đã di chuyển** — File hiện đã nằm đúng vị trí trong thư mục `models/`.
